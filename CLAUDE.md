@@ -44,7 +44,6 @@ Do not proceed on training-data recall alone when verification is available. Sil
 |---|---|
 | Laravel 13 | https://laravel.com/docs/13.x |
 | Laravel AI SDK | https://laravel.com/docs/13.x/ai-sdk |
-| Laravel Pennant | https://laravel.com/docs/13.x/pennant |
 | Laravel Boost | https://laravel.com/docs/13.x/boost |
 | Filament 5 | https://filamentphp.com/docs/5.x *(verify at build time)* |
 | Livewire 4 | https://livewire.laravel.com/docs |
@@ -151,7 +150,7 @@ If that fails, ownership is the likely cause — not the permission bits.
 - `favorites (user_id, family_id, version_id)` — unique on `(user_id, family_id)`. One favorite per family per user. Favoriting a different version of the same family is an upsert.
 - `subject_grade_user` pivot stores `editor` role only. Subject Admin is stored on `subject_grades` directly.
 - All versions are immutable once saved. Editing always creates a new version.
-- First version in any new family is always `1.0.0`.
+- First version in any new family is always `1.0.0`. **Exception:** a family created by AI translation inherits the version number of the English source version (e.g. translating v2.1.0 produces a Swahili family starting at v2.1.0).
 - System user (`system@ares.internal`, `is_system = true`) is seeded by `DatabaseSeeder`. Never expose in user-facing UI.
 
 ---

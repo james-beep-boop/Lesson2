@@ -19,8 +19,8 @@
 #  Assumptions:
 #    - The DreamHost domain document root points to ~/Lesson2/public
 #    - ~/Lesson2 is a full Laravel app clone, not an overlay repo
-#    - Frontend assets are built before deploy and committed or uploaded
-#      (DreamHost shared hosting does not provide Node.js for server builds)
+#    - Frontend assets are built locally or in CI and uploaded — never committed
+#      to the repository. DreamHost has no Node.js for server-side builds.
 #    - .env already exists on the server and is not tracked in Git
 # ============================================================================
 
