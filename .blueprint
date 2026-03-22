@@ -1,0 +1,38 @@
+created:
+    - database/factories/UserFactory.php
+    - database/factories/SubjectFactory.php
+    - database/factories/SubjectGradeFactory.php
+    - database/factories/SubjectGradeUserFactory.php
+    - database/factories/LessonPlanFamilyFactory.php
+    - database/factories/LessonPlanVersionFactory.php
+    - database/factories/FavoriteFactory.php
+    - database/factories/MessageFactory.php
+    - database/factories/DeletionRequestFactory.php
+    - database/migrations/2026_03_22_193314_create_users_table.php
+    - database/migrations/2026_03_22_193315_create_subjects_table.php
+    - database/migrations/2026_03_22_193316_create_subject_grades_table.php
+    - database/migrations/2026_03_22_193317_create_subject_grade_users_table.php
+    - database/migrations/2026_03_22_193318_create_lesson_plan_families_table.php
+    - database/migrations/2026_03_22_193319_create_lesson_plan_versions_table.php
+    - database/migrations/2026_03_22_193320_create_favorites_table.php
+    - database/migrations/2026_03_22_193321_create_messages_table.php
+    - database/migrations/2026_03_22_193322_create_deletion_requests_table.php
+    - app/Models/User.php
+    - app/Models/Subject.php
+    - app/Models/SubjectGrade.php
+    - app/Models/SubjectGradeUser.php
+    - app/Models/LessonPlanFamily.php
+    - app/Models/LessonPlanVersion.php
+    - app/Models/Favorite.php
+    - app/Models/Message.php
+    - app/Models/DeletionRequest.php
+models:
+    User: { username: 'string unique', name: string, email: 'string unique', email_verified_at: 'nullable timestamp', password: 'nullable string', is_system: 'boolean default:false', remember_token: 'nullable string:100', softDeletes: softDeletes }
+    Subject: { name: 'string unique', archived_at: 'nullable timestamp' }
+    SubjectGrade: { subject_id: 'id foreign:subjects', grade: integer, subject_admin_user_id: 'nullable id foreign:users', indexes: [{ unique: 'subject_id,grade' }] }
+    SubjectGradeUser: { subject_grade_id: 'id foreign:subject_grades', user_id: 'id foreign:users', role: 'enum:editor', indexes: [{ unique: 'subject_grade_id,user_id' }] }
+    LessonPlanFamily: { subject_grade_id: 'id foreign:subject_grades', day: string, language: 'string:5', official_version_id: 'nullable id foreign:lesson_plan_versions', indexes: [{ unique: 'subject_grade_id,day,language' }] }
+    LessonPlanVersion: { lesson_plan_family_id: 'id foreign:lesson_plan_families', contributor_id: 'id foreign:users', version: 'string:20', content: longText, revision_note: 'nullable text', indexes: [{ unique: 'lesson_plan_family_id,version' }] }
+    Favorite: { user_id: 'id foreign:users', lesson_plan_family_id: 'id foreign:lesson_plan_families', lesson_plan_version_id: 'id foreign:lesson_plan_versions', indexes: [{ unique: 'user_id,lesson_plan_family_id' }] }
+    Message: { from_user_id: 'id foreign:users', to_user_id: 'id foreign:users', subject: string, body: text, read_at: 'nullable timestamp' }
+    DeletionRequest: { lesson_plan_version_id: 'id foreign:lesson_plan_versions', requested_by_user_id: 'id foreign:users', reason: 'nullable text', resolved_at: 'nullable timestamp', resolved_by_user_id: 'nullable id foreign:users' }

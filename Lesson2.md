@@ -175,15 +175,16 @@ Run through this before writing code in each phase. Use Boost `search_docs` or W
 After the first `composer install`, record the resolved versions of key packages here. **Only useful if actively maintained — if it falls out of date, delete it rather than leave it wrong.**
 
 ```
-# Resolved package versions — fill in after first composer install
-laravel/framework:
-filament/filament:
-livewire/livewire:
-laravel/ai:
-laravel/pennant:
-laravel/boost:
-laravel-shift/blueprint:
-spatie/laravel-permission:
+# Resolved package versions — 2026-03-22
+laravel/framework: 13.1.1
+filament/filament: 5.4.1
+livewire/livewire: 4.2.1
+laravel/ai: 0.3.2
+laravel/pennant: (not installed — not used; direct config check used instead)
+laravel/boost: (install separately: composer require laravel/boost --dev)
+laravel-shift/blueprint: 2.13.0
+spatie/laravel-permission: 6.25.0
+bezhansalleh/filament-shield: 4.2.0
 ```
 
 ---
