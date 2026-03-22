@@ -23,3 +23,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+/composer.phar
+/public/.dh-diag
+/public/favicon.gif
+/public/test.php
+/public/vendor/
