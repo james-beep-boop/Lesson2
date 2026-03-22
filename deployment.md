@@ -88,11 +88,41 @@ DreamHost shared hosting runs Apache, MariaDB, and shared PHP. No Docker, no roo
 
 ### PHP version
 
-DreamHost allows selecting a PHP version per domain. In the panel, set PHP to **8.4** (or the highest 8.x available). Confirm it is active:
+DreamHost allows selecting a PHP version per domain. In the panel, set PHP to **8.4** (or the highest 8.x available).
+
+**Important:** The default `php` binary in the DreamHost shell points to PHP 8.2, not 8.4. Add PHP 8.4 to your shell PATH permanently:
 
 ```bash
-php -v
+echo 'export PATH=/usr/local/php84/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+php -v   # should now show 8.4.x
 ```
+
+The `UPDATE_SITE.sh` deploy script detects this automatically and does not require it in PATH.
+
+### Composer
+
+Composer is not installed on DreamHost by default. Install it once as a `phar` and create a wrapper script:
+
+```bash
+cd ~
+curl -sS https://getcomposer.org/installer | /usr/local/php84/bin/php
+# Creates ~/composer.phar
+
+cat > ~/composer.sh << 'EOF'
+#!/bin/bash
+/usr/local/php84/bin/php "$HOME/composer.phar" "$@"
+EOF
+chmod +x ~/composer.sh
+```
+
+Then set the `COMPOSER_BIN` variable when running the deploy script if Composer is not in PATH:
+
+```bash
+COMPOSER_BIN=~/composer.sh bash ~/Lesson2/UPDATE_SITE.sh
+```
+
+(The deploy script also checks for `~/composer.phar` automatically.)
 
 ### Database
 
@@ -100,48 +130,148 @@ Create a MySQL/MariaDB database in the DreamHost panel:
 - Database name, username, and password are assigned in the panel
 - Record these for your `.env` file
 
-### Deployment steps
+**Critical:** The MySQL hostname on DreamHost is **not** `localhost`. It is your domain's dedicated MySQL host, typically `mysql.sheql.com`. Using `localhost` causes a connection refused error because MySQL runs on a separate host.
 
-**Option A — Git + SSH (recommended)**
+### First-time setup
 
 1. SSH into your DreamHost account
-2. Clone the repo into the domain's web root:
+2. Clone the repo:
    ```bash
    cd ~
-   git clone https://github.com/your-org/ares-lessons.git ares-lessons
+   git clone https://github.com/james-beep-boop/Lesson2.git Lesson2
    ```
-3. Point the domain's document root to `ares-lessons/public` in the DreamHost panel
-4. Upload your `.env` file (never commit it)
-5. Run the post-deployment commands above
+3. In the DreamHost panel, set the domain's document root to `~/Lesson2/public`
+4. Create `~/Lesson2/.env` with production credentials (see Section 2)
+5. Build frontend assets locally and upload them (DreamHost has no Node.js):
+   ```bash
+   # On your Mac:
+   cd /path/to/Lesson2
+   npm install
+   npm run build
+   rsync -avz --delete public/build/ david_sheql@sheql.com:~/Lesson2/public/build/
+   ```
+6. On DreamHost, run the first-time commands:
+   ```bash
+   cd ~/Lesson2
+   COMPOSER_BIN=~/composer.sh /usr/local/php84/bin/php artisan key:generate
+   COMPOSER_BIN=~/composer.sh bash ~/Lesson2/UPDATE_SITE.sh
+   /usr/local/php84/bin/php artisan db:seed --force
+   /usr/local/php84/bin/php artisan livewire:publish --assets
+   ```
 
-**Option B — SFTP (not a full deployment path)**
+**Why `livewire:publish --assets`?** Livewire 4 requires its JS assets to be published to `public/vendor/livewire/`. Without this step, `livewire.js` returns a 404 and all interactive components are broken. Run this once after the initial clone.
 
-SFTP alone is insufficient — Composer, Artisan, and `npm run build` still require remote shell access. If SSH is unavailable, the practical workaround is to run `composer install --no-dev` and `npm run build` locally, then upload the full project including the `vendor/` directory and compiled `public/build/` assets via SFTP. This is fragile and not recommended for ongoing use. Request SSH access from DreamHost support — it is available on all DreamHost plans.
+### Ongoing deployments
+
+After every push to GitHub, run on DreamHost:
+
+```bash
+bash ~/Lesson2/UPDATE_SITE.sh
+```
+
+If the deploy script reports local changes (DreamHost creates `public/.dh-diag` and `public/favicon.gif` as untracked files, which the script ignores; but it will block on modified tracked files):
+
+```bash
+cd ~/Lesson2 && git checkout -- . && bash ~/Lesson2/UPDATE_SITE.sh
+```
+
+If the local repo has diverged from `origin/main` (can happen after a force-push):
+
+```bash
+cd ~/Lesson2 && git fetch origin && git reset --hard origin/main
+bash ~/Lesson2/UPDATE_SITE.sh
+```
+
+If you need to rebuild frontend assets (Tailwind/Vite changes):
+
+```bash
+# On your Mac:
+npm run build
+rsync -avz --delete public/build/ david_sheql@sheql.com:~/Lesson2/public/build/
+```
+
+### Trusted proxies
+
+DreamHost shared hosting routes traffic through a load balancer. Without trusted proxy configuration, Laravel cannot determine the real client IP or protocol, causing HTTPS redirect loops and session issues.
+
+`bootstrap/app.php` already includes:
+```php
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->trustProxies(at: '*');
+})
+```
+
+This is required on DreamHost. Do not remove it.
 
 ### Apache `.htaccess`
 
-Laravel ships with a `public/.htaccess` that handles routing. DreamHost Apache should honour it. If you see 404s on any URL beyond `/`, confirm `mod_rewrite` is enabled — DreamHost enables it by default on shared hosting.
+`public/.htaccess` handles routing and HTTPS redirection. The deployed version includes:
+
+```apache
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+```
+
+**Do not add `php_value output_buffering`** to `.htaccess` — it causes a 500 Internal Server Error on DreamHost's FastCGI/mod_fcgid setup.
 
 ### Cron job (queued jobs / scheduled tasks)
 
 In the DreamHost panel, add a cron job:
 
 ```
-* * * * * cd /home/username/ares-lessons && php artisan schedule:run >> /dev/null 2>&1
+* * * * * /usr/local/php84/bin/php /home/david_sheql/Lesson2/artisan schedule:run >> /dev/null 2>&1
 ```
 
 ### Storage permissions
+
+On DreamHost, PHP runs as the SSH/domain user via suEXEC — not `www-data`. Set permissions accordingly:
 
 ```bash
 chmod -R 775 storage bootstrap/cache
 ```
 
+If writes fail, check ownership first (not just permissions):
+
+```bash
+/usr/local/php84/bin/php artisan tinker --execute="file_put_contents(storage_path('test-write.txt'), 'ok'); echo file_get_contents(storage_path('test-write.txt')); unlink(storage_path('test-write.txt'));"
+```
+
+### Required `.env` settings for DreamHost
+
+```ini
+APP_ENV=production
+APP_DEBUG=false          # IMPORTANT: set to false before going live
+APP_KEY=                 # generate with: php artisan key:generate
+APP_URL=https://www.sheql.com
+
+DB_CONNECTION=mysql
+DB_HOST=mysql.sheql.com  # NOT localhost — DreamHost MySQL is on a separate host
+DB_PORT=3306
+DB_DATABASE=your_db_name
+DB_USERNAME=your_db_user
+DB_PASSWORD=your_db_password
+
+CACHE_STORE=file         # no Redis on shared hosting
+SESSION_DRIVER=file      # no Redis on shared hosting
+QUEUE_CONNECTION=sync    # no queue workers on shared hosting
+```
+
+After creating or editing `.env`, always clear the config cache:
+
+```bash
+/usr/local/php84/bin/php artisan config:clear
+```
+
 ### Known DreamHost constraints
 
-- No Supervisor or queue workers — use `QUEUE_CONNECTION=sync` in `.env` for MVP (jobs run inline)
+- No Supervisor or queue workers — use `QUEUE_CONNECTION=sync` (jobs run inline)
 - No Redis — use `CACHE_STORE=file` and `SESSION_DRIVER=file`
-- No partial unique indexes — already accounted for in the data model (see `Lesson2.md` Section 8)
+- No Node.js — all Vite/Tailwind/Filament assets must be compiled locally or in CI and uploaded
+- No partial unique indexes (MariaDB constraint) — accounted for in the data model
 - Ollama is not reachable from DreamHost — use Anthropic as AI provider for production
+- `php_value` directives in `.htaccess` for FastCGI settings can cause 500 errors — test carefully before committing
+- DreamHost auto-creates files in `public/` (`public/.dh-diag`, `public/favicon.gif`) — these are untracked and harmless; the deploy script already ignores them
 
 ---
 
@@ -645,14 +775,19 @@ Then from another machine on Tailscale, `OLLAMA_BASE_URL=http://<dgx-tailscale-i
 
 Run through this after any fresh install or major update:
 
-- [ ] `APP_DEBUG=false` in production `.env`
-- [ ] `APP_KEY` is set
-- [ ] `php artisan config:cache` run
+- [ ] `APP_DEBUG=false` in production `.env` — disable with: `sed -i 's/APP_DEBUG=true/APP_DEBUG=false/' .env`
+- [ ] `APP_KEY` is set — generate with `php artisan key:generate`
+- [ ] `php artisan config:cache` run (and `config:clear` first if `.env` was recently edited)
 - [ ] `php artisan route:cache` run
-- [ ] `storage/` is writable
+- [ ] `storage/` and `bootstrap/cache/` are writable (`chmod -R 775 storage bootstrap/cache`)
 - [ ] `php artisan storage:link` run — **DreamHost and local dev only; skip for Docker deployments**
+- [ ] **DreamHost only:** `php artisan livewire:publish --assets` run at least once after initial clone
+- [ ] **DreamHost only:** `DB_HOST` is `mysql.sheql.com` (not `localhost`)
+- [ ] **DreamHost only:** `CACHE_STORE=file`, `SESSION_DRIVER=file`, `QUEUE_CONNECTION=sync`
+- [ ] **DreamHost only:** Trusted proxies configured in `bootstrap/app.php` (`trustProxies(at: '*')`)
+- [ ] Frontend assets present: `public/build/manifest.json` exists
 - [ ] Database migrated: `php artisan migrate --status` shows no pending
-- [ ] Site Admin can log in with `admin@sheql.com`
+- [ ] Site Admin can log in (`admin@sheql.com`)
 - [ ] System user exists: `php artisan tinker` → `App\Models\User::where('is_system', true)->first()`
 - [ ] Email delivery works (send a test password-reset email)
 - [ ] `AI_SUGGESTIONS_ENABLED=false` in production unless intentionally enabled
@@ -681,4 +816,4 @@ Run through this after any fresh install or major update:
 
 ---
 
-*Last updated: 2026-03-22.*
+*Last updated: 2026-03-22. Expanded DreamHost section based on live deployment experience.*
