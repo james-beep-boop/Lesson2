@@ -131,7 +131,6 @@ Verify these URLs are current at build time — doc URL structures occasionally 
 |---|---|
 | Laravel 13 | https://laravel.com/docs/13.x |
 | Laravel AI SDK | https://laravel.com/docs/13.x/ai-sdk |
-| Laravel Pennant | https://laravel.com/docs/13.x/pennant |
 | Laravel Boost | https://laravel.com/docs/13.x/boost |
 | Filament 5 | https://filamentphp.com/docs/5.x *(verify URL at build time)* |
 | Livewire 4 | https://livewire.laravel.com/docs |
@@ -573,8 +572,8 @@ Subject Administrators (own subject_grade) and Site Administrators can trigger a
 
 - If a Swahili family already exists for that `subject_grade + day` combination, the new version inherits the English source version number. If that version number already exists in the Swahili family (conflict), the system falls back to the standard bump flow from the highest existing Swahili version — user chooses Patch / Minor / Major.
 - The English source version is never modified.
-- The "Translate to Swahili" button is gated by the same `AI_SUGGESTIONS_ENABLED` config flag as the "Ask AI" button — both require `config('features.ai_suggestions')` to be true.
-- Teacher-only users do not see the button.
+- The "Translate to Swahili" button requires **both** `config('features.ai_suggestions') === true` **and** Subject Admin or Site Admin role. The config flag alone is not sufficient — role is checked independently.
+- Teacher-only users do not see the button. Editor-role users see "Ask AI" but not "Translate to Swahili".
 
 **Testing:**
 
@@ -738,6 +737,9 @@ Required test coverage:
 **AI suggestions and translation**
 - "Ask AI" button and "Translate to Swahili" button do not render when `config('features.ai_suggestions')` is false
 - When flag is on: "Ask AI" button visible to Editors, Subject Admins, and Site Admins; "Translate to Swahili" button visible to Subject Admins and Site Admins only; both hidden from Teachers
+- An Editor sees "Ask AI" but does NOT see "Translate to Swahili" even when the flag is on
+- A Subject Admin sees both buttons for their own subject_grade
+- A Teacher sees neither button regardless of flag state
 - Submitting a prompt returns a suggestion response (use `LessonPlanAdvisor::fake()` in tests; assert with `LessonPlanAdvisor::assertPrompted(...)` — never make real API calls in tests)
 - AI response does not auto-modify the document content
 
@@ -765,7 +767,7 @@ Required test coverage:
 Runs on every `php artisan db:seed`, including production installs. Contains only what the application requires to function:
 
 - **System user** — `system@ares.internal`, no password, `is_system = true`
-- **Site Administrator** — `admin@ares.internal`, password set via `ADMIN_PASSWORD` env variable (no hardcoded default)
+- **Site Administrator** — `admin@sheql.com`, password set via `ADMIN_PASSWORD` env variable (no hardcoded default)
 
 ### DemoSeeder (opt-in)
 

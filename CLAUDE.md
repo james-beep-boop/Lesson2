@@ -66,8 +66,7 @@ Alpine.js           — bundled with Filament/Livewire
 Spatie Permission   — global roles only (Site Administrator)
 Custom pivot        — subject_grade-scoped roles (see below)
 Filament Shield     — admin panel access control
-Laravel Pennant     — feature flags (first-party package, verify install separately)
-Laravel AI SDK      — in-editor AI suggestions (gated by feature flag)
+Laravel AI SDK      — in-editor AI suggestions and translation (gated by config flag `AI_SUGGESTIONS_ENABLED`)
 Laravel Boost       — dev-time MCP server (use when available)
 Laravel Shift Blueprint — scaffolding from draft.yaml
 Pest                — all tests

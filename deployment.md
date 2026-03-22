@@ -30,21 +30,21 @@ APP_NAME="ARES Lesson Repository"
 APP_ENV=production         # or local for dev
 APP_KEY=                   # php artisan key:generate
 APP_DEBUG=false            # true in dev only
-APP_URL=https://your-domain.com
+APP_URL=https://www.sheql.com
 
 DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
+DB_HOST=mysql.sheql.com     # IMPORTANT: localhost will not work on DreamHost
 DB_PORT=3306
-DB_DATABASE=ares_lessons
-DB_USERNAME=ares_user
-DB_PASSWORD=your_db_password
+DB_DATABASE=lesson2_db
+DB_USERNAME=david_sheql
+DB_PASSWORD=your_db_password    # set to your actual password
 
 MAIL_MAILER=smtp           # or log for dev
 MAIL_HOST=
 MAIL_PORT=
 MAIL_USERNAME=
 MAIL_PASSWORD=
-MAIL_FROM_ADDRESS=noreply@your-domain.com
+MAIL_FROM_ADDRESS=noreply@sheql.com
 MAIL_FROM_NAME="ARES Lesson Repository"
 
 ADMIN_PASSWORD=            # Site Admin password — required for DatabaseSeeder
@@ -70,7 +70,7 @@ php artisan db:seed --force      # DatabaseSeeder only — System user + Site Ad
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-php artisan storage:link
+php artisan storage:link   # DreamHost and local dev only — do NOT run in Docker
 ```
 
 > **Note for DreamHost:** DreamHost shared hosting does not provide Node.js. The preferred approach is a CI/CD pipeline that runs `npm run build` and uploads the compiled `public/build/` directory to the server as part of deployment. Do not commit compiled build artifacts to the repository.
@@ -550,7 +550,7 @@ docker compose exec app php artisan migrate --force
 docker compose exec app php artisan db:seed --force
 docker compose exec app php artisan config:cache
 docker compose exec app php artisan route:cache
-docker compose exec app php artisan storage:link
+# Note: do NOT run storage:link in Docker — uploaded files are served via direct volume mount
 ```
 
 ### Running Ollama on the DGX Spark
@@ -650,9 +650,9 @@ Run through this after any fresh install or major update:
 - [ ] `php artisan config:cache` run
 - [ ] `php artisan route:cache` run
 - [ ] `storage/` is writable
-- [ ] `php artisan storage:link` run (public disk symlink)
+- [ ] `php artisan storage:link` run — **DreamHost and local dev only; skip for Docker deployments**
 - [ ] Database migrated: `php artisan migrate --status` shows no pending
-- [ ] Site Admin can log in with `admin@ares.internal`
+- [ ] Site Admin can log in with `admin@sheql.com`
 - [ ] System user exists: `php artisan tinker` → `App\Models\User::where('is_system', true)->first()`
 - [ ] Email delivery works (send a test password-reset email)
 - [ ] `AI_SUGGESTIONS_ENABLED=false` in production unless intentionally enabled
