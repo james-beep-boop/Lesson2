@@ -134,7 +134,7 @@ else
     old_head="$(git rev-parse HEAD)"
     git fetch --depth 1 origin "$BRANCH"
     git checkout "$BRANCH"
-    git pull --ff-only origin "$BRANCH"
+    git reset --hard origin/"$BRANCH"
 fi
 
 cd "$APP_DIR"
