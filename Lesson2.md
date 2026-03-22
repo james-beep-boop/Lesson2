@@ -27,8 +27,7 @@ Build the MVP for the **ARES Kenya Lesson Plan Repository** — a web applicatio
 | Testing | Pest | Feature and unit tests |
 | AI dev tooling | Laravel Boost | Dev dependency (`--dev`). MCP server + AI guidelines + agent skills. Includes Filament 2–5 documentation API. |
 | Scaffolding | Laravel Shift Blueprint | Dev dependency (`--dev`). Generates models, migrations, factories, form requests, and tests from a YAML draft file. Does not generate Filament resources — those are built on top. |
-| AI features (runtime) | Laravel AI SDK (`laravel/ai`) | First-party. Powers the in-editor AI suggestions feature. Provider-abstracted: Anthropic for demo, Ollama for future local LLM. Gated by a Pennant feature flag. |
-| Feature flags | Laravel Pennant (`laravel/pennant`) | First-party package. Used to gate the AI suggestions feature. Disabled by default. Verify install separately — not assumed to be bundled. |
+| AI features (runtime) | Laravel AI SDK (`laravel/ai`) | First-party. Powers the in-editor AI suggestions and translation features. Provider-abstracted: Anthropic for demo, Ollama for future local LLM. Gated by a config flag (`AI_SUGGESTIONS_ENABLED`). |
 | Hosting target | DreamHost shared hosting | Optimize for low server load, simple dependencies, no heavy runtime requirements |
 | Markdown | Stored in database | Canonical lesson-plan format; no filesystem identity reliance |
 
@@ -111,7 +110,6 @@ The AI assistants working on this project (Claude Code and others) have a traini
 | Filament | 5 |
 | Livewire | 4 |
 | Laravel AI SDK (`laravel/ai`) | first-party, Laravel 13 era |
-| Laravel Pennant (`laravel/pennant`) | first-party package |
 
 Release dates are context, not the rule. **The rule is: verify before using.** Built-in training knowledge of these packages must be treated as unreliable. Always verify against live documentation or installed package source before implementing any feature that touches them. If documentation and installed source disagree, trust the installed source. This is not optional — silent assumption errors on post-cutoff APIs are the primary risk on this project.
 
@@ -162,10 +160,6 @@ Run through this before writing code in each phase. Use Boost `search_docs` or W
 - [ ] Confirm `laravel/ai` install and `AiServiceProvider` publish steps
 - [ ] Confirm Agent class interface and `Promptable` trait in current version
 - [ ] Confirm streaming response API
-
-**Before Pennant work:**
-- [ ] Confirm feature class resolution pattern in current Pennant version
-- [ ] Confirm how to override a feature via `.env` for demo environments
 
 **Before Blueprint scaffolding:**
 - [ ] Confirm `draft.yaml` syntax for current Blueprint version (2.13+)
@@ -263,7 +257,7 @@ subject_grade-scoped roles use a **custom pivot table**, not Spatie Teams mode. 
 
 - Spatie Teams requires a global config switch affecting all role lookups — fragile and poorly tested with Filament Shield
 - Custom pivot (`subject_grade_user` with a `role` enum) is explicit, readable, and testable
-- Uniqueness constraints ("one Subject Admin per subject_grade", "one subject_grade per Subject Admin") map directly to DB-level partial indexes
+- Uniqueness constraints ("one Subject Admin per subject_grade", "one subject_grade per Subject Admin") are handled via nullable FK columns, standard unique indexes, and service-layer transactions — no partial indexes required or used
 - Policy helpers (`$user->roleInSubjectGrade($subjectGrade)`) are straightforward and easy to audit
 
 ### Authorization model summary
@@ -300,8 +294,9 @@ subject_grade-scoped roles use a **custom pivot table**, not Spatie Teams mode. 
 - `subject_grades.subject_admin_user_id` is a **nullable FK to users**. Enforces "at most one Subject Admin per subject_grade" structurally — no partial index needed. NULL means no Subject Admin assigned.
 - `lesson_plan_families.official_version_id` is a **nullable FK to lesson_plan_versions**. Enforces "at most one official version per family" structurally — no partial index needed. NULL means no official version designated.
 - "One subject_grade per Subject Admin" (inverse constraint) is enforced in the **service layer**: before promoting a user, check all `subject_grades.subject_admin_user_id` records and demote within the same transaction.
+- `lesson_plan_families` has a **composite unique index on `(subject_grade_id, day, language)`** — enforces the family key at DB level, fully MariaDB-safe. On uniqueness conflict at save time (e.g. concurrent creation race), catch the exception and redirect the user to the existing family with a prompt to add a new version instead. Never surface a raw DB error to the user.
 - `favorites` uses a standard unique index on `(user_id, family_id)` — fully MariaDB-safe. `version_id` must belong to the given `family_id` (enforced at service layer).
-- Use database transactions for all critical business rules (official version toggling, Subject Admin promotion/demotion, favorite upsert).
+- Use database transactions for all critical business rules (official version toggling, Subject Admin promotion/demotion, favorite upsert, new family + first version creation).
 
 ### MariaDB / DreamHost compatibility note
 
@@ -310,14 +305,33 @@ The spec deliberately avoids partial/filtered unique indexes (a PostgreSQL featu
 - **Standard composite unique index** — favorites `(user_id, family_id)`
 - **Service-layer transaction** — inverse constraints that have no clean DB-level expression
 
+### User fields
+
+Every user record has:
+
+| Field | Notes |
+|---|---|
+| `username` | Unique. Chosen by the user at registration. Displayed in the UI wherever a user is identified. |
+| `name` | Full name. Displayed alongside username where space allows. |
+| `email` | Unique. Used for login and email verification. **Visible only to Site Administrators** in admin tables — never shown to Teachers, Editors, or Subject Administrators in any user-facing table or view. |
+| `password` | Hashed. Verified email required before account activation. |
+| `is_system` | Boolean. `true` only for the reserved System user. |
+
+### Email privacy rule
+
+Users who are not Site Administrators must not see the email addresses of other users anywhere in the application — not in tables, not in message headers, not in search results. Contributor attribution on lesson plans shows `username` (and optionally `name`) only.
+
+This is enforced at the **view layer** (Filament resources and custom pages), not only in policies. When building any table or view that shows user information, default to showing `username`. Only the admin panel surfaces `email`.
+
 ### System user
 
 A reserved **"System"** user is seeded at install time:
 
+- `username`: system
 - `name`: System
 - `email`: system@ares.internal
 - `password`: null (no login possible)
-- `is_system`: true (boolean flag on users table)
+- `is_system`: true
 
 The System user never appears in user search, compose-message UI, or user management lists. It is used as `from_user_id` for any application-generated messages (errors, duplicate alerts, future automated notifications).
 
@@ -356,7 +370,7 @@ Grade is implicit — it is carried by the subject_grade record, not stored sepa
 ### Versioning
 
 - Version numbers use semantic format `x.y.z` only.
-- The **first version** in a new family is always `1.0.0`.
+- The **first version** in a new family is always `1.0.0`. **Exception:** a family created by AI translation inherits the version number of the source version (see Section 12 — Translation feature).
 - The system computes the next valid version number automatically. Users never type arbitrary version strings.
 - Default bump when saving edits is **Patch**.
 - User may choose Patch, Minor, or Major before saving.
@@ -371,6 +385,47 @@ Grade is implicit — it is carried by the subject_grade record, not stored sepa
 - Setting official to none: set `official_version_id = NULL`.
 - "Is this the official version?" = `$family->official_version_id === $version->id`.
 
+### Creating a new lesson plan
+
+Creating a **new lesson-plan family** (a brand-new lesson plan, not a new version of an existing one) is restricted to Subject Administrators and Site Administrators only. Editors and Teachers cannot create new families.
+
+**Who can create:**
+- **Subject Administrator** — may create new families for their own subject_grade only
+- **Site Administrator** — may create new families for any subject_grade
+
+**Creation flow:**
+1. Authorised user clicks "Add Lesson Plan" (visible only to Subject Admins and Site Admins)
+2. A form collects the family key: subject_grade (scoped to the user's own subject_grade for Subject Admins; full list for Site Admins), day, language
+3. If a family with those attributes already exists → the user is redirected to the existing family's version list with a prompt to add a new version instead
+4. If no family exists → system opens the editor. **The family record is not yet created.**
+5. User enters content (see input methods below) and saves → the family record and version `1.0.0` are created together in a single transaction. If save fails or user abandons the editor, no record is left in the database.
+
+**Input methods:**
+
+| Method | Details |
+|---|---|
+| Type / paste | User writes or pastes Markdown directly into the editor. Filament `MarkdownEditor` field with live preview. |
+| Upload `.md` or `.txt` | File contents are read server-side and loaded into the editor for review before saving. |
+| Upload `.docx` | File is converted to Markdown via a two-step pipeline (see below) and loaded into the editor. A prominent warning is shown before conversion begins. |
+
+**Word document warning** (shown on upload of `.docx`, before conversion begins):
+> *"This system stores all lesson plans as Markdown. Word documents are converted automatically, but complex formatting — tables, images, footnotes, and columns — may not convert correctly. Please review the result carefully before saving."*
+
+**File upload rules:**
+- Uploaded files never persist on disk — content is extracted to a string and loaded into the editor
+- The user always reviews content in the editor before saving — no auto-commit on upload
+- PDF upload is not supported (deferred)
+- Maximum upload size: follow DreamHost's `upload_max_filesize` (typically 32MB on shared hosting)
+
+**Adding a new version to an existing family** follows the same editor flow but is available to Editors and above. The version number is bumped from the current highest; user chooses Patch / Minor / Major.
+
+**DOCX conversion pipeline:**
+PHPWord has no Markdown writer. The conversion uses two steps:
+1. `phpoffice/phpword` reads the `.docx` and outputs HTML via its `HTML` writer
+2. `league/html-to-markdown` converts that HTML to Markdown
+
+Both packages are required in `composer.json`. Fidelity limits apply at each step — tables and basic formatting survive; images, footnotes, and complex layouts do not. This is why the warning exists and why the user must review before saving.
+
 ---
 
 ## 11. Permissions Matrix
@@ -382,7 +437,9 @@ Grade is implicit — it is carried by the subject_grade record, not stored sepa
 | Favorite a specific version / change favorite | ✓ | ✓ | ✓ | ✓ |
 | Use inbox / send messages | ✓ | ✓ | ✓ | ✓ |
 | Use "Ask AI" in editor | — | ✓ | ✓ | ✓ |
-| Create new version (edit) | — | own subject_grades | own subject_grades | ✓ |
+| Create new lesson plan (new family) | — | — | own subject_grade | ✓ |
+| Translate lesson plan to Swahili | — | — | own subject_grade | ✓ |
+| Add new version to existing family (edit) | — | own subject_grades | own subject_grades | ✓ |
 | Mark version official | — | — | own subject_grades | ✓ |
 | Promote/demote Teacher ↔ Editor | — | — | own subject_grades | ✓ |
 | Request deletion of version | — | — | own subject_grades | ✓ |
@@ -414,37 +471,53 @@ Editors, Subject Administrators, and Site Administrators see an **"Ask AI"** but
 
 ### Feature flag
 
-The AI suggestions feature is gated by a **Laravel Pennant** feature flag named `ai-suggestions`. It is **disabled by default**.
+The AI suggestions and translation features are both gated by a **direct config check**. Pennant is not used for this toggle — Pennant's default database store caches resolved values per scope, which means a Pennant-based feature would not respond predictably to a simple env change without purging cached state. A direct config read is simpler and correct for a global on/off switch.
 
 ```php
-// app/Features/AiSuggestions.php
-class AiSuggestions
-{
-    public function resolve(): bool
-    {
-        return false; // off by default
-    }
-}
+// config/features.php
+return [
+    'ai_suggestions' => env('AI_SUGGESTIONS_ENABLED', false),
+];
 ```
 
-To enable for a demo or dev environment, set in `.env`:
+Check in components and views:
+
+```php
+config('features.ai_suggestions')
+```
+
+To enable for a demo or dev environment:
 
 ```ini
+# .env
 AI_SUGGESTIONS_ENABLED=true
 ```
 
-Or flip it on per-user via Pennant's stored state for more granular control later.
+If per-user feature control is needed in the future, Pennant can be introduced then with proper scope and store configuration. For MVP, the config check is the single pattern used everywhere.
 
-The "Ask AI" button does not render at all when the flag is off — no dead UI, no error states to handle.
+The "Ask AI" and "Translate to Swahili" buttons do not render at all when the flag is off — no dead UI, no error states to handle.
 
 ### Constraints for MVP
 
 - Single prompt → single response only. No multi-turn conversation in the panel for MVP.
 - AI never writes directly to the document. User copy-pastes what they want.
 - No rate limiting for MVP (demo mode). Rate limiting is a post-demo concern.
-- Provider: **Anthropic** (configured via `ANTHROPIC_API_KEY`). Switching to Ollama on the DGX Spark requires only an environment variable change — no code changes.
+- Provider: **Anthropic** for demo (configured via `ANTHROPIC_API_KEY`). Switching to Ollama requires a config change only — no application code changes.
+- **Verify at build time:** The exact env var names (`AI_DEFAULT_PROVIDER`, `OLLAMA_BASE_URL`) are project conventions. Confirm the actual `config/ai.php` shape from the installed `laravel/ai` package before treating these as canonical.
 
-### Agent class
+### Provider / hosting note — DGX Spark on Tailscale
+
+The DGX Spark runs on a Tailscale private network. This affects where Ollama can be used:
+
+- **Development:** Any dev machine on the Tailscale network can reach the Spark directly via its Tailscale IP. Set `OLLAMA_BASE_URL=http://100.x.x.x:11434`. No complications.
+- **Production on DreamHost shared hosting:** Shared hosting cannot install Tailscale and therefore cannot reach the Spark. Ollama is not usable from DreamHost production.
+
+**Options when moving to production with a local LLM:**
+1. **Keep Anthropic for production, Ollama for dev/demo** — simplest. Different `.env` per environment. Set `AI_SUGGESTIONS_ENABLED=false` on DreamHost until a suitable provider is reachable.
+2. **Move to a VPS** (DigitalOcean, Hetzner, etc.) — a VPS can install Tailscale and join the network. Reaches the Spark directly. Worth considering if the app outgrows shared hosting.
+3. **Tailscale Funnel** — exposes the Spark's Ollama port to the public internet over HTTPS. Allows DreamHost to reach it without joining Tailscale. Unconventional but technically workable.
+
+### Agent classes
 
 ```php
 // app/Ai/Agents/LessonPlanAdvisor.php
@@ -459,6 +532,58 @@ class LessonPlanAdvisor implements Agent {
     }
 }
 ```
+
+```php
+// app/Ai/Agents/LessonPlanTranslator.php
+class LessonPlanTranslator implements Agent {
+    use Promptable;
+
+    public function instructions(): string {
+        return 'You are an expert translator specialising in Kenyan educational
+                content. Translate the provided lesson plan from English to Swahili.
+                Preserve all markdown formatting exactly. Translate all body text
+                and headings. Do not translate proper nouns, subject names, or
+                version metadata. Return only the translated markdown content,
+                nothing else.';
+    }
+}
+```
+
+---
+
+### Translation feature (English → Swahili)
+
+Subject Administrators (own subject_grade) and Site Administrators can trigger an AI-powered translation of any English lesson plan version into Swahili.
+
+**Why not Editors?** Translation that targets a non-existent Swahili family creates a new family, which is an admin-only action. Restricting translation to Subject Admins and Site Admins keeps the permission model consistent — the same user who may create a new English family may create the Swahili equivalent.
+
+**UX flow:**
+
+1. User views a lesson-plan version (language = English).
+2. A **"Translate to Swahili"** button is visible to Subject Admins (own subject_grade) and Site Admins.
+3. User clicks the button. The current version's Markdown content is sent to `LessonPlanTranslator`.
+4. The translated content appears in a **review panel** — the user can read and optionally edit it before saving.
+5. User confirms. The system creates in a single transaction:
+   - A new `lesson_plan_family` record (if none exists): same `subject_grade_id` + `day`, `language = 'sw'`
+   - A new `lesson_plan_version` record: `version` = **same version number as the English source**, `contributor_id` = the user who triggered it
+   - If the user abandons the review panel without confirming, nothing is written to the database.
+6. User is navigated to the new Swahili version.
+
+**Rules:**
+
+- If a Swahili family already exists for that `subject_grade + day` combination, the new version inherits the English source version number. If that version number already exists in the Swahili family (conflict), the system falls back to the standard bump flow from the highest existing Swahili version — user chooses Patch / Minor / Major.
+- The English source version is never modified.
+- The "Translate to Swahili" button is gated by the same `AI_SUGGESTIONS_ENABLED` config flag as the "Ask AI" button — both require `config('features.ai_suggestions')` to be true.
+- Teacher-only users do not see the button.
+
+**Testing:**
+
+- Translation creates a new Swahili family when none exists
+- Translation adds a new version to an existing Swahili family when one exists
+- Source English version is unchanged after translation
+- Button is hidden from Teachers
+- Button is hidden when `config('features.ai_suggestions')` is false
+- Use `LessonPlanTranslator::fake()` in tests
 
 ---
 
@@ -489,15 +614,44 @@ class LessonPlanAdvisor implements Agent {
 ## 15. UI — Documents (Lessons) Page
 
 - Summary count cards at top (e.g., total families, total versions, favorites)
-- Searchable, sortable, paginated table of lesson plans
 - Responsive:
   - Desktop: full column set
   - Mobile: reduced columns; remaining detail via expandable panel or secondary view
-- Selecting a lesson plan opens the **family view**, showing the official version by default (or most recent if no official version is set)
+
+### Search / filter bar
+
+Appears directly above the table. All criteria are optional and combinable. Active filters are shown as dismissible chips so the user can see and clear them individually.
+
+| Filter | Type | Notes |
+|---|---|---|
+| Subject | Dropdown | List of academic subjects |
+| Grade | Dropdown | Integer grades, displayed as "Grade N" |
+| Day | Dropdown | |
+| Official status | Toggle | Yes / No / Either (default: Either) |
+| Contributor | User search | Searches by `username` and `name` (both fields). Results display `username` only — email is never shown to non-admins. |
+| My favorites only | Toggle | When on, shows only families the current user has favorited |
+
+### Tab bar
+
+Sits below the search bar. Tabs apply on top of any active filters — they are quick sub-views, not replacements for the filter bar. Tab counts reflect the filtered result set, not the full table.
+
+| Tab | What it shows |
+|---|---|
+| **All** | Every family matching the current filters (default) |
+| **Official** | Families where `official_version_id` is set; one row per family showing the official version |
+| **Latest revision** | One row per family showing only the most recently created version (by `created_at`), regardless of official status |
+| **My favorites** | Families where the current user has a favorite recorded; one row per family showing the favorited version |
+
+**Note on "My favorites" tab vs. filter bar toggle:** Both produce the same base result set. The tab is a one-click shortcut; the filter bar toggle allows combining favorite status with other criteria (e.g., "my favorites in Science Grade 4"). Keep both.
+
+### Table behaviour
+
+- Sortable columns: subject, grade, day, version, contributor, updated date
+- Selecting a row opens the **family view**, defaulting to the official version (or most recent if no official is set)
 - Within the family view, the user can navigate to any version
-- **★ Favorite** button appears in the **version viewer** — the user is consciously starring a specific version
+- **★ Favorite** button appears in the **version viewer** only — the user consciously stars a specific version
 - Favoriting a version of a family the user has already favorited silently replaces the old favorite (upsert — no confirmation needed)
-- The lesson listing can show at a glance when a user's favorited version differs from the official version
+- The listing indicates when the user's favorited version differs from the official version (e.g., a subtle badge or secondary version label on the row)
 - **Compare mode:** read-only, limited to versions within the same family
 - **Edit** button visible only to authorized users
 
@@ -507,7 +661,27 @@ class LessonPlanAdvisor implements Agent {
 
 Built in Filament's `admin` panel. Functional and simple.
 
-Key workflows:
+### Search / filter / tab pattern
+
+The same search bar + tab bar pattern used on the lessons page applies to all admin tables. Each table has criteria appropriate to its content:
+
+**Users table**
+- Filter bar: name/email search, role (Teacher / Editor / Subject Admin / Site Admin), subject_grade assignment
+- Tabs: All | Site Admins | Subject Admins | Editors | Teachers (unassigned)
+
+**Subject_grades table**
+- Filter bar: subject dropdown, grade dropdown, has Subject Admin (Yes / No / Either)
+- Tabs: All | Has Subject Admin | No Subject Admin
+
+**Lesson plan families table** (admin view)
+- Same filter bar as the lessons page (subject, grade, day, official status, contributor)
+- Tabs: All | Official | Latest revision | Pending deletion request
+
+**Deletion requests table**
+- Filter bar: subject_grade, contributor, requesting admin, status (pending / resolved)
+- Tabs: All | Pending | Resolved
+
+### Key workflows
 - User management (list, view, edit roles)
 - Subject management (create, rename, archive academic subjects)
 - Subject_grade management (create subject+grade pairings, assign users)
@@ -541,7 +715,8 @@ Required test coverage:
 **Versioning**
 - Editing creates a new immutable version
 - Patch / Minor / Major bumping works correctly
-- First version in a new family is 1.0.0
+- First version in a new family created normally is 1.0.0
+- First version in a family created by translation inherits the English source version number
 - Duplicate version numbers in same family are rejected
 - Only one official version per family (enforced via `official_version_id` FK on family)
 - Setting a new official version updates `official_version_id` atomically; no boolean flag to unset
@@ -560,10 +735,10 @@ Required test coverage:
 - A user cannot hold two favorites for the same family simultaneously
 - Favorites are user-specific — another user's favorite for the same family is independent
 
-**AI suggestions**
-- "Ask AI" button does not render when the `ai-suggestions` feature flag is off (regardless of role)
-- When flag is on: button is visible to Editors, Subject Admins, and Site Admins; hidden from Teachers
-- Submitting a prompt returns a suggestion response (`AgentFake` used in tests)
+**AI suggestions and translation**
+- "Ask AI" button and "Translate to Swahili" button do not render when `config('features.ai_suggestions')` is false
+- When flag is on: "Ask AI" button visible to Editors, Subject Admins, and Site Admins; "Translate to Swahili" button visible to Subject Admins and Site Admins only; both hidden from Teachers
+- Submitting a prompt returns a suggestion response (use `LessonPlanAdvisor::fake()` in tests; assert with `LessonPlanAdvisor::assertPrompted(...)` — never make real API calls in tests)
 - AI response does not auto-modify the document content
 
 ---
@@ -578,6 +753,8 @@ Required test coverage:
 - Threaded messaging
 - Advanced mobile polish beyond responsive usability
 - Email-change workflow unless it comes almost free from existing auth scaffolding
+- "View Original" for DOCX uploads — store and allow download of the original `.docx` if the Markdown conversion is unreadable. Deferred: MVP handles this with the pre-conversion warning and mandatory editor review. Worth adding if user frustration with conversion quality is reported.
+- Full-text content search (searching within lesson plan Markdown text). If added, implement a `FULLTEXT` index on `lesson_plan_versions.content`. Not needed for MVP — the filter bar searches metadata only.
 
 ---
 
@@ -598,16 +775,19 @@ Intended for development, review, and demo environments only. Never run on produ
 
 **Demo users:**
 
-| Name | Email | Role |
-|---|---|---|
-| Alice Kamau | `alice@demo.test` | Subject Admin — Mathematics Grade 4 |
-| Bob Ochieng | `bob@demo.test` | Editor — Mathematics Grade 4 |
-| Carol Mwangi | `carol@demo.test` | Editor — Science Grade 7 |
-| David Njoroge | `david@demo.test` | Teacher (no subject assignment) |
+| Name | Username | Email | Role |
+|---|---|---|---|
+| Alice Kamau | `alice` | `alice@demo.test` | Subject Admin — Mathematics Grade 10 |
+| Bob Ochieng | `bob` | `bob@demo.test` | Editor — Mathematics Grade 10 |
+| Carol Mwangi | `carol` | `carol@demo.test` | Editor — Science Grade 10 |
+| David Njoroge | `david` | `david@demo.test` | Teacher (no subject assignment) |
+| Eve Wanjiku | `eve` | `eve@demo.test` | Subject Admin — Science Grade 10 |
+
+Eve is seeded as the existing Subject Admin of Science Grade 10. The **auto-demotion** test scenario is: the Site Admin promotes Carol (currently Editor, Science Grade 10) to Subject Admin — Eve should be automatically demoted to Editor.
 
 **Demo subjects:** Mathematics, English, Science, Kiswahili
 
-**Demo subject_grades:** Mathematics 4, Mathematics 5, English 4, Science 7
+**Demo subject_grades:** Mathematics Grade 10, Mathematics Grade 11, English Grade 10, Science Grade 10
 
 **Demo lesson plan content:**
 - At least one family with 3+ versions; one version marked official, a different version favourited by Alice — exercises the "your favourite differs from official" UI state
@@ -628,6 +808,8 @@ Intended for development, review, and demo environments only. Never run on produ
 ## 20. Implementation Order
 
 Build in this sequence unless a clearly better order presents itself:
+
+> **First implementation artifact:** Before generating any code, write and validate a **Blueprint draft YAML** (`draft.yaml`) covering all models, their columns, relationships, and controllers. Run `php artisan blueprint:build` against it and review the output. Fix the YAML until the generated scaffolding is correct before proceeding. The draft YAML is the implementation spec for the data layer — it replaces guessing about migration column types and relationship shapes.
 
 1. Project scaffolding — Boost install, Blueprint install, AI SDK install, package version verification
 2. Auth and user model (including System user seed via `DatabaseSeeder`)

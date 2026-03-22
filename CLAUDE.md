@@ -85,7 +85,7 @@ MariaDB             — DreamHost shared hosting target
 | `SubjectGrade` | This is what roles, families, and user assignments attach to — not bare Subject | `subject_grade_user` pivot |
 | Grade | Always an integer. Always displayed as "Grade N" | `subject_grades.grade` integer column |
 
-`class` is a PHP reserved keyword — never use it as a variable, method, or route name in this codebase.
+`class` is a PHP reserved keyword — never use it as a variable name (`$class`), method name, route segment (`/class`), or model name. This does not mean avoiding the `class` keyword for defining PHP classes — that is unavoidable and correct. The restriction is on using "class" as an *identifier* for the educational concept. The entity is always called `SubjectGrade`.
 
 ---
 
@@ -98,10 +98,34 @@ MariaDB             — DreamHost shared hosting target
 
 Role scoping is **per subject_grade**, not per subject. A Math Grade 4 Subject Admin has zero authority over Math Grade 5.
 
+When promoting a user to Subject Admin, always use a **service layer transaction** that:
+1. Finds any `subject_grades` row where `subject_admin_user_id = $userId` and sets it to `NULL` (removes their existing Subject Admin role if any)
+2. Sets `subject_grades.subject_admin_user_id = $userId` on the target subject_grade
+3. Demotes the previous Subject Admin of the target subject_grade (if any) to Editor in the pivot
+
+Never update `subject_admin_user_id` directly without this full transaction. A partial update leaves ghost admins assigned to other subject_grades.
+
 ---
 
-## MariaDB constraints — no partial indexes
+## DreamHost shared hosting constraints
 
+DreamHost is the **primary production target**. It has significant limitations — keep all of these in mind whenever writing code or suggesting commands that will run in production.
+
+### No Node.js on the server
+DreamHost shared hosting does not have Node.js. All frontend assets (Vite/Tailwind/Filament) **must be compiled locally or in CI** before deployment. Never suggest `npm install`, `npm run build`, or any Node command as a server-side production step. The preferred deployment path is a CI pipeline that builds assets and uploads the compiled `public/build/` directory to DreamHost. Do not commit compiled assets to the repository.
+
+### Tailwind CSS v4 — no tailwind.config.js
+This project uses Tailwind CSS v4, which is CSS-first. **Do not create or modify `tailwind.config.js`** — in Tailwind v4 that file is ignored or causes build warnings. All theme customisations go in `@theme {}` blocks inside the CSS entry file. Filament manages its own Tailwind pipeline via `@source` directives, not a JS config file.
+
+### AI calls are synchronous — use streaming
+`QUEUE_CONNECTION=sync` on DreamHost means AI requests run inline in the HTTP request. Anthropic API calls can take 10–30 seconds. To prevent browser and PHP timeouts:
+- **Always use streaming** when calling the Laravel AI SDK. Streaming sends response chunks progressively, keeping the connection alive rather than hanging until completion.
+- In Livewire components, stream the AI response into the UI as chunks arrive.
+- As a safety net, add `php_value max_execution_time 60` to the DreamHost `.htaccess` — the default is often 30 seconds.
+- Also call `set_time_limit(60)` at the start of the AI agent execution path as an in-process fallback, since `.htaccess` directives are not always honoured on all shared hosting configurations.
+- Never design an AI interaction that waits for a full synchronous response before rendering anything.
+
+### MariaDB — no partial indexes
 DreamHost runs MariaDB. Partial/filtered unique indexes are a PostgreSQL feature and must not be used.
 
 Uniqueness constraints use:
@@ -110,6 +134,15 @@ Uniqueness constraints use:
 - **Service-layer transaction** — inverse constraints with no clean DB expression
 
 Never suggest a `WHERE` clause on a `CREATE UNIQUE INDEX` statement for this project.
+
+The MariaDB version on DreamHost shared hosting may differ from the `mariadb:11` used in Docker. Write all migrations to be compatible with MariaDB 10.6+. Avoid column types or index features not present in that version. Test migrations against the actual DreamHost version before deploying.
+
+### Storage permissions
+On DreamHost, PHP runs as the domain/SSH user via suEXEC — not as `www-data`. The web server user and the SSH user are the same. Set `storage/` and `bootstrap/cache/` to `775` and ensure they are owned by your SSH user. If writes fail, check ownership first, not just permissions. Verify with Tinker:
+```bash
+php artisan tinker --execute="file_put_contents(storage_path('test-write.txt'), 'ok'); echo file_get_contents(storage_path('test-write.txt')); unlink(storage_path('test-write.txt'));"
+```
+If that fails, ownership is the likely cause — not the permission bits.
 
 ---
 
@@ -126,8 +159,8 @@ Never suggest a `WHERE` clause on a `CREATE UNIQUE INDEX` statement for this pro
 
 ## Feature flags
 
-AI suggestions are gated by the `ai-suggestions` Pennant feature flag, **disabled by default**.
-The "Ask AI" button must not render when the flag is off — no dead UI, no error states.
+AI suggestions and translation are both gated by a **direct config check**: `config('features.ai_suggestions')`. Pennant is not used — it caches per scope and would not respond reliably to a simple env change. The config reads from `env('AI_SUGGESTIONS_ENABLED', false)`.
+Neither button renders when the flag is off — no dead UI, no error states.
 Enable for demo via `.env`: `AI_SUGGESTIONS_ENABLED=true`.
 
 ---
@@ -142,7 +175,7 @@ Enable for demo via `.env`: `AI_SUGGESTIONS_ENABLED=true`.
 ## Testing
 
 All tests use **Pest**. Test files live in `tests/Feature` and `tests/Unit`.
-Use `AgentFake` for AI SDK tests — never make real API calls in tests.
+Use per-agent fakes for AI SDK tests — e.g. `LessonPlanAdvisor::fake()`, assert with `LessonPlanAdvisor::assertPrompted(...)`. Never make real API calls in tests.
 The full test checklist is in **Section 17** of `Lesson2.md`.
 
 ---
