@@ -117,7 +117,7 @@ else
     echo "  [1/8] Fetching latest from GitHub..."
     cd "$APP_DIR"
 
-    if [ -n "$(git status --porcelain)" ]; then
+    if [ -n "$(git status --porcelain | grep -v '^??')" ]; then
         echo "ERROR: $APP_DIR has local changes."
         echo "Commit or discard them before running the deploy script."
         exit 1
