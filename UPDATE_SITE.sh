@@ -227,7 +227,9 @@ echo "  [6/8] Rebuilding caches..."
 "$PHP_BIN" artisan optimize:clear --quiet
 "$PHP_BIN" artisan config:cache --quiet
 "$PHP_BIN" artisan route:cache --quiet
-"$PHP_BIN" artisan view:cache --quiet
+# view:cache intentionally omitted — it pre-compiles all Filament vendor
+# templates and takes 30-60 s on shared hosting. Laravel compiles views
+# on first use and caches them automatically; no pre-compile step needed.
 "$PHP_BIN" artisan event:cache --quiet
 "$PHP_BIN" artisan icons:cache --quiet
 # Reset Spatie permission cache so the first authenticated request
