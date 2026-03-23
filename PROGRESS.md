@@ -4,7 +4,7 @@ Lightweight tracker extracted from `Lesson2.md`. Update this file as features ar
 For full spec details (data model, auth rules, UX flows, test requirements) always refer to `Lesson2.md`.
 
 **Live site:** https://www.sheql.com
-**Last updated:** 2026-03-22
+**Last updated:** 2026-03-22 (session 4)
 
 ---
 
@@ -60,10 +60,10 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - ⬜ Tabs: All | Official | Latest revision | Pending deletion request
 
 ### Deletion Requests
-- ⬜ List deletion requests
+- ✅ List deletion requests
 - ⬜ Filter bar: subject_grade, contributor, requesting admin, status
-- ⬜ Tabs: All | Pending | Resolved
-- ⬜ Hard-delete action (Site Admin only)
+- ✅ Tabs: All | Pending | Resolved (live counts)
+- ✅ Hard-delete action (Site Admin only)
 
 ### Summary Counts
 - ⬜ Dashboard widget: users, subjects, subject_grades, families, versions
@@ -117,9 +117,9 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 ---
 
 ## Deletion Workflow (Section 13)
-- ⬜ "Request deletion" button (Subject Admin, own subject_grade)
-- ⬜ Creates `deletion_requests` record + sends message to contributor + all Site Admins
-- ⬜ Admin panel deletion request list + hard-delete action
+- ✅ "Request deletion" button (Subject Admin, own subject_grade)
+- ✅ Creates `deletion_requests` record + sends message to contributor + all Site Admins
+- ✅ Admin panel deletion request list + hard-delete action
 
 ---
 
@@ -176,31 +176,32 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 
 ## Current Sprint
 
-### ✅ Completed this session
+### ✅ Completed (sessions 1–4)
 - Version editor crash fix (`$user` undefined → `auth()->user()`)
 - Button labels: "Edit This Plan", "Discard Edits"
 - Version bump order (Major / Minor / Patch) with resulting version previews
 - Full-width edit mode
 - Compare: LCS diff with pink/green highlights, side-by-side + unified toggle
-
 - Lesson list: one row per version, All/Official/Latest/Favorites tabs, Subject/Grade/Language filters, ✓ Official column
 - Inbox / messaging: inbox list, message detail, compose, mark-as-read, unread badge in nav, reply pre-fill
 - Admin: Create User button + page (username, name, email, password; auto-verified)
-- Admin: stray misnamed file (`app/FilamentAdminResourcesUserResourcePagesEditUser.php`) removed
+- Registration page (username + name + email + password + confirm password; auto email-verified)
+- Forgot password / reset password flow
+- Bug fixes (Nanoclaw test pass): compose 404, registration 403, filter leaks, version bump radios
+- Bug fixes (Nanoclaw round 2): message detail 404, confirm-password field clearing on blur
+- Role badge in user avatar dropdown (Teacher / Editor / Subject Admin / Administrator)
+- Brand name 35% larger (1.5rem, bold)
+- **Deletion workflow**: Request Deletion button (Subject Admin, own subject_grade only), creates `deletion_requests` row + messages to contributor + all Site Admins; admin panel `DeletionRequestResource` with All/Pending/Resolved tabs and hard-delete action
 
 ### 🔧 Next (chosen)
-**Registration + password reset** — unblocks all real-world usage; without it only manually-created accounts can log in.
+**Dashboard widget — admin panel stat cards**
 
 Scope:
-- App panel registration page (username, name, email, password, confirm password)
-- New registrants automatically get the `teacher` role via Spatie
-- Email verification still required before panel access (already enforced)
-- Forgot password / reset password flow on the login page
-- Password change available from the existing Profile page (already wired; just needs testing confirmation)
-
-Comes before the create/deletion flows because you need registered users to test those flows meaningfully.
+- Single Filament widget on the admin panel dashboard
+- Stat cards: Total Users, Total Subjects, Total Subject Grades, Total Families, Total Versions
+- Pending Deletion Requests count with link to DeletionRequestResource
 
 Following features (in order):
 1. **Create lesson plan: full flow** — duplicate family detection, file upload (md/txt)
-2. **Deletion workflow** — "Request deletion" button + admin review + hard-delete
-3. **Dashboard widgets** — admin panel stat cards (users, families, versions)
+2. **Admin user filter bar + tabs** — name/email search, role tabs (Site Admins | Subject Admins | Editors | Teachers)
+3. **AI features** — LessonPlanAdvisor streaming, LessonPlanTranslator flow (gated by `AI_SUGGESTIONS_ENABLED`)
