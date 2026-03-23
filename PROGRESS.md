@@ -30,9 +30,9 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 ## Authentication (Section 5)
 - ✅ Login / Logout
 - ✅ Email verification required before access
-- ⬜ Registration page (new signups → Teacher role)
-- ⬜ Forgot password / reset password flow
-- ⬜ Account page with password change
+- ✅ Registration page (username + name + email + password; Teacher by default)
+- ✅ Forgot password / reset password flow (`password_reset_tokens` migration added)
+- ✅ Account page with password change (Profile page edit mode)
 
 ---
 
@@ -188,7 +188,19 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - Admin: Create User button + page (username, name, email, password; auto-verified)
 - Admin: stray misnamed file (`app/FilamentAdminResourcesUserResourcePagesEditUser.php`) removed
 
-### 🔧 Next three (in order)
-1. **Create lesson plan: full flow** — duplicate family detection, file upload (md/txt), transactional pattern
-2. **Registration + password reset** — new signup flow (Teacher role), forgot/reset password
-3. **Deletion workflow** — "Request deletion" button for Subject Admin, admin panel review + hard-delete
+### 🔧 Next (chosen)
+**Registration + password reset** — unblocks all real-world usage; without it only manually-created accounts can log in.
+
+Scope:
+- App panel registration page (username, name, email, password, confirm password)
+- New registrants automatically get the `teacher` role via Spatie
+- Email verification still required before panel access (already enforced)
+- Forgot password / reset password flow on the login page
+- Password change available from the existing Profile page (already wired; just needs testing confirmation)
+
+Comes before the create/deletion flows because you need registered users to test those flows meaningfully.
+
+Following features (in order):
+1. **Create lesson plan: full flow** — duplicate family detection, file upload (md/txt)
+2. **Deletion workflow** — "Request deletion" button + admin review + hard-delete
+3. **Dashboard widgets** — admin panel stat cards (users, families, versions)

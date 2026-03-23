@@ -10,7 +10,7 @@ use Filament\Resources\Pages\Page;
 class ViewMessage extends Page
 {
     protected static string $resource = MessageResource::class;
-    protected static string $view = 'filament.app.pages.view-message';
+    protected string $view = 'filament.app.pages.view-message';
 
     public Message $record;
 
