@@ -11,7 +11,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
-use Illuminate\Support\HtmlString;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -38,11 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
             ->renderHook(
                 PanelsRenderHook::FOOTER,
-                fn (): HtmlString => new HtmlString(
-                    '<footer class="py-4 text-center text-xs text-gray-400 dark:text-gray-600">'
-                    . 'Kenya Lesson Plan Repository &copy; 2026 ARES Education &mdash; CC BY-SA 4.0'
-                    . '</footer>'
-                )
+                fn () => view('components.ares-footer')
             )
             ->plugins([
                 FilamentShieldPlugin::make(),
