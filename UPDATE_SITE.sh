@@ -250,6 +250,22 @@ maintenance_up
 
 # trap will also call maintenance_up on exit, which is harmless if already up.
 
+# --- OPcache reset ----------------------------------------------------------
+# PHP CLI and PHP-FPM (web) have separate OPcache pools. 'php artisan' clears
+# the CLI cache only. To invalidate the web OPcache we create a temp PHP file,
+# request it over HTTP so it runs inside the FPM process, then delete it.
+# This ensures updated PHP files (providers, services, etc.) are re-read on
+# the very next request rather than after the OPcache TTL expires.
+
+echo "  [+] Resetting PHP OPcache via web request..."
+_RESET_TOKEN=$(openssl rand -hex 16 2>/dev/null || echo "$$$(date +%s)")
+_RESET_FILE="$APP_DIR/public/opcache-reset-${_RESET_TOKEN}.php"
+echo '<?php if (function_exists("opcache_reset")) { opcache_reset(); } echo "ok";' > "$_RESET_FILE"
+curl -sf --max-time 10 "${SITE_URL}/opcache-reset-${_RESET_TOKEN}.php" > /dev/null 2>&1 \
+    && echo "       OPcache reset successful." \
+    || echo "       OPcache reset skipped (curl unavailable or timed out — harmless)."
+rm -f "$_RESET_FILE"
+
 # --- Done -------------------------------------------------------------------
 
 echo ""
