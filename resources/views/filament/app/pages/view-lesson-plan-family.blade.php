@@ -5,6 +5,8 @@
         $canEdit = $user && $user->canEditSubjectGrade($sg);
         $canMarkOfficial = $user && ($user->isSiteAdmin() || $user->isSubjectAdminFor($sg));
         $canTranslate = $user && config('features.ai_suggestions') && ($user->isSiteAdmin() || $user->isSubjectAdminFor($sg));
+        $canRequestDeletion = $user && $selectedVersion && $user->isSubjectAdminFor($sg)
+            && ! $selectedVersion->deletionRequests()->whereNull('resolved_at')->exists();
         $canAskAi = $user && config('features.ai_suggestions') && $canEdit;
         $favorite = $user ? \App\Models\Favorite::where('user_id', $user->id)->where('lesson_plan_family_id', $record->id)->first() : null;
         $isOfficialSelected = $selectedVersion && $record->official_version_id === $selectedVersion->id;
@@ -260,8 +262,47 @@
                                             Translate to Swahili
                                         </x-filament::link>
                                     @endif
+
+                                    {{-- Request Deletion --}}
+                                    @if($canRequestDeletion)
+                                        <x-filament::button
+                                            wire:click="$set('showDeletionForm', true)"
+                                            color="danger"
+                                            size="sm"
+                                            icon="heroicon-o-trash"
+                                        >
+                                            Request Deletion
+                                        </x-filament::button>
+                                    @endif
                                 </div>
                             </div>
+
+                            {{-- Deletion request confirmation modal --}}
+                            @if($showDeletionForm)
+                                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
+                                    <h3 class="mb-2 text-sm font-semibold text-red-800 dark:text-red-300">Request deletion of version {{ $selectedVersion->version }}?</h3>
+                                    <p class="mb-3 text-xs text-red-700 dark:text-red-400">
+                                        This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
+                                    </p>
+                                    <div class="mb-3">
+                                        <label class="mb-1 block text-xs font-medium text-red-800 dark:text-red-300">Reason (optional)</label>
+                                        <textarea
+                                            wire:model="deletionReason"
+                                            rows="3"
+                                            class="w-full rounded border border-red-300 p-2 text-sm dark:border-red-700 dark:bg-red-900 dark:text-red-100"
+                                            placeholder="Explain why this version should be deleted…"
+                                        ></textarea>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <x-filament::button wire:click="requestDeletion" color="danger" size="sm">
+                                            Submit Request
+                                        </x-filament::button>
+                                        <x-filament::button wire:click="$set('showDeletionForm', false)" color="gray" size="sm">
+                                            Cancel
+                                        </x-filament::button>
+                                    </div>
+                                </div>
+                            @endif
 
                             {{-- Content viewer --}}
                             <div class="prose max-w-none">

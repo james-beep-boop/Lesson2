@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
+use App\Services\DeletionRequestService;
 use App\Services\FavoriteService;
 use App\Services\VersionService;
 use Filament\Notifications\Notification;
@@ -23,6 +24,9 @@ class ViewLessonPlanFamily extends Page
     public string $editContent = '';
     public string $versionBump = 'patch';
     public ?string $revisionNote = null;
+
+    public bool $showDeletionForm = false;
+    public string $deletionReason = '';
 
     // AI panel state
     public bool $aiPanelOpen = false;
@@ -156,6 +160,48 @@ class ViewLessonPlanFamily extends Page
             'minor' => $svc->computeNextVersion($this->record, 'minor'),
             'patch' => $svc->computeNextVersion($this->record, 'patch'),
         ];
+    }
+
+    public function requestDeletion(DeletionRequestService $service): void
+    {
+        if (! $this->selectedVersion) {
+            return;
+        }
+
+        $user = auth()->user();
+        $sg   = $this->record->subjectGrade;
+
+        if (! $user->isSubjectAdminFor($sg)) {
+            Notification::make('deletion-unauthorized')
+                ->title('Not authorized.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        // Prevent duplicate pending requests for the same version.
+        if ($this->selectedVersion->deletionRequests()->whereNull('resolved_at')->exists()) {
+            Notification::make('deletion-already-pending')
+                ->title('A pending deletion request already exists for this version.')
+                ->warning()
+                ->send();
+            $this->showDeletionForm = false;
+            return;
+        }
+
+        $service->request(
+            $this->selectedVersion,
+            $user,
+            filled($this->deletionReason) ? $this->deletionReason : null
+        );
+
+        $this->showDeletionForm = false;
+        $this->deletionReason   = '';
+
+        Notification::make('deletion-requested')
+            ->title('Deletion request submitted — Site Admins have been notified.')
+            ->success()
+            ->send();
     }
 
     public function enterCompareMode(int $versionId): void
