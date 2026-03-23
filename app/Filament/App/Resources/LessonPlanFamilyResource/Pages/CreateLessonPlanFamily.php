@@ -79,7 +79,11 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->dehydrated(false)
                 ->live()
                 ->columnSpanFull()
-                ->afterStateUpdated(function (?TemporaryUploadedFile $state, Set $set): void {
+                ->afterStateUpdated(function (mixed $state, Set $set): void {
+                    if (is_string($state)) {
+                        $state = TemporaryUploadedFile::createFromLivewire($state);
+                    }
+
                     if (! $state instanceof TemporaryUploadedFile) {
                         return;
                     }
