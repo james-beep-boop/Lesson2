@@ -2,6 +2,8 @@
 
 namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
+use App\Ai\Agents\LessonPlanAdvisor;
+use App\Ai\Agents\LessonPlanTranslator;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
@@ -10,6 +12,7 @@ use App\Services\FavoriteService;
 use App\Services\VersionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
+use Laravel\Ai\Streaming\Events\TextDelta;
 
 class ViewLessonPlanFamily extends Page
 {
@@ -32,6 +35,11 @@ class ViewLessonPlanFamily extends Page
     public bool $aiPanelOpen = false;
     public string $aiPrompt = '';
     public string $aiResponse = '';
+
+    // Translation state: idle | streaming | review | conflict
+    public string $translationState = 'idle';
+    public string $translateContent = '';
+    public string $translationBump = 'patch';
 
     public function mount(LessonPlanFamily $record): void
     {
@@ -209,5 +217,152 @@ class ViewLessonPlanFamily extends Page
         $other = $this->record->versions()->findOrFail($versionId);
         $this->compareVersion = $other;
         $this->compareMode = true;
+    }
+
+    // -------------------------------------------------------------------------
+    // Ask AI
+    // -------------------------------------------------------------------------
+
+    /**
+     * Stream an AI suggestion into the AI panel response area.
+     * Requires the AI_SUGGESTIONS_ENABLED flag and editor-or-above role.
+     */
+    public function submitAiPrompt(): void
+    {
+        if (! config('features.ai_suggestions')) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if (! $user->canEditSubjectGrade($this->record->subjectGrade)) {
+            return;
+        }
+
+        if (blank($this->aiPrompt)) {
+            return;
+        }
+
+        $content = $this->selectedVersion?->content ?? '';
+        $prompt  = "The following is the current lesson plan content:\n\n{$content}"
+                 . "\n\n---\n\nUser's request: {$this->aiPrompt}";
+
+        $this->aiResponse = '';
+        $accumulated = '';
+
+        set_time_limit(120);
+
+        $stream = LessonPlanAdvisor::make()->stream($prompt);
+
+        foreach ($stream as $event) {
+            if ($event instanceof TextDelta) {
+                $accumulated .= $event->delta;
+                $this->stream($event->delta, false, 'aiResponse');
+            }
+        }
+
+        // Persist the full text so it survives subsequent Livewire re-renders.
+        $this->aiResponse = $accumulated;
+    }
+
+    // -------------------------------------------------------------------------
+    // Translate to Swahili
+    // -------------------------------------------------------------------------
+
+    /**
+     * Begin the translation flow: stream the Swahili translation into the
+     * review panel. On completion, transitions to the 'review' state where
+     * the user can edit before saving.
+     */
+    public function startTranslation(): void
+    {
+        if (! config('features.ai_suggestions')) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if (! ($user->isSiteAdmin() || $user->isSubjectAdminFor($this->record->subjectGrade))) {
+            return;
+        }
+
+        if (! $this->selectedVersion || $this->record->language !== 'en') {
+            return;
+        }
+
+        $this->translateContent = '';
+        $this->translationState = 'streaming';
+        $accumulated = '';
+
+        set_time_limit(120);
+
+        $stream = LessonPlanTranslator::make()->stream($this->selectedVersion->content);
+
+        foreach ($stream as $event) {
+            if ($event instanceof TextDelta) {
+                $accumulated .= $event->delta;
+                $this->stream($event->delta, false, 'translatePreview');
+            }
+        }
+
+        $this->translateContent = $accumulated;
+        $this->translationState = 'review';
+    }
+
+    /**
+     * Confirm and save the translation. If a version-number conflict exists
+     * and no bump has been chosen yet, transitions to the 'conflict' state
+     * so the user can pick a bump type before confirming again.
+     */
+    public function saveTranslation(VersionService $versionService): void
+    {
+        if (! config('features.ai_suggestions')) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        if (! ($user->isSiteAdmin() || $user->isSubjectAdminFor($this->record->subjectGrade))) {
+            return;
+        }
+
+        // First save attempt: detect version conflict and ask user to choose a bump.
+        if ($this->translationState !== 'conflict') {
+            $conflict = $versionService->translationHasVersionConflict(
+                $this->record,
+                $this->selectedVersion->version
+            );
+
+            if ($conflict) {
+                $this->translationState = 'conflict';
+
+                return;
+            }
+        }
+
+        $version = $versionService->createTranslatedVersion(
+            $this->record,
+            $this->selectedVersion,
+            $this->translateContent,
+            $user,
+            $this->translationBump,
+        );
+
+        Notification::make('translation-saved')
+            ->title('Swahili translation saved.')
+            ->success()
+            ->send();
+
+        $this->redirect(
+            LessonPlanFamilyResource::getUrl('view', ['record' => $version->lesson_plan_family_id])
+        );
+    }
+
+    /** Reset all translation state and return to the idle button. */
+    public function cancelTranslation(): void
+    {
+        $this->translationState = 'idle';
+        $this->translateContent = '';
+        $this->translationBump  = 'patch';
     }
 }

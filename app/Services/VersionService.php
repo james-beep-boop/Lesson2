@@ -125,4 +125,79 @@ class VersionService
 
         return [$aMaj, $aMin, $aPat] <=> [$bMaj, $bMin, $bPat];
     }
+
+    /**
+     * Return true if a Swahili family already has a version matching $sourceVersion,
+     * indicating a conflict that requires the user to choose a fallback bump.
+     */
+    public function translationHasVersionConflict(LessonPlanFamily $englishFamily, string $sourceVersion): bool
+    {
+        $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $englishFamily->subject_grade_id)
+            ->where('day', $englishFamily->day)
+            ->where('language', 'sw')
+            ->first();
+
+        if ($swahiliFamily === null) {
+            return false;
+        }
+
+        return $swahiliFamily->versions()->where('version', $sourceVersion)->exists();
+    }
+
+    /**
+     * Create (or add to) the Swahili family for a translated lesson plan.
+     *
+     * - No Swahili family exists → create one, first version = source version number.
+     * - Swahili family exists, source version not yet used → add at source version number.
+     * - Swahili family exists, source version already used (conflict) → bump from highest
+     *   Swahili version using $fallbackBump ('patch', 'minor', or 'major').
+     */
+    public function createTranslatedVersion(
+        LessonPlanFamily $englishFamily,
+        LessonPlanVersion $sourceVersion,
+        string $content,
+        User $contributor,
+        string $fallbackBump = 'patch',
+    ): LessonPlanVersion {
+        return DB::transaction(function () use ($englishFamily, $sourceVersion, $content, $contributor, $fallbackBump) {
+            $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $englishFamily->subject_grade_id)
+                ->where('day', $englishFamily->day)
+                ->where('language', 'sw')
+                ->first();
+
+            if ($swahiliFamily === null) {
+                $swahiliFamily = LessonPlanFamily::create([
+                    'subject_grade_id'    => $englishFamily->subject_grade_id,
+                    'day'                 => $englishFamily->day,
+                    'language'            => 'sw',
+                    'official_version_id' => null,
+                ]);
+
+                return LessonPlanVersion::create([
+                    'lesson_plan_family_id' => $swahiliFamily->id,
+                    'contributor_id'        => $contributor->id,
+                    'version'               => $sourceVersion->version,
+                    'content'               => $content,
+                    'revision_note'         => "Translated from English {$sourceVersion->version}",
+                ]);
+            }
+
+            // Swahili family already exists — use source version number if not taken.
+            $conflict = $swahiliFamily->versions()
+                ->where('version', $sourceVersion->version)
+                ->exists();
+
+            $targetVersion = $conflict
+                ? $this->computeNextVersion($swahiliFamily, $fallbackBump)
+                : $sourceVersion->version;
+
+            return LessonPlanVersion::create([
+                'lesson_plan_family_id' => $swahiliFamily->id,
+                'contributor_id'        => $contributor->id,
+                'version'               => $targetVersion,
+                'content'               => $content,
+                'revision_note'         => "Translated from English {$sourceVersion->version}",
+            ]);
+        });
+    }
 }

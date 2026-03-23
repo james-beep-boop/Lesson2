@@ -82,11 +82,12 @@
                     @endforeach
                 </div>
                 <textarea wire:model="aiPrompt" rows="3" class="w-full rounded border border-gray-300 p-2 text-sm" placeholder="What would you like help with?"></textarea>
-                @if($aiResponse)
-                    <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap">{{ $aiResponse }}</div>
-                @endif
+                <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap min-h-[2rem]">
+                    <span wire:stream="aiResponse">{{ $aiResponse }}</span>
+                    <span wire:loading wire:target="submitAiPrompt" class="text-gray-400 italic">Thinking…</span>
+                </div>
                 <div class="mt-3 flex gap-2">
-                    <x-filament::button size="sm">Submit</x-filament::button>
+                    <x-filament::button wire:click="submitAiPrompt" wire:loading.attr="disabled" wire:target="submitAiPrompt" size="sm">Submit</x-filament::button>
                     <x-filament::button wire:click="$set('aiPanelOpen', false)" color="gray" size="sm">Close</x-filament::button>
                 </div>
             </x-filament::section>
@@ -257,10 +258,10 @@
                                     @endif
 
                                     {{-- Translate --}}
-                                    @if($canTranslate && $record->language === 'en')
-                                        <x-filament::link href="{{ route('filament.app.pages.translate-lesson-plan', ['version' => $selectedVersion->id]) }}" size="sm" color="gray">
+                                    @if($canTranslate && $record->language === 'en' && $translationState === 'idle')
+                                        <x-filament::button wire:click="startTranslation" size="sm" color="gray" icon="heroicon-o-language">
                                             Translate to Swahili
-                                        </x-filament::link>
+                                        </x-filament::button>
                                     @endif
 
                                     {{-- Request Deletion --}}
@@ -311,6 +312,75 @@
                         </x-filament::section>
                     @endif
 
+                    {{-- Translation panel --}}
+                    @if($canTranslate && $record->language === 'en' && $translationState !== 'idle')
+                        <x-filament::section heading="Translate to Swahili" class="mt-4">
+
+                            @if($translationState === 'streaming')
+                                <p class="mb-3 text-sm text-gray-500">
+                                    Translating — please wait. This may take up to 30 seconds.
+                                </p>
+                                <div class="rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap min-h-[6rem]">
+                                    <span wire:stream="translatePreview">{{ $translateContent }}</span>
+                                    <span class="text-gray-400 italic">▌</span>
+                                </div>
+                            @endif
+
+                            @if(in_array($translationState, ['review', 'conflict']))
+                                <p class="mb-3 text-sm text-gray-500">
+                                    Review the translation below. You can edit it before saving.
+                                    The AI does not auto-apply changes — you must click <strong>Save Translation</strong>.
+                                </p>
+
+                                <textarea
+                                    wire:model="translateContent"
+                                    rows="20"
+                                    class="w-full rounded border border-gray-300 p-2 text-sm font-mono dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                                ></textarea>
+
+                                @if($translationState === 'conflict')
+                                    <div class="mt-3 rounded border border-yellow-300 bg-yellow-50 p-3 text-sm dark:border-yellow-700 dark:bg-yellow-950">
+                                        <p class="font-semibold text-yellow-800 dark:text-yellow-200">Version conflict</p>
+                                        <p class="mt-1 text-yellow-700 dark:text-yellow-300">
+                                            A Swahili version {{ $selectedVersion->version }} already exists for this lesson.
+                                            Choose how to number the new version:
+                                        </p>
+                                        <div class="mt-2 flex gap-3">
+                                            @foreach(['patch' => 'Patch', 'minor' => 'Minor', 'major' => 'Major'] as $bump => $label)
+                                                <label class="flex items-center gap-1 text-sm">
+                                                    <input
+                                                        type="radio"
+                                                        wire:model="translationBump"
+                                                        value="{{ $bump }}"
+                                                        name="translationBump"
+                                                    >
+                                                    {{ $label }}
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <div class="mt-3 flex gap-2">
+                                    <x-filament::button
+                                        wire:click="saveTranslation"
+                                        wire:loading.attr="disabled"
+                                        wire:target="saveTranslation"
+                                        color="success"
+                                        size="sm"
+                                        icon="heroicon-o-check"
+                                    >
+                                        Save Translation
+                                    </x-filament::button>
+                                    <x-filament::button wire:click="cancelTranslation" color="gray" size="sm">
+                                        Cancel
+                                    </x-filament::button>
+                                </div>
+                            @endif
+
+                        </x-filament::section>
+                    @endif
+
                     {{-- AI panel (slide-over style) --}}
                     @if($aiPanelOpen && $canAskAi)
                         <x-filament::section heading="Ask AI" class="mt-4">
@@ -323,11 +393,12 @@
                                 @endforeach
                             </div>
                             <textarea wire:model="aiPrompt" rows="3" class="w-full rounded border border-gray-300 p-2 text-sm" placeholder="What would you like help with?"></textarea>
-                            @if($aiResponse)
-                                <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap">{{ $aiResponse }}</div>
-                            @endif
+                            <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap min-h-[2rem]">
+                                <span wire:stream="aiResponse">{{ $aiResponse }}</span>
+                                <span wire:loading wire:target="submitAiPrompt" class="text-gray-400 italic">Thinking…</span>
+                            </div>
                             <div class="mt-3 flex gap-2">
-                                <x-filament::button size="sm">Submit</x-filament::button>
+                                <x-filament::button wire:click="submitAiPrompt" wire:loading.attr="disabled" wire:target="submitAiPrompt" size="sm">Submit</x-filament::button>
                                 <x-filament::button wire:click="$set('aiPanelOpen', false)" color="gray" size="sm">Close</x-filament::button>
                             </div>
                         </x-filament::section>
