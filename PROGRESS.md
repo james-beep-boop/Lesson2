@@ -4,7 +4,7 @@ Lightweight tracker extracted from `Lesson2.md`. Update this file as features ar
 For full spec details (data model, auth rules, UX flows, test requirements) always refer to `Lesson2.md`.
 
 **Live site:** https://www.sheql.com
-**Last updated:** 2026-03-22 (session 5)
+**Last updated:** 2026-03-22 (session 5 end)
 
 ---
 
@@ -41,8 +41,10 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 ### Users
 - ✅ List users (system user hidden)
 - ✅ Edit user (assign `site_administrator` global role)
-- 🔧 Filter bar: name/email search, role, subject_grade assignment ← next sprint
-- 🔧 Tabs: All | Site Admins | Subject Admins | Editors | Teachers ← next sprint
+- ✅ Text search (name, email, username) via searchable columns
+- ✅ Tabs: All | Site Admins | Subject Admins | Editors | Teachers (live counts)
+- ✅ Role badge column (colour-coded)
+- ⬜ Filter by subject_grade assignment
 
 ### Subjects
 - ✅ List, create, edit subjects
@@ -100,8 +102,8 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - ✅ Permission gate: Subject Admin (own subject_grade) + Site Admin only
 - ✅ Duplicate family detection → redirect to existing with warning notification
 - ✅ "Family not created until save" transactional pattern (VersionService)
-- ⬜ File upload: `.md` / `.txt` → load into editor
-- ❌ File upload: `.docx` → DOCX conversion pipeline (deferred — Section 18)
+- ✅ File upload: `.md` / `.txt` → reads content into editor
+- ✅ File upload: `.docx` → PHPWord → HTML → Markdown conversion, persistent warning notification
 
 ---
 
@@ -135,7 +137,7 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 ## Branding and UI (Section 4)
 - ⬜ Header: ARES Education / Kenya Lesson Plan Repository top-left
 - ⬜ Header: Lessons | Admin (if authorized) | unread badge | account menu | sign out
-- ⬜ Footer: "Kenya Lesson Plan Repository © 2026 ARES Education — CC BY-SA 4.0"
+- ✅ Footer: "Kenya Lesson Plan Repository © 2026 ARES Education — CC BY-SA 4.0" (both panels)
 
 ---
 
@@ -195,15 +197,10 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - **Deletion workflow**: Request Deletion button (Subject Admin), admin `DeletionRequestResource` with hard-delete action
 - **Admin dashboard**: stat cards (users, subjects, grades, families, versions, official), pending deletions banner (red when pending), clickable cards, quick links
 
-### 🔧 Next (chosen)
-**Admin user filter bar + tabs** — UserResource currently shows a flat list; the school needs to search by name/email and filter by role.
-
-Scope:
-- Text search filter on name and email columns
-- Tabs: All | Site Admins | Subject Admins | Editors | Teachers (with live counts)
-- Each tab scopes the query to users with that role/assignment
+### 🔧 Next
+**AI features** — LessonPlanAdvisor (Ask AI streaming panel) and LessonPlanTranslator (Translate to Swahili flow), both gated by `AI_SUGGESTIONS_ENABLED` config flag.
 
 Following features (in order):
-1. **File upload on Create page** — `.md`/`.txt` → populate content textarea (core Create flow already done)
-2. **Footer** — "Kenya Lesson Plan Repository © 2026 ARES Education — CC BY-SA 4.0"
-3. **AI features** — LessonPlanAdvisor streaming, LessonPlanTranslator (gated by `AI_SUGGESTIONS_ENABLED`)
+1. **System-generated messages** — duplicate alert from System user on Create
+2. **Filter by subject_grade in admin user list**
+3. **Tests** — Pest test suite (Section 17)
