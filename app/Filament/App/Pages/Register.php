@@ -41,8 +41,7 @@ class Register extends BaseRegister
                 ->password()
                 ->required()
                 ->revealable()
-                ->rules([Password::min(8)])
-                ->live(onBlur: true),
+                ->rules([Password::min(8)]),
             TextInput::make('passwordConfirmation')
                 ->label('Confirm password')
                 ->password()

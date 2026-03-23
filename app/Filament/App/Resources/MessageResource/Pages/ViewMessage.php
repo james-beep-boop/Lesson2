@@ -3,25 +3,27 @@
 namespace App\Filament\App\Resources\MessageResource\Pages;
 
 use App\Filament\App\Resources\MessageResource;
-use App\Models\Message;
 use Filament\Actions\Action;
-use Filament\Resources\Pages\Page;
+use Filament\Resources\Pages\ViewRecord;
 
-class ViewMessage extends Page
+class ViewMessage extends ViewRecord
 {
     protected static string $resource = MessageResource::class;
-    protected string $view = 'filament.app.pages.view-message';
 
-    public Message $record;
+    /**
+     * Custom blade view — bypasses default infolist rendering while still
+     * using ViewRecord for correct route binding and canView() authorization.
+     * ViewRecord also scopes the lookup through getEloquentQuery() so a user
+     * cannot access another user's message by guessing its ID.
+     */
+    protected string $view = 'filament.app.pages.view-message';
 
     public function mount(int|string $record): void
     {
-        $this->record = Message::with('fromUser')->findOrFail($record);
+        // Resolves record through the scoped query and runs canView() check.
+        parent::mount($record);
 
-        // Authorization — only the recipient may view
-        abort_unless($this->record->to_user_id === auth()->id(), 403);
-
-        // Mark as read the first time it is opened
+        // Mark as read the first time the message is opened.
         if (! $this->record->isRead()) {
             $this->record->update(['read_at' => now()]);
             $this->record->refresh();

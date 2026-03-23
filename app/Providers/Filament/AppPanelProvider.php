@@ -40,15 +40,25 @@ class AppPanelProvider extends PanelProvider
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => new HtmlString('
 <style>
-/* Slightly larger brand name to match page heading weight */
-.fi-logo { font-size: 1.125rem !important; font-weight: 600 !important; }
+/* Brand name — ~35% bigger than default body text (1rem → 1.5rem) */
+.fi-logo { font-size: 1.5rem !important; font-weight: 700 !important; letter-spacing: -0.01em; }
 
-/* Push nav items (Dashboard, Lessons) to the right, just left of the user avatar */
+/* Push nav items (Dashboard, Lessons, Inbox) to the right, just left of the user avatar */
 .fi-topbar { display: flex; align-items: center; gap: 0; }
 .fi-topbar-nav-groups { margin-left: auto !important; }
 .fi-topbar-end { margin-left: 1rem !important; flex-shrink: 0; }
 </style>
                 ')
+            )
+            ->renderHook(
+                PanelsRenderHook::USER_MENU_PROFILE_BEFORE,
+                fn (): HtmlString => auth()->check()
+                    ? new HtmlString(
+                        '<p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">'
+                        . e(auth()->user()->getRoleLabel())
+                        . '</p>'
+                    )
+                    : new HtmlString('')
             )
             ->colors([
                 'primary' => Color::Blue,

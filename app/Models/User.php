@@ -114,4 +114,25 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
             || $this->isSubjectAdminFor($subjectGrade)
             || $this->isEditorFor($subjectGrade);
     }
+
+    /**
+     * Single-word role label for the user avatar dropdown.
+     * Priority: Site Admin → Subject Admin → Editor → Teacher (default / no role).
+     */
+    public function getRoleLabel(): string
+    {
+        if ($this->isSiteAdmin()) {
+            return 'Administrator';
+        }
+
+        if (SubjectGrade::where('subject_admin_user_id', $this->id)->exists()) {
+            return 'Subject Admin';
+        }
+
+        if ($this->subjectGrades()->wherePivot('role', 'editor')->exists()) {
+            return 'Editor';
+        }
+
+        return 'Teacher';
+    }
 }
