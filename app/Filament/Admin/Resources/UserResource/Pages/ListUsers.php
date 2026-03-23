@@ -23,17 +23,25 @@ class ListUsers extends ListRecords
 
     public function getTabs(): array
     {
-        // Fetch once — used in both badge labels and modifyQueryUsing closures.
-        // Exclude system user in all counts (base table query already does this).
+        // Avoid Spatie's role() scope which throws RoleDoesNotExist when the role
+        // hasn't been seeded yet. Use whereHas instead — safe on any environment.
         $subjectAdminIds = SubjectGrade::whereNotNull('subject_admin_user_id')
             ->pluck('subject_admin_user_id');
 
+        $isSiteAdmin = fn (Builder $q) => $q->whereHas(
+            'roles',
+            fn (Builder $r) => $r->where('name', 'site_administrator')
+        );
+
+        $isEditor = fn (Builder $q) => $q->whereHas(
+            'subjectGrades',
+            fn (Builder $r) => $r->wherePivot('role', 'editor')
+        );
+
         $all           = User::where('is_system', false)->count();
-        $siteAdmins    = User::where('is_system', false)->role('site_administrator')->count();
+        $siteAdmins    = User::where('is_system', false)->tap($isSiteAdmin)->count();
         $subjectAdmins = User::where('is_system', false)->whereIn('id', $subjectAdminIds)->count();
-        $editors       = User::where('is_system', false)
-            ->whereHas('subjectGrades', fn (Builder $q) => $q->wherePivot('role', 'editor'))
-            ->count();
+        $editors       = User::where('is_system', false)->tap($isEditor)->count();
         $teachers      = User::where('is_system', false)
             ->whereDoesntHave('roles')
             ->whereNotIn('id', $subjectAdminIds)
@@ -44,7 +52,10 @@ class ListUsers extends ListRecords
             'all' => Tab::make("All ({$all})"),
 
             'site_admins' => Tab::make("Site Admins ({$siteAdmins})")
-                ->modifyQueryUsing(fn (Builder $query) => $query->role('site_administrator')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
+                    'roles',
+                    fn (Builder $r) => $r->where('name', 'site_administrator')
+                )),
 
             'subject_admins' => Tab::make("Subject Admins ({$subjectAdmins})")
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('id', $subjectAdminIds)),
@@ -52,7 +63,7 @@ class ListUsers extends ListRecords
             'editors' => Tab::make("Editors ({$editors})")
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
                     'subjectGrades',
-                    fn (Builder $q) => $q->wherePivot('role', 'editor')
+                    fn (Builder $r) => $r->wherePivot('role', 'editor')
                 )),
 
             'teachers' => Tab::make("Teachers ({$teachers})")
