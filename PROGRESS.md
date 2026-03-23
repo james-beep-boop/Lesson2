@@ -4,7 +4,7 @@ Lightweight tracker extracted from `Lesson2.md`. Update this file as features ar
 For full spec details (data model, auth rules, UX flows, test requirements) always refer to `Lesson2.md`.
 
 **Live site:** https://www.sheql.com
-**Last updated:** 2026-03-22 (session 4)
+**Last updated:** 2026-03-22 (session 5)
 
 ---
 
@@ -41,8 +41,8 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 ### Users
 - ✅ List users (system user hidden)
 - ✅ Edit user (assign `site_administrator` global role)
-- ⬜ Filter bar: name/email search, role, subject_grade assignment
-- ⬜ Tabs: All | Site Admins | Subject Admins | Editors | Teachers
+- 🔧 Filter bar: name/email search, role, subject_grade assignment ← next sprint
+- 🔧 Tabs: All | Site Admins | Subject Admins | Editors | Teachers ← next sprint
 
 ### Subjects
 - ✅ List, create, edit subjects
@@ -66,7 +66,7 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - ✅ Hard-delete action (Site Admin only)
 
 ### Summary Counts
-- ⬜ Dashboard widget: users, subjects, subject_grades, families, versions
+- ✅ Dashboard widget: users, subjects, subject_grades, families, versions, pending deletions (clickable cards + deletion banner)
 
 ---
 
@@ -97,11 +97,11 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - ⬜ Translate to Swahili button wired to `LessonPlanTranslator` (UI shell exists; not connected)
 
 ### Create new lesson plan (Section 10)
-- ⬜ Permission gate: Subject Admin (own subject_grade) + Site Admin only
-- ⬜ Duplicate family detection → redirect to existing with prompt
-- ⬜ "Family not created until save" transactional pattern
+- ✅ Permission gate: Subject Admin (own subject_grade) + Site Admin only
+- ✅ Duplicate family detection → redirect to existing with warning notification
+- ✅ "Family not created until save" transactional pattern (VersionService)
 - ⬜ File upload: `.md` / `.txt` → load into editor
-- ⬜ File upload: `.docx` → DOCX conversion pipeline → load into editor (with warning)
+- ❌ File upload: `.docx` → DOCX conversion pipeline (deferred — Section 18)
 
 ---
 
@@ -176,7 +176,7 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 
 ## Current Sprint
 
-### ✅ Completed (sessions 1–4)
+### ✅ Completed (sessions 1–5)
 - Version editor crash fix (`$user` undefined → `auth()->user()`)
 - Button labels: "Edit This Plan", "Discard Edits"
 - Version bump order (Major / Minor / Patch) with resulting version previews
@@ -187,21 +187,23 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - Admin: Create User button + page (username, name, email, password; auto-verified)
 - Registration page (username + name + email + password + confirm password; auto email-verified)
 - Forgot password / reset password flow
-- Bug fixes (Nanoclaw test pass): compose 404, registration 403, filter leaks, version bump radios
-- Bug fixes (Nanoclaw round 2): message detail 404, confirm-password field clearing on blur
+- Bug fixes (Nanoclaw round 1): compose 404, registration 403, filter leaks, version bump radios
+- Bug fixes (Nanoclaw round 2): message detail 404, confirm-password clearing on blur
+- Bug fix (Nanoclaw round 3): subject/grade filters completely non-functional — replaced dot-notation `whereHas` with explicit nested calls
 - Role badge in user avatar dropdown (Teacher / Editor / Subject Admin / Administrator)
 - Brand name 35% larger (1.5rem, bold)
-- **Deletion workflow**: Request Deletion button (Subject Admin, own subject_grade only), creates `deletion_requests` row + messages to contributor + all Site Admins; admin panel `DeletionRequestResource` with All/Pending/Resolved tabs and hard-delete action
+- **Deletion workflow**: Request Deletion button (Subject Admin), admin `DeletionRequestResource` with hard-delete action
+- **Admin dashboard**: stat cards (users, subjects, grades, families, versions, official), pending deletions banner (red when pending), clickable cards, quick links
 
 ### 🔧 Next (chosen)
-**Dashboard widget — admin panel stat cards**
+**Admin user filter bar + tabs** — UserResource currently shows a flat list; the school needs to search by name/email and filter by role.
 
 Scope:
-- Single Filament widget on the admin panel dashboard
-- Stat cards: Total Users, Total Subjects, Total Subject Grades, Total Families, Total Versions
-- Pending Deletion Requests count with link to DeletionRequestResource
+- Text search filter on name and email columns
+- Tabs: All | Site Admins | Subject Admins | Editors | Teachers (with live counts)
+- Each tab scopes the query to users with that role/assignment
 
 Following features (in order):
-1. **Create lesson plan: full flow** — duplicate family detection, file upload (md/txt)
-2. **Admin user filter bar + tabs** — name/email search, role tabs (Site Admins | Subject Admins | Editors | Teachers)
-3. **AI features** — LessonPlanAdvisor streaming, LessonPlanTranslator flow (gated by `AI_SUGGESTIONS_ENABLED`)
+1. **File upload on Create page** — `.md`/`.txt` → populate content textarea (core Create flow already done)
+2. **Footer** — "Kenya Lesson Plan Repository © 2026 ARES Education — CC BY-SA 4.0"
+3. **AI features** — LessonPlanAdvisor streaming, LessonPlanTranslator (gated by `AI_SUGGESTIONS_ENABLED`)
