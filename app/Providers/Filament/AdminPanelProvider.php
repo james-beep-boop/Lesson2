@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->topNavigation()
             ->brandName('ARES — Admin')
             ->colors([
                 'primary' => Color::Slate,
