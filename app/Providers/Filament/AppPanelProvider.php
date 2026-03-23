@@ -60,6 +60,14 @@ class AppPanelProvider extends PanelProvider
                     )
                     : new HtmlString('')
             )
+            ->renderHook(
+                PanelsRenderHook::FOOTER,
+                fn (): HtmlString => new HtmlString(
+                    '<footer class="py-4 text-center text-xs text-gray-400 dark:text-gray-600">'
+                    . 'Kenya Lesson Plan Repository &copy; 2026 ARES Education &mdash; CC BY-SA 4.0'
+                    . '</footer>'
+                )
+            )
             ->colors([
                 'primary' => Color::Blue,
             ])

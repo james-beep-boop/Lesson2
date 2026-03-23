@@ -4,13 +4,12 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\UserResource\Pages;
 use App\Models\User;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class UserResource extends Resource
@@ -36,16 +35,17 @@ class UserResource extends Resource
                 TextColumn::make('username')->searchable()->sortable(),
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('email')->searchable()->sortable(),
-                TextColumn::make('email_verified_at')->dateTime()->label('Verified'),
-            ])
-            ->filters([
-                SelectFilter::make('role')
-                    ->options([
-                        'site_administrator' => 'Site Administrator',
-                    ])
-                    ->query(fn ($query, $data) => $data['value']
-                        ? $query->role($data['value'])
-                        : $query),
+                TextColumn::make('role_label')
+                    ->label('Role')
+                    ->state(fn (User $record): string => $record->getRoleLabel())
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Administrator'  => 'danger',
+                        'Subject Admin'  => 'warning',
+                        'Editor'         => 'info',
+                        default          => 'gray',
+                    }),
+                TextColumn::make('email_verified_at')->dateTime()->label('Verified')->sortable(),
             ])
             ->actions([
                 EditAction::make(),
@@ -61,9 +61,9 @@ class UserResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListUsers::route('/'),
+            'index'  => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
-            'edit' => Pages\EditUser::route('/{record}/edit'),
+            'edit'   => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 

@@ -6,14 +6,19 @@ use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanFamily;
 use App\Models\SubjectGrade;
 use App\Services\VersionService;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
+use League\HTMLToMarkdown\HtmlConverter;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use PhpOffice\PhpWord\IOFactory;
 
 class CreateLessonPlanFamily extends CreateRecord
 {
@@ -30,14 +35,6 @@ class CreateLessonPlanFamily extends CreateRecord
     public function form(Schema $schema): Schema
     {
         $user = auth()->user();
-
-        // Subject Admins may only create within their own subject_grade.
-        // Site Admins see all subject_grades.
-        $subjectGradeQuery = fn ($query) => $user->isSiteAdmin()
-            ? $query->with('subject')->orderBy('grade')
-            : $query->with('subject')
-                ->where('subject_admin_user_id', $user->id)
-                ->orderBy('grade');
 
         return $schema->schema([
             Select::make('subject_grade_id')
@@ -66,12 +63,80 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->default('en')
                 ->required(),
 
+            FileUpload::make('lesson_file')
+                ->label('Upload file (optional)')
+                ->helperText('Upload a .md or .txt file to populate the editor below, or a .docx Word document to convert to Markdown. You can edit the result before saving.')
+                ->acceptedFileTypes([
+                    'text/plain',
+                    'text/markdown',
+                    'text/x-markdown',
+                    '.md',
+                    '.txt',
+                    '.docx',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                ])
+                ->maxSize(32768) // 32 MB — DreamHost upload_max_filesize
+                ->dehydrated(false)
+                ->live()
+                ->columnSpanFull()
+                ->afterStateUpdated(function (?TemporaryUploadedFile $state, Set $set): void {
+                    if (! $state instanceof TemporaryUploadedFile) {
+                        return;
+                    }
+
+                    $ext = strtolower($state->getClientOriginalExtension());
+
+                    if (in_array($ext, ['md', 'txt'])) {
+                        $set('content', $state->get());
+                        return;
+                    }
+
+                    if ($ext === 'docx') {
+                        try {
+                            set_time_limit(60);
+
+                            $phpWord = IOFactory::load($state->getRealPath());
+                            $writer  = IOFactory::createWriter($phpWord, 'HTML');
+
+                            ob_start();
+                            $writer->save('php://output');
+                            $html = ob_get_clean();
+
+                            $converter = new HtmlConverter([
+                                'strip_tags'   => true,
+                                'remove_nodes' => 'head style script',
+                            ]);
+
+                            $set('content', $converter->convert($html));
+
+                            Notification::make()
+                                ->title('Word document converted — please review')
+                                ->body(
+                                    'This system stores lesson plans as Markdown. '
+                                    . 'Complex formatting — tables, images, footnotes, and columns — may not have converted correctly. '
+                                    . 'Review the content carefully before saving.'
+                                )
+                                ->warning()
+                                ->persistent()
+                                ->send();
+
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Conversion failed')
+                                ->body('The Word document could not be converted: ' . $e->getMessage())
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                    }
+                }),
+
             Textarea::make('content')
                 ->label('Lesson Plan Content (Markdown)')
                 ->rows(20)
                 ->required()
                 ->columnSpanFull()
-                ->placeholder('Write your lesson plan in Markdown...'),
+                ->placeholder('Write or paste your lesson plan in Markdown, or upload a file above...'),
 
             TextInput::make('revision_note')
                 ->label('Revision Note (optional)')
