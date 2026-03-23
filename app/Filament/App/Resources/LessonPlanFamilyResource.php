@@ -68,8 +68,8 @@ class LessonPlanFamilyResource extends Resource
     {
         return [
             'index' => Pages\ListLessonPlanFamilies::route('/'),
-            'view' => Pages\ViewLessonPlanFamily::route('/{record}'),
             'create' => Pages\CreateLessonPlanFamily::route('/create'),
+            'view' => Pages\ViewLessonPlanFamily::route('/{record}'),
         ];
     }
 

@@ -11,7 +11,9 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
+use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -34,6 +36,20 @@ class AppPanelProvider extends PanelProvider
             ->profile(Profile::class, isSimple: false)
             ->topNavigation()
             ->brandName('ARES Lesson Repository')
+            ->renderHook(
+                PanelsRenderHook::STYLES_AFTER,
+                fn (): HtmlString => new HtmlString('
+<style>
+/* Slightly larger brand name to match page heading weight */
+.fi-logo { font-size: 1.125rem !important; font-weight: 600 !important; }
+
+/* Push nav items (Dashboard, Lessons) to the right, just left of the user avatar */
+.fi-topbar { display: flex; align-items: center; gap: 0; }
+.fi-topbar-nav-groups { margin-left: auto !important; }
+.fi-topbar-end { margin-left: 1rem !important; flex-shrink: 0; }
+</style>
+                ')
+            )
             ->colors([
                 'primary' => Color::Blue,
             ])
