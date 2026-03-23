@@ -73,12 +73,14 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 ## App Panel — Lesson Plan Browsing (Sections 10, 15)
 
 ### List page
-- ✅ Table showing all families
-- ⬜ Filter bar: Subject, Grade, Day, Official status, Contributor, My favorites toggle
-- ⬜ Tabs: All | Official | Latest revision | My favorites
+- ✅ Table showing one row per version (not per family)
+- ✅ Filter bar: Subject, Grade, Language dropdowns
+- ✅ Tabs: All | Official | Latest | Favorites
+- ✅ Official column: ✓ checkmark or blank
+- ⬜ Filter bar: Official status toggle, Contributor, My favorites toggle
 - ⬜ Summary count cards at top (total families, total versions, favorites)
 - ⬜ "Favorite differs from official" indicator on list row
-- ⬜ Sortable columns (subject, grade, day, version, contributor, updated date)
+- ⬜ Sortable columns on nested relationship attributes
 
 ### View / Version detail page
 - ✅ Version sidebar (all versions, official badge, ★ favorite badge)
@@ -104,11 +106,12 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 ---
 
 ## Messaging / Inbox (Section 14)
-- ⬜ Inbox page: list messages (from, subject/preview, unread indicator)
-- ⬜ Message detail view
-- ⬜ Compose message (to any user except System user)
-- ⬜ Mark as read
-- ⬜ Unread message count badge in top navigation
+- ✅ Inbox page: list messages (from, subject/preview, unread indicator)
+- ✅ Message detail view (ViewMessage page with formatted body)
+- ✅ Compose message (to any user except System user)
+- ✅ Mark as read (on first open)
+- ✅ Unread message count badge in navigation (`getNavigationBadge`)
+- ✅ Reply pre-fills To and Subject fields
 - ⬜ System-generated messages (duplicate alert, etc.) from System user
 
 ---
@@ -180,7 +183,12 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - Full-width edit mode
 - Compare: LCS diff with pink/green highlights, side-by-side + unified toggle
 
+- Lesson list: one row per version, All/Official/Latest/Favorites tabs, Subject/Grade/Language filters, ✓ Official column
+- Inbox / messaging: inbox list, message detail, compose, mark-as-read, unread badge in nav, reply pre-fill
+- Admin: Create User button + page (username, name, email, password; auto-verified)
+- Admin: stray misnamed file (`app/FilamentAdminResourcesUserResourcePagesEditUser.php`) removed
+
 ### 🔧 Next three (in order)
-1. **Filters + tabs on lesson list** — Subject/Grade/Day/Official/Contributor/My Favorites filter bar; All/Official/Latest/My Favorites tabs; count cards
-2. **Inbox / messaging** — inbox page, compose, mark read, unread badge in navigation
-3. **Create lesson plan: full flow** — permission gate, duplicate detection, file upload (md/txt), transactional save
+1. **Create lesson plan: full flow** — duplicate family detection, file upload (md/txt), transactional pattern
+2. **Registration + password reset** — new signup flow (Teacher role), forgot/reset password
+3. **Deletion workflow** — "Request deletion" button for Subject Admin, admin panel review + hard-delete

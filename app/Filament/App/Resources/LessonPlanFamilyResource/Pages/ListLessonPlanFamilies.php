@@ -4,11 +4,15 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanVersion;
+use App\Models\Subject;
 use App\Models\SubjectGrade;
 use Filament\Actions\CreateAction;
+use Filament\Forms\Components\Select;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +86,56 @@ class ListLessonPlanFamilies extends ListRecords
                     ->label('Date')
                     ->date()
                     ->sortable(),
+            ])
+            ->filters([
+                Filter::make('subject')
+                    ->form([
+                        Select::make('subject_id')
+                            ->label('Subject')
+                            ->options(fn () => Subject::orderBy('name')->pluck('name', 'id'))
+                            ->placeholder('All subjects'),
+                    ])
+                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
+                        $data['subject_id']
+                            ? $query->whereHas('family.subjectGrade', fn ($q) => $q->where('subject_id', $data['subject_id']))
+                            : $query
+                    )
+                    ->indicateUsing(fn (array $data) =>
+                        $data['subject_id']
+                            ? 'Subject: ' . (Subject::find($data['subject_id'])?->name ?? $data['subject_id'])
+                            : null
+                    ),
+
+                Filter::make('grade')
+                    ->form([
+                        Select::make('grade')
+                            ->label('Grade')
+                            ->options(fn () =>
+                                SubjectGrade::query()
+                                    ->distinct()
+                                    ->orderBy('grade')
+                                    ->pluck('grade', 'grade')
+                                    ->mapWithKeys(fn ($g, $k) => [$k => 'Grade ' . $g])
+                            )
+                            ->placeholder('All grades'),
+                    ])
+                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
+                        $data['grade']
+                            ? $query->whereHas('family.subjectGrade', fn ($q) => $q->where('grade', $data['grade']))
+                            : $query
+                    )
+                    ->indicateUsing(fn (array $data) =>
+                        $data['grade'] ? 'Grade ' . $data['grade'] : null
+                    ),
+
+                SelectFilter::make('language')
+                    ->label('Language')
+                    ->options(['en' => 'English', 'sw' => 'Swahili'])
+                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
+                        $data['value']
+                            ? $query->whereHas('family', fn ($q) => $q->where('language', $data['value']))
+                            : $query
+                    ),
             ])
             ->recordUrl(fn (LessonPlanVersion $record): string =>
                 LessonPlanFamilyResource::getUrl('view', ['record' => $record->lesson_plan_family_id])
