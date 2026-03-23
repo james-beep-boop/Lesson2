@@ -66,7 +66,7 @@ class SubjectGradeResource extends Resource
                     ->action(function (SubjectGrade $record, array $data) {
                         $user = User::findOrFail($data['user_id']);
                         app(SubjectAdminService::class)->promote($user, $record);
-                        Notification::make()->title('Subject Admin assigned')->success()->send();
+                        Notification::make('subject-admin-assigned')->title('Subject Admin assigned')->success()->send();
                     }),
             ]);
     }

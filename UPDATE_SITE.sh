@@ -228,6 +228,11 @@ echo "  [6/8] Rebuilding caches..."
 "$PHP_BIN" artisan config:cache --quiet
 "$PHP_BIN" artisan route:cache --quiet
 "$PHP_BIN" artisan view:cache --quiet
+"$PHP_BIN" artisan event:cache --quiet
+"$PHP_BIN" artisan icons:cache --quiet
+# Reset Spatie permission cache so the first authenticated request
+# after deploy does not hit a cold-cache permission load.
+"$PHP_BIN" artisan permission:cache-reset --quiet
 
 # --- Version info -----------------------------------------------------------
 

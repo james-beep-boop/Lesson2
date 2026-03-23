@@ -58,6 +58,10 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
+            // Persistent connections reuse the TCP link to mysql.sheql.com
+            // across FastCGI requests on the same worker, eliminating the
+            // ~5–20 ms TCP handshake on every page load.
+            'persistent' => env('DB_PERSISTENT', true),
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),

@@ -72,7 +72,7 @@ class ViewLessonPlanFamily extends Page
         $this->editMode = false;
         $this->revisionNote = null;
 
-        Notification::make()->title('New version saved.')->success()->send();
+        Notification::make('version-saved')->title('New version saved.')->success()->send();
     }
 
     public function markOfficial(VersionService $versionService): void
@@ -83,7 +83,7 @@ class ViewLessonPlanFamily extends Page
         $this->record->refresh();
         $this->selectedVersion = $this->selectedVersion->fresh();
 
-        Notification::make()->title('Official version updated.')->success()->send();
+        Notification::make('official-updated')->title('Official version updated.')->success()->send();
     }
 
     public function favorite(FavoriteService $favoriteService): void
@@ -92,7 +92,7 @@ class ViewLessonPlanFamily extends Page
 
         $favoriteService->upsert(auth()->user(), $this->selectedVersion);
 
-        Notification::make()->title('Added to favorites.')->success()->send();
+        Notification::make('favorited')->title('Added to favorites.')->success()->send();
     }
 
     /**

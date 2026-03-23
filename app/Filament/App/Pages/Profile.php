@@ -74,7 +74,7 @@ class Profile extends EditProfile
         $this->editPassword = '';
         $this->editPasswordConfirmation = '';
 
-        Notification::make()->title('Profile updated.')->success()->send();
+        Notification::make('profile-saved')->title('Profile updated.')->success()->send();
     }
 
     /** Human-readable role label for this user. */
