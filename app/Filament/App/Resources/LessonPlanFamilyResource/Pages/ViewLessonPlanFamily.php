@@ -64,7 +64,7 @@ class ViewLessonPlanFamily extends Page
             $this->editContent,
             $this->versionBump,
             $this->revisionNote ?: null,
-            $user
+            auth()->user()
         );
 
         $this->record->refresh();
@@ -93,6 +93,17 @@ class ViewLessonPlanFamily extends Page
         $favoriteService->upsert(auth()->user(), $this->selectedVersion);
 
         Notification::make()->title('Added to favorites.')->success()->send();
+    }
+
+    /** Returns ['major' => '2.0.0', 'minor' => '1.1.0', 'patch' => '1.0.1'] based on current versions. */
+    public function versionPreviews(): array
+    {
+        $svc = app(VersionService::class);
+        return [
+            'major' => $svc->computeNextVersion($this->record, 'major'),
+            'minor' => $svc->computeNextVersion($this->record, 'minor'),
+            'patch' => $svc->computeNextVersion($this->record, 'patch'),
+        ];
     }
 
     public function enterCompareMode(int $versionId): void
