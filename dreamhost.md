@@ -193,6 +193,41 @@ set_time_limit(60);
 
 ## Git on DreamHost
 
+**Do not use custom `Page` subclasses for Filament resource create/edit pages — use `CreateRecord` / `EditRecord`.**
+
+Filament registers resource page classes as Livewire components during panel boot. On DreamHost (and any production server running `php artisan route:cache` and `php artisan view:cache`), a custom resource page that extends the base `Page` class directly can end up registered twice under different component names — once by the resource's `getPages()` registration and once by panel component discovery. The collision causes a consistent 404 on that route even though `php artisan route:list` shows it as registered.
+
+The fix: always extend the appropriate standard base class (`CreateRecord`, `EditRecord`, `ListRecords`, `ViewRecord`) for resource pages. These are discovered correctly by both mechanisms. Override `handleRecordCreation()`, `handleRecordUpdate()`, etc. for custom business logic instead of building a raw `Page`.
+
+Example of what causes the problem:
+```php
+// ❌ Causes 404 on DreamHost when registered in getPages() as 'create'
+class CreateFoo extends \Filament\Resources\Pages\Page { ... }
+```
+
+Example of the correct approach:
+```php
+// ✅ Works correctly — same as Filament's own create pages
+class CreateFoo extends \Filament\Resources\Pages\CreateRecord {
+    protected function handleRecordCreation(array $data): Model { ... }
+}
+```
+
+---
+
+**Persistent MySQL connections cause intermittent 503 errors.**
+
+Setting `'persistent' => true` on the MySQL connection in `config/database.php` looks like a free win (eliminates the TCP handshake to the remote `mysql.sheql.com` host on each request). In practice it causes 503 "Service Unavailable" errors.
+
+DreamHost shared hosting uses FastCGI (mod_fcgid) and recycles PHP worker processes aggressively. Each worker holds its persistent connection open. When workers are recycled faster than MySQL times out idle connections, the connection pool fills with stale handles and new connection attempts are refused. The next request clears the pool, so retries succeed — a confusing intermittent pattern.
+
+Keep persistent connections **off** (the default):
+```php
+'persistent' => env('DB_PERSISTENT', false),
+```
+
+---
+
 **DreamHost creates untracked files in `public/`.**
 
 DreamHost automatically creates `public/.dh-diag` and `public/favicon.gif`. These are untracked and harmless. Any deploy script dirty-check should ignore untracked files:
