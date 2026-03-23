@@ -93,13 +93,18 @@ class LessonPlanFamilyResource extends Resource
                             ->options(fn () => Subject::orderBy('name')->pluck('name', 'id'))
                             ->placeholder('All subjects'),
                     ])
-                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
-                        filled($data['subject_id'] ?? null)
-                            ? $query->whereHas('family.subjectGrade', fn (Builder $q) =>
-                                $q->where('subject_id', $data['subject_id'])
-                              )
-                            : $query
-                    )
+                    ->modifyQueryUsing(function (Builder $query, array $data): Builder {
+                        if (! filled($data['subject_id'] ?? null)) {
+                            return $query;
+                        }
+                        return $query->whereHas(
+                            'family',
+                            fn (Builder $q) => $q->whereHas(
+                                'subjectGrade',
+                                fn (Builder $q2) => $q2->where('subject_id', $data['subject_id'])
+                            )
+                        );
+                    })
                     ->indicateUsing(fn (array $data): ?string =>
                         filled($data['subject_id'] ?? null)
                             ? 'Subject: ' . (Subject::find($data['subject_id'])?->name ?? $data['subject_id'])
@@ -119,13 +124,18 @@ class LessonPlanFamilyResource extends Resource
                             )
                             ->placeholder('All grades'),
                     ])
-                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
-                        filled($data['grade'] ?? null)
-                            ? $query->whereHas('family.subjectGrade', fn (Builder $q) =>
-                                $q->where('grade', $data['grade'])
-                              )
-                            : $query
-                    )
+                    ->modifyQueryUsing(function (Builder $query, array $data): Builder {
+                        if (! filled($data['grade'] ?? null)) {
+                            return $query;
+                        }
+                        return $query->whereHas(
+                            'family',
+                            fn (Builder $q) => $q->whereHas(
+                                'subjectGrade',
+                                fn (Builder $q2) => $q2->where('grade', $data['grade'])
+                            )
+                        );
+                    })
                     ->indicateUsing(fn (array $data): ?string =>
                         filled($data['grade'] ?? null) ? 'Grade ' . $data['grade'] : null
                     ),
@@ -133,13 +143,15 @@ class LessonPlanFamilyResource extends Resource
                 SelectFilter::make('language')
                     ->label('Language')
                     ->options(['en' => 'English', 'sw' => 'Swahili'])
-                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
-                        filled($data['value'] ?? null)
-                            ? $query->whereHas('family', fn (Builder $q) =>
-                                $q->where('language', $data['value'])
-                              )
-                            : $query
-                    ),
+                    ->modifyQueryUsing(function (Builder $query, array $data): Builder {
+                        if (! filled($data['value'] ?? null)) {
+                            return $query;
+                        }
+                        return $query->whereHas(
+                            'family',
+                            fn (Builder $q) => $q->where('language', $data['value'])
+                        );
+                    }),
             ])
             ->recordUrl(fn (LessonPlanVersion $record): string =>
                 static::getUrl('view', ['record' => $record->lesson_plan_family_id])
