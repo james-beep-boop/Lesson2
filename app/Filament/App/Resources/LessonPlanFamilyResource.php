@@ -4,15 +4,18 @@ namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 use App\Models\LessonPlanFamily;
+use App\Models\LessonPlanVersion;
+use App\Models\Subject;
 use App\Models\SubjectGrade;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class LessonPlanFamilyResource extends Resource
 {
@@ -38,25 +41,110 @@ class LessonPlanFamilyResource extends Resource
         ]);
     }
 
+    /**
+     * Table definition — applies to the version-per-row query supplied by
+     * ListLessonPlanFamilies::getTableQuery(). Each $record is a LessonPlanVersion
+     * with its family, subjectGrade, and subject eager-loaded.
+     */
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                TextColumn::make('subjectGrade.subject.name')->label('Subject')->sortable()->searchable(),
-                TextColumn::make('subjectGrade.grade')->label('Grade')->formatStateUsing(fn ($state) => 'Grade ' . $state)->sortable(),
-                TextColumn::make('day')->sortable(),
-                TextColumn::make('language')->formatStateUsing(fn ($state) => $state === 'en' ? 'English' : 'Swahili'),
-                TextColumn::make('officialVersion.version')->label('Official Version')->default('—'),
-                TextColumn::make('versions_count')->counts('versions')->label('Versions'),
+                TextColumn::make('family.subjectGrade.subject.name')
+                    ->label('Subject')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('family.subjectGrade.grade')
+                    ->label('Grade')
+                    ->formatStateUsing(fn ($state) => 'Grade ' . $state)
+                    ->sortable(),
+                TextColumn::make('family.day')
+                    ->label('Day')
+                    ->sortable(),
+                TextColumn::make('family.language')
+                    ->label('Language')
+                    ->formatStateUsing(fn ($state) => $state === 'en' ? 'English' : 'Swahili'),
+                TextColumn::make('version')
+                    ->label('Version')
+                    ->sortable(),
+                TextColumn::make('official_indicator')
+                    ->label('Official')
+                    ->state(fn (LessonPlanVersion $record): string =>
+                        ($record->family && (int) $record->family->official_version_id === $record->id)
+                            ? '✓' : ''
+                    )
+                    ->color(fn (LessonPlanVersion $record): string =>
+                        ($record->family && (int) $record->family->official_version_id === $record->id)
+                            ? 'success' : 'gray'
+                    ),
+                TextColumn::make('contributor.name')
+                    ->label('By')
+                    ->sortable(),
+                TextColumn::make('created_at')
+                    ->label('Date')
+                    ->date()
+                    ->sortable(),
             ])
             ->filters([
-                SelectFilter::make('subject')
-                    ->relationship('subjectGrade.subject', 'name')
-                    ->label('Subject'),
+                Filter::make('subject')
+                    ->form([
+                        Select::make('subject_id')
+                            ->label('Subject')
+                            ->options(fn () => Subject::orderBy('name')->pluck('name', 'id'))
+                            ->placeholder('All subjects'),
+                    ])
+                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
+                        filled($data['subject_id'] ?? null)
+                            ? $query->whereHas('family.subjectGrade', fn (Builder $q) =>
+                                $q->where('subject_id', $data['subject_id'])
+                              )
+                            : $query
+                    )
+                    ->indicateUsing(fn (array $data): ?string =>
+                        filled($data['subject_id'] ?? null)
+                            ? 'Subject: ' . (Subject::find($data['subject_id'])?->name ?? $data['subject_id'])
+                            : null
+                    ),
+
+                Filter::make('grade')
+                    ->form([
+                        Select::make('grade')
+                            ->label('Grade')
+                            ->options(fn () =>
+                                SubjectGrade::query()
+                                    ->distinct()
+                                    ->orderBy('grade')
+                                    ->pluck('grade', 'grade')
+                                    ->mapWithKeys(fn ($g) => [$g => 'Grade ' . $g])
+                            )
+                            ->placeholder('All grades'),
+                    ])
+                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
+                        filled($data['grade'] ?? null)
+                            ? $query->whereHas('family.subjectGrade', fn (Builder $q) =>
+                                $q->where('grade', $data['grade'])
+                              )
+                            : $query
+                    )
+                    ->indicateUsing(fn (array $data): ?string =>
+                        filled($data['grade'] ?? null) ? 'Grade ' . $data['grade'] : null
+                    ),
+
                 SelectFilter::make('language')
-                    ->options(['en' => 'English', 'sw' => 'Swahili']),
+                    ->label('Language')
+                    ->options(['en' => 'English', 'sw' => 'Swahili'])
+                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
+                        filled($data['value'] ?? null)
+                            ? $query->whereHas('family', fn (Builder $q) =>
+                                $q->where('language', $data['value'])
+                              )
+                            : $query
+                    ),
             ])
-            ->defaultSort('updated_at', 'desc');
+            ->recordUrl(fn (LessonPlanVersion $record): string =>
+                static::getUrl('view', ['record' => $record->lesson_plan_family_id])
+            )
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getRelations(): array

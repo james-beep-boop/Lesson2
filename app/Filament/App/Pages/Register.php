@@ -54,13 +54,22 @@ class Register extends BaseRegister
     }
 
     /**
-     * Strip passwordConfirmation before creating the user (not a DB column).
+     * Strip passwordConfirmation, auto-verify email, then create the user.
+     * Auto-verification is intentional: DreamHost email delivery is unreliable
+     * and the school controls who receives the registration URL. The same
+     * pattern is used in CreateUser for admin-created accounts.
+     *
+     * Teacher behaviour = no Spatie role. Any authenticated user without a
+     * site_administrator role or subject_grade_user pivot entry is treated as a
+     * plain teacher by all policies — no separate role assignment is needed.
      *
      * @param  array<string, mixed>  $data
      */
     protected function handleRegistration(array $data): Model
     {
         unset($data['passwordConfirmation']);
+
+        $data['email_verified_at'] = now();
 
         return $this->getUserModel()::create($data);
     }

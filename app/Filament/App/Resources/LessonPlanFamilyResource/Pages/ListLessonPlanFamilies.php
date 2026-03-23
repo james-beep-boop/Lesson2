@@ -4,16 +4,10 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanVersion;
-use App\Models\Subject;
 use App\Models\SubjectGrade;
 use Filament\Actions\CreateAction;
-use Filament\Forms\Components\Select;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\Filter;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -36,119 +30,19 @@ class ListLessonPlanFamilies extends ListRecords
     }
 
     /**
-     * Override to query lesson_plan_versions instead of lesson_plan_families.
-     * Each row represents one version so the table shows the full version history.
+     * Query versions instead of families so each table row is one LessonPlanVersion.
+     * Columns, filters, and recordUrl live in LessonPlanFamilyResource::table() and
+     * are applied normally through configureTable() — no makeTable() override needed.
      */
     protected function getTableQuery(): Builder
     {
         return LessonPlanVersion::query()
-            ->with(['family.subjectGrade.subject', 'contributor']);
+            ->with(['family.subjectGrade.subject', 'family.subjectGrade', 'contributor']);
     }
 
     /**
-     * Define version-based columns and record URL, replacing the resource's
-     * family-based table definition entirely.
-     */
-    protected function makeTable(): Table
-    {
-        return $this->makeBaseTable()
-            ->modifyQueryUsing($this->modifyQueryWithActiveTab(...))
-            ->columns([
-                TextColumn::make('family.subjectGrade.subject.name')
-                    ->label('Subject')
-                    ->sortable()
-                    ->searchable(),
-                TextColumn::make('family.subjectGrade.grade')
-                    ->label('Grade')
-                    ->formatStateUsing(fn ($state) => 'Grade ' . $state)
-                    ->sortable(),
-                TextColumn::make('family.day')
-                    ->label('Day')
-                    ->sortable(),
-                TextColumn::make('family.language')
-                    ->label('Language')
-                    ->formatStateUsing(fn ($state) => $state === 'en' ? 'English' : 'Swahili'),
-                TextColumn::make('version')
-                    ->label('Version')
-                    ->sortable(),
-                TextColumn::make('official_badge')
-                    ->label('Official')
-                    ->state(fn (LessonPlanVersion $record): string =>
-                        ($record->family && (int) $record->family->official_version_id === $record->id) ? '✓' : ''
-                    )
-                    ->color(fn (LessonPlanVersion $record): string =>
-                        ($record->family && (int) $record->family->official_version_id === $record->id) ? 'success' : 'gray'
-                    ),
-                TextColumn::make('contributor.name')
-                    ->label('By')
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->label('Date')
-                    ->date()
-                    ->sortable(),
-            ])
-            ->filters([
-                Filter::make('subject')
-                    ->form([
-                        Select::make('subject_id')
-                            ->label('Subject')
-                            ->options(fn () => Subject::orderBy('name')->pluck('name', 'id'))
-                            ->placeholder('All subjects'),
-                    ])
-                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
-                        $data['subject_id']
-                            ? $query->whereHas('family.subjectGrade', fn ($q) => $q->where('subject_id', $data['subject_id']))
-                            : $query
-                    )
-                    ->indicateUsing(fn (array $data) =>
-                        $data['subject_id']
-                            ? 'Subject: ' . (Subject::find($data['subject_id'])?->name ?? $data['subject_id'])
-                            : null
-                    ),
-
-                Filter::make('grade')
-                    ->form([
-                        Select::make('grade')
-                            ->label('Grade')
-                            ->options(fn () =>
-                                SubjectGrade::query()
-                                    ->distinct()
-                                    ->orderBy('grade')
-                                    ->pluck('grade', 'grade')
-                                    ->mapWithKeys(fn ($g, $k) => [$k => 'Grade ' . $g])
-                            )
-                            ->placeholder('All grades'),
-                    ])
-                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
-                        $data['grade']
-                            ? $query->whereHas('family.subjectGrade', fn ($q) => $q->where('grade', $data['grade']))
-                            : $query
-                    )
-                    ->indicateUsing(fn (array $data) =>
-                        $data['grade'] ? 'Grade ' . $data['grade'] : null
-                    ),
-
-                SelectFilter::make('language')
-                    ->label('Language')
-                    ->options(['en' => 'English', 'sw' => 'Swahili'])
-                    ->modifyQueryUsing(fn (Builder $query, array $data) =>
-                        $data['value']
-                            ? $query->whereHas('family', fn ($q) => $q->where('language', $data['value']))
-                            : $query
-                    ),
-            ])
-            ->recordUrl(fn (LessonPlanVersion $record): string =>
-                LessonPlanFamilyResource::getUrl('view', ['record' => $record->lesson_plan_family_id])
-            )
-            ->defaultSort('created_at', 'desc');
-    }
-
-    /**
-     * Filter tabs shown to the left of the search bar.
-     * All  — every version in the system
-     * Official — versions designated as the official version of their family
-     * Latest   — the most recently added version per family
-     * Favorites — versions the current user has favorited
+     * Tabs displayed to the left of the search bar.
+     * All | Official | Latest (newest version per family) | Favorites
      */
     public function getTabs(): array
     {
@@ -173,7 +67,8 @@ class ListLessonPlanFamilies extends ListRecords
 
             'favorites' => Tab::make('Favorites')
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
-                    'favorites', fn (Builder $fq) => $fq->where('user_id', auth()->id())
+                    'favorites',
+                    fn (Builder $fq) => $fq->where('user_id', auth()->id())
                 )),
         ];
     }

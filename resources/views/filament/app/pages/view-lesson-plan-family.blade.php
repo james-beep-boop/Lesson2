@@ -40,8 +40,8 @@
                     <label class="text-sm font-medium">Version bump</label>
                     <div class="mt-1 flex gap-4">
                         @foreach(['major', 'minor', 'patch'] as $bump)
-                            <label class="flex items-center gap-1 text-sm cursor-pointer">
-                                <input type="radio" wire:model.live="versionBump" value="{{ $bump }}">
+                            <label wire:key="bump-{{ $bump }}" class="flex items-center gap-1 text-sm cursor-pointer">
+                                <input type="radio" name="versionBump" wire:model.live="versionBump" value="{{ $bump }}">
                                 {{ ucfirst($bump) }} ({{ $previews[$bump] }})
                             </label>
                         @endforeach
