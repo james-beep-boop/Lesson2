@@ -140,23 +140,79 @@
             <div class="lg:col-span-3">
                 @if($selectedVersion)
                     @if($compareMode && $compareVersion)
-                        {{-- Compare mode: two columns, read-only --}}
-                        <x-filament::section>
-                            <div class="mb-2 flex items-center justify-between">
-                                <span class="font-semibold">Compare (read-only)</span>
-                                <x-filament::button wire:click="$set('compareMode', false)" color="gray" size="sm">
-                                    Exit Compare
-                                </x-filament::button>
+                        {{-- Compare mode: diff view --}}
+                        @php $diff = $this->computeDiff(); @endphp
+                        <x-filament::section
+                            x-data="{ layout: 'side' }"
+                        >
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-semibold">
+                                        v{{ $selectedVersion->version }}
+                                        <span class="text-gray-400 mx-1">vs</span>
+                                        v{{ $compareVersion->version }}
+                                    </span>
+                                    <span class="flex items-center gap-1 text-xs">
+                                        <span class="inline-block w-3 h-3 rounded bg-red-100 border border-red-200"></span> removed
+                                        <span class="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 ml-2"></span> added
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex rounded border border-gray-300 overflow-hidden text-xs">
+                                        <button
+                                            @click="layout = 'side'"
+                                            :class="layout === 'side' ? 'bg-gray-200 font-semibold' : 'bg-white hover:bg-gray-50'"
+                                            class="px-3 py-1"
+                                        >Side by side</button>
+                                        <button
+                                            @click="layout = 'unified'"
+                                            :class="layout === 'unified' ? 'bg-gray-200 font-semibold' : 'bg-white hover:bg-gray-50'"
+                                            class="px-3 py-1 border-l border-gray-300"
+                                        >Unified</button>
+                                    </div>
+                                    <x-filament::button wire:click="$set('compareMode', false)" color="gray" size="sm">
+                                        Exit Compare
+                                    </x-filament::button>
+                                </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="mb-1 text-xs font-bold text-gray-500">v{{ $selectedVersion->version }}</p>
-                                    <pre class="overflow-auto rounded border bg-gray-50 p-3 text-sm">{{ $selectedVersion->content }}</pre>
-                                </div>
-                                <div>
-                                    <p class="mb-1 text-xs font-bold text-gray-500">v{{ $compareVersion->version }}</p>
-                                    <pre class="overflow-auto rounded border bg-gray-50 p-3 text-sm">{{ $compareVersion->content }}</pre>
-                                </div>
+
+                            {{-- Side-by-side view --}}
+                            <div x-show="layout === 'side'" class="overflow-auto rounded border border-gray-200">
+                                <table class="w-full border-collapse font-mono text-xs leading-5">
+                                    <thead>
+                                        <tr class="bg-gray-100 text-gray-600 text-left">
+                                            <th class="px-3 py-1 w-1/2 border-b border-r border-gray-200">v{{ $selectedVersion->version }}</th>
+                                            <th class="px-3 py-1 w-1/2 border-b border-gray-200">v{{ $compareVersion->version }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($diff as $line)
+                                            <tr class="align-top">
+                                                <td class="px-3 py-0 border-r border-gray-100 whitespace-pre-wrap {{ $line['type'] === 'deleted' ? 'bg-red-50' : ($line['type'] === 'added' ? 'bg-gray-50' : '') }}">{{ $line['left'] !== '' ? $line['left'] : ($line['type'] === 'deleted' ? $line['left'] : "\u{00A0}") }}</td>
+                                                <td class="px-3 py-0 whitespace-pre-wrap {{ $line['type'] === 'added' ? 'bg-green-50' : ($line['type'] === 'deleted' ? 'bg-gray-50' : '') }}">{{ $line['right'] !== '' ? $line['right'] : "\u{00A0}" }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {{-- Unified view --}}
+                            <div x-show="layout === 'unified'" class="overflow-auto rounded border border-gray-200 font-mono text-xs leading-5">
+                                @foreach($diff as $line)
+                                    @if($line['type'] === 'deleted')
+                                        <div class="flex bg-red-50 px-3 py-0 whitespace-pre-wrap">
+                                            <span class="select-none text-red-400 mr-2 shrink-0">−</span><span>{{ $line['left'] }}</span>
+                                        </div>
+                                    @elseif($line['type'] === 'added')
+                                        <div class="flex bg-green-50 px-3 py-0 whitespace-pre-wrap">
+                                            <span class="select-none text-green-600 mr-2 shrink-0">+</span><span>{{ $line['right'] }}</span>
+                                        </div>
+                                    @else
+                                        <div class="flex px-3 py-0 whitespace-pre-wrap text-gray-700">
+                                            <span class="select-none text-gray-300 mr-2 shrink-0">&nbsp;</span><span>{{ $line['left'] }}</span>
+                                        </div>
+                                    @endif
+                                @endforeach
                             </div>
                         </x-filament::section>
 

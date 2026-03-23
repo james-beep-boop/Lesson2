@@ -95,6 +95,58 @@ class ViewLessonPlanFamily extends Page
         Notification::make()->title('Added to favorites.')->success()->send();
     }
 
+    /**
+     * Compute a line-by-line diff between the selected version and the compare version.
+     * Returns an array of ['type' => 'equal'|'deleted'|'added', 'left' => string, 'right' => string].
+     * 'deleted' lines appear on the left (old) only; 'added' lines appear on the right (new) only.
+     */
+    public function computeDiff(): array
+    {
+        if (! $this->selectedVersion || ! $this->compareVersion) {
+            return [];
+        }
+
+        return $this->diffLines($this->selectedVersion->content, $this->compareVersion->content);
+    }
+
+    private function diffLines(string $old, string $new): array
+    {
+        $oldLines = explode("\n", $old);
+        $newLines = explode("\n", $new);
+        $m = count($oldLines);
+        $n = count($newLines);
+
+        // LCS DP table
+        $dp = array_fill(0, $m + 1, array_fill(0, $n + 1, 0));
+        for ($i = 1; $i <= $m; $i++) {
+            for ($j = 1; $j <= $n; $j++) {
+                $dp[$i][$j] = $oldLines[$i - 1] === $newLines[$j - 1]
+                    ? $dp[$i - 1][$j - 1] + 1
+                    : max($dp[$i - 1][$j], $dp[$i][$j - 1]);
+            }
+        }
+
+        // Backtrack
+        $ops = [];
+        $i = $m;
+        $j = $n;
+        while ($i > 0 || $j > 0) {
+            if ($i > 0 && $j > 0 && $oldLines[$i - 1] === $newLines[$j - 1]) {
+                array_unshift($ops, ['type' => 'equal', 'left' => $oldLines[$i - 1], 'right' => $newLines[$j - 1]]);
+                $i--;
+                $j--;
+            } elseif ($j > 0 && ($i === 0 || $dp[$i][$j - 1] >= $dp[$i - 1][$j])) {
+                array_unshift($ops, ['type' => 'added', 'left' => '', 'right' => $newLines[$j - 1]]);
+                $j--;
+            } else {
+                array_unshift($ops, ['type' => 'deleted', 'left' => $oldLines[$i - 1], 'right' => '']);
+                $i--;
+            }
+        }
+
+        return $ops;
+    }
+
     /** Returns ['major' => '2.0.0', 'minor' => '1.1.0', 'patch' => '1.0.1'] based on current versions. */
     public function versionPreviews(): array
     {
