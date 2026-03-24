@@ -33,9 +33,13 @@ class ListUsers extends ListRecords
             fn (Builder $r) => $r->where('name', 'site_administrator')
         );
 
+        // wherePivot() is only valid on a BelongsToMany instance, not inside
+        // whereHas/whereDoesntHave callbacks — it generates `"pivot" = ?`
+        // which is an unknown column on MariaDB and causes a 500. Use the
+        // explicit pivot table name instead.
         $isEditor = fn (Builder $q) => $q->whereHas(
             'subjectGrades',
-            fn (Builder $r) => $r->wherePivot('role', 'editor')
+            fn (Builder $r) => $r->where('subject_grade_user.role', 'editor')
         );
 
         $all           = User::where('is_system', false)->count();
@@ -45,7 +49,7 @@ class ListUsers extends ListRecords
         $teachers      = User::where('is_system', false)
             ->whereDoesntHave('roles')
             ->whereNotIn('id', $subjectAdminIds)
-            ->whereDoesntHave('subjectGrades', fn (Builder $q) => $q->wherePivot('role', 'editor'))
+            ->whereDoesntHave('subjectGrades', fn (Builder $q) => $q->where('subject_grade_user.role', 'editor'))
             ->count();
 
         return [
@@ -63,14 +67,14 @@ class ListUsers extends ListRecords
             'editors' => Tab::make("Editors ({$editors})")
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
                     'subjectGrades',
-                    fn (Builder $r) => $r->wherePivot('role', 'editor')
+                    fn (Builder $r) => $r->where('subject_grade_user.role', 'editor')
                 )),
 
             'teachers' => Tab::make("Teachers ({$teachers})")
                 ->modifyQueryUsing(fn (Builder $query) => $query
                     ->whereDoesntHave('roles')
                     ->whereNotIn('id', $subjectAdminIds)
-                    ->whereDoesntHave('subjectGrades', fn (Builder $q) => $q->wherePivot('role', 'editor'))
+                    ->whereDoesntHave('subjectGrades', fn (Builder $q) => $q->where('subject_grade_user.role', 'editor'))
                 ),
         ];
     }
