@@ -1,9 +1,7 @@
-{{-- Footer: fi-simple-main-ctn/fi-simple-main give exactly the login-box look and centering --}}
-{{-- Outer: padding gives ~1 button-height (2.5rem) from bottom and sides --}}
-<div class="fi-simple-main-ctn" style="padding:0 2.5rem 2.5rem;">
-    {{-- fi-simple-main without fi-width-lg so it fills the padded space; override its 4rem margin-block --}}
+{{-- Outer: fixed 2.5rem bottom gap regardless of page height (fi-simple-main-ctn was flex:1 and grew) --}}
+<div style="padding:0 2.5rem 2.5rem;">
     <div class="fi-simple-main"
-         style="text-align:center; color:var(--gray-500); font-size:0.75rem; line-height:1rem; padding-block:1.25rem; margin-block:1rem 0;">
+         style="text-align:center; color:var(--gray-500); font-size:0.75rem; line-height:1rem; padding-block:1.25rem; margin-block:0;">
         <p>
             Lesson Plans by
             <a href="https://areseducation.org" target="_blank" rel="noopener noreferrer"
@@ -30,15 +28,16 @@
                 </svg>
             </span>
             <br>
-            Adapt, transform, redistribute, provided appropriate credit given and adaptations retain this copyright
+            Adapt, transform, redistribute, provided appropriate credit is given.
         </p>
-        <div style="margin-top:1rem;display:flex;gap:0.5rem;">
+        <div style="margin-top:1rem;display:flex;justify-content:center;gap:0.5rem;">
             <x-filament::button
                 tag="a"
                 href="https://areseducation.org/donate.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                style="flex:1;justify-content:center;"
+                class="!w-auto shrink-0"
+                style="white-space:nowrap;"
             >
                 Donate to ARES Education
             </x-filament::button>
@@ -47,7 +46,8 @@
                 href="https://www.seavuria.org/donate"
                 target="_blank"
                 rel="noopener noreferrer"
-                style="flex:1;justify-content:center;"
+                class="!w-auto shrink-0"
+                style="white-space:nowrap;"
             >
                 Donate to SeaVuria
             </x-filament::button>

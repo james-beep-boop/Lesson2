@@ -4,9 +4,11 @@ namespace App\Filament\Admin\Resources;
 
 use App\Filament\Admin\Resources\UserResource\Pages;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -24,6 +26,13 @@ class UserResource extends Resource
             TextInput::make('username')->required()->unique(ignoreRecord: true),
             TextInput::make('name')->required(),
             TextInput::make('email')->email()->required()->unique(ignoreRecord: true),
+            TextInput::make('password')
+                ->password()
+                ->revealable()
+                ->required(fn ($record) => $record === null)
+                ->dehydrated(fn ($state) => filled($state))
+                ->helperText(fn ($record) => $record ? 'Leave blank to keep the current password.' : null)
+                ->maxLength(255),
         ]);
     }
 
@@ -49,6 +58,36 @@ class UserResource extends Resource
             ])
             ->actions([
                 EditAction::make(),
+                Action::make('grantSiteAdmin')
+                    ->label('Grant Site Admin')
+                    ->icon('heroicon-o-shield-check')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Grant Site Administrator role?')
+                    ->modalDescription(fn (User $record) => "This will give {$record->name} full administrative access to the system.")
+                    ->action(function (User $record): void {
+                        $record->assignRole('site_administrator');
+                        Notification::make('site-admin-granted')
+                            ->title('Site Admin role granted.')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn (User $record): bool => ! $record->isSiteAdmin()),
+                Action::make('revokeSiteAdmin')
+                    ->label('Revoke Site Admin')
+                    ->icon('heroicon-o-shield-exclamation')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Revoke Site Administrator role?')
+                    ->modalDescription(fn (User $record) => "This will remove {$record->name}'s administrative access.")
+                    ->action(function (User $record): void {
+                        $record->removeRole('site_administrator');
+                        Notification::make('site-admin-revoked')
+                            ->title('Site Admin role revoked.')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn (User $record): bool => $record->isSiteAdmin()),
                 DeleteAction::make(),
             ]);
     }

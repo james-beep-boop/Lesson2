@@ -42,11 +42,18 @@ class SubjectGradeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['subject', 'subjectAdmin']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['subject', 'subjectAdmin', 'users']))
             ->columns([
                 TextColumn::make('subject.name')->sortable()->searchable()->label('Subject'),
                 TextColumn::make('grade')->sortable()->formatStateUsing(fn ($state) => 'Grade ' . $state),
                 TextColumn::make('subjectAdmin.username')->label('Subject Admin')->default('—'),
+                TextColumn::make('editors_display')
+                    ->label('Editors')
+                    ->state(fn (SubjectGrade $record): string =>
+                        $record->users->isNotEmpty()
+                            ? $record->users->pluck('username')->join(', ')
+                            : '—'
+                    ),
             ])
             ->filters([
                 SelectFilter::make('subject')->relationship('subject', 'name'),
@@ -68,6 +75,46 @@ class SubjectGradeResource extends Resource
                         app(SubjectAdminService::class)->promote($user, $record);
                         Notification::make('subject-admin-assigned')->title('Subject Admin assigned')->success()->send();
                     }),
+                Action::make('addEditor')
+                    ->label('Add Editor')
+                    ->icon('heroicon-o-user-circle')
+                    ->color('info')
+                    ->form(fn (SubjectGrade $record): array => [
+                        Select::make('user_id')
+                            ->label('User')
+                            ->options(
+                                User::where('is_system', false)
+                                    ->whereNotIn('id', $record->users->pluck('id')->push($record->subject_admin_user_id)->filter()->unique()->values()->all())
+                                    ->orderBy('name')
+                                    ->pluck('username', 'id')
+                            )
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (SubjectGrade $record, array $data): void {
+                        $user = User::findOrFail($data['user_id']);
+                        app(SubjectAdminService::class)->assignEditor($user, $record);
+                        Notification::make('editor-added')->title('Editor added.')->success()->send();
+                    }),
+                Action::make('removeEditor')
+                    ->label('Remove Editor')
+                    ->icon('heroicon-o-user-minus')
+                    ->color('danger')
+                    ->form(fn (SubjectGrade $record): array => [
+                        Select::make('user_id')
+                            ->label('Editor to remove')
+                            ->options(
+                                $record->users->pluck('username', 'id')
+                            )
+                            ->searchable()
+                            ->required(),
+                    ])
+                    ->action(function (SubjectGrade $record, array $data): void {
+                        $user = User::findOrFail($data['user_id']);
+                        app(SubjectAdminService::class)->removeUser($user, $record);
+                        Notification::make('editor-removed')->title('Editor removed.')->success()->send();
+                    })
+                    ->visible(fn (SubjectGrade $record): bool => $record->users->isNotEmpty()),
             ]);
     }
 
