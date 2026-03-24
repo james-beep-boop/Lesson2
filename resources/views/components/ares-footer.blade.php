@@ -30,7 +30,11 @@
             <br>
             Adapt, transform, redistribute, provided appropriate credit is given.
         </p>
-        <div style="margin-top:1rem;display:flex;justify-content:center;gap:0.5rem;">
+        <div
+            style="margin-top:1rem;display:flex;justify-content:center;gap:0.5rem;"
+            x-data
+            x-init="$nextTick(() => { const els = [...$el.children]; const w = Math.max(...els.map(e => e.offsetWidth)); els.forEach(e => e.style.minWidth = w + 'px') })"
+        >
             <x-filament::button
                 tag="a"
                 href="https://areseducation.org/donate.html"
