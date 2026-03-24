@@ -28,13 +28,13 @@
         &mdash;
         you may copy, adapt, redistribute <em>with attribution</em>
     </p>
-    <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem;">
+    <div style="margin-top:0.75rem;display:flex;flex-direction:row;gap:0.5rem;">
         <a href="https://areseducation.org/donate.html" target="_blank" rel="noopener noreferrer"
-           style="display:flex;width:100%;align-items:center;justify-content:center;border-radius:0.5rem;background-color:#2563eb;padding:0.5rem 1rem;font-weight:600;color:#fff;text-decoration:none;">
+           style="flex:1;display:flex;align-items:center;justify-content:center;border-radius:0.5rem;background-color:#2563eb;padding:0.5rem 0.75rem;font-weight:600;color:#fff;text-decoration:none;text-align:center;">
             Donate to ARES Education, a registered Kenyan nonprofit
         </a>
         <a href="https://www.seavuria.org/donate" target="_blank" rel="noopener noreferrer"
-           style="display:flex;width:100%;align-items:center;justify-content:center;border-radius:0.5rem;background-color:#2563eb;padding:0.5rem 1rem;font-weight:600;color:#fff;text-decoration:none;">
+           style="flex:1;display:flex;align-items:center;justify-content:center;border-radius:0.5rem;background-color:#2563eb;padding:0.5rem 0.75rem;font-weight:600;color:#fff;text-decoration:none;text-align:center;">
             Donate to SeaVuria, a registered US nonprofit
         </a>
     </div>
