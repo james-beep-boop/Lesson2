@@ -10,6 +10,8 @@ use Illuminate\Validation\Rules\Password;
 class Profile extends EditProfile
 {
     public bool $editing = false;
+
+    private ?string $cachedRoleLabel = null;
     public string $editName = '';
     public string $editPassword = '';
     public string $editPasswordConfirmation = '';
@@ -77,13 +79,17 @@ class Profile extends EditProfile
         Notification::make('profile-saved')->title('Profile updated.')->success()->send();
     }
 
-    /** Human-readable role label for this user. */
+    /** Human-readable role label for this user. Cached per Livewire request. */
     public function getRoleLabel(): string
     {
+        if (isset($this->cachedRoleLabel)) {
+            return $this->cachedRoleLabel;
+        }
+
         $user = $this->getUser();
 
         if ($user->hasRole('site_administrator')) {
-            return 'Site Administrator';
+            return $this->cachedRoleLabel = 'Site Administrator';
         }
 
         $asSubjectAdmin = SubjectGrade::where('subject_admin_user_id', $user->id)
@@ -91,7 +97,7 @@ class Profile extends EditProfile
             ->get();
 
         if ($asSubjectAdmin->isNotEmpty()) {
-            return $asSubjectAdmin
+            return $this->cachedRoleLabel = $asSubjectAdmin
                 ->map(fn ($sg) => 'Subject Administrator — ' . $sg->subject->name . ' Grade ' . $sg->grade)
                 ->join(', ');
         }
@@ -99,11 +105,11 @@ class Profile extends EditProfile
         $asEditor = $user->subjectGrades()->with('subject')->get();
 
         if ($asEditor->isNotEmpty()) {
-            return $asEditor
+            return $this->cachedRoleLabel = $asEditor
                 ->map(fn ($sg) => 'Editor — ' . $sg->subject->name . ' Grade ' . $sg->grade)
                 ->join(', ');
         }
 
-        return 'Teacher';
+        return $this->cachedRoleLabel = 'Teacher';
     }
 }

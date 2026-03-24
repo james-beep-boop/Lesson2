@@ -31,6 +31,9 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
         'remember_token',
     ];
 
+    // Per-instance cache — not persisted, not fillable
+    private ?string $cachedRoleLabel = null;
+
     protected function casts(): array
     {
         return [
@@ -118,21 +121,26 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
     /**
      * Single-word role label for the user avatar dropdown.
      * Priority: Site Admin → Subject Admin → Editor → Teacher (default / no role).
+     * Cached on the model instance to avoid repeated DB hits in the same request.
      */
     public function getRoleLabel(): string
     {
+        if (isset($this->cachedRoleLabel)) {
+            return $this->cachedRoleLabel;
+        }
+
         if ($this->isSiteAdmin()) {
-            return 'Administrator';
+            return $this->cachedRoleLabel = 'Administrator';
         }
 
         if (SubjectGrade::where('subject_admin_user_id', $this->id)->exists()) {
-            return 'Subject Admin';
+            return $this->cachedRoleLabel = 'Subject Admin';
         }
 
         if ($this->subjectGrades()->wherePivot('role', 'editor')->exists()) {
-            return 'Editor';
+            return $this->cachedRoleLabel = 'Editor';
         }
 
-        return 'Teacher';
+        return $this->cachedRoleLabel = 'Teacher';
     }
 }

@@ -8,6 +8,7 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use App\Filament\App\Pages\Profile;
 use App\Filament\App\Pages\Register;
+use App\Filament\App\Pages\RequestPasswordReset;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -31,7 +32,7 @@ class AppPanelProvider extends PanelProvider
             ->path('/')
             ->login()
             ->registration(Register::class)
-            ->passwordReset()
+            ->passwordReset(RequestPasswordReset::class)
             ->emailVerification()
             ->profile(Profile::class, isSimple: false)
             ->topNavigation()

@@ -5,10 +5,11 @@
         $canEdit = $user && $user->canEditSubjectGrade($sg);
         $canMarkOfficial = $user && ($user->isSiteAdmin() || $user->isSubjectAdminFor($sg));
         $canTranslate = $user && config('features.ai_suggestions') && ($user->isSiteAdmin() || $user->isSubjectAdminFor($sg));
-        $canRequestDeletion = $user && $selectedVersion && $user->isSubjectAdminFor($sg)
-            && ! $selectedVersion->deletionRequests()->whereNull('resolved_at')->exists();
+        $canRequestDeletion = $user && $selectedVersion
+            && ($user->isSubjectAdminFor($sg) || $user->isSiteAdmin())
+            && ! $this->hasPendingDeletion;
         $canAskAi = $user && config('features.ai_suggestions') && $canEdit;
-        $favorite = $user ? \App\Models\Favorite::where('user_id', $user->id)->where('lesson_plan_family_id', $record->id)->first() : null;
+        $favorite = $this->userFavorite;
         $isOfficialSelected = $selectedVersion && $record->official_version_id === $selectedVersion->id;
         $differsFromOfficial = $favorite && $record->official_version_id && $favorite->lesson_plan_version_id !== $record->official_version_id;
     @endphp
@@ -100,7 +101,7 @@
             <div class="lg:col-span-1">
                 <x-filament::section heading="Versions">
                     <ul class="space-y-1">
-                        @foreach($record->versions()->orderByDesc('created_at')->get() as $v)
+                        @foreach($record->versions->sortByDesc('created_at') as $v)
                             <li>
                                 <button
                                     wire:click="selectVersion({{ $v->id }})"
@@ -122,10 +123,10 @@
                 </x-filament::section>
 
                 {{-- Compare mode selector --}}
-                @if(!$compareMode && $selectedVersion && $record->versions()->count() > 1)
+                @if(!$compareMode && $selectedVersion && $record->versions->count() > 1)
                     <x-filament::section heading="Compare" class="mt-4">
                         <p class="mb-2 text-xs text-gray-500">Compare with:</p>
-                        @foreach($record->versions()->orderByDesc('created_at')->get() as $v)
+                        @foreach($record->versions->sortByDesc('created_at') as $v)
                             @if($v->id !== $selectedVersion->id)
                                 <button
                                     wire:click="enterCompareMode({{ $v->id }})"

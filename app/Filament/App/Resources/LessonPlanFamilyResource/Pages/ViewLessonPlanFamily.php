@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 use App\Ai\Agents\LessonPlanAdvisor;
 use App\Ai\Agents\LessonPlanTranslator;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
+use App\Models\Favorite;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Services\DeletionRequestService;
@@ -28,6 +29,9 @@ class ViewLessonPlanFamily extends Page
     public string $versionBump = 'patch';
     public ?string $revisionNote = null;
 
+    public ?Favorite $userFavorite = null;
+    public bool $hasPendingDeletion = false;
+
     public bool $showDeletionForm = false;
     public string $deletionReason = '';
 
@@ -45,6 +49,22 @@ class ViewLessonPlanFamily extends Page
     {
         $this->record = $record->load(['versions', 'officialVersion', 'latestVersion', 'subjectGrade.subject']);
         $this->selectedVersion = $record->officialVersion ?? $record->latestVersion;
+        $this->syncDerivedState();
+    }
+
+    private function syncDerivedState(): void
+    {
+        $user = auth()->user();
+
+        $this->userFavorite = $user
+            ? Favorite::where('user_id', $user->id)
+                ->where('lesson_plan_family_id', $this->record->id)
+                ->first()
+            : null;
+
+        $this->hasPendingDeletion = (bool) ($this->selectedVersion?->deletionRequests()
+            ->whereNull('resolved_at')
+            ->exists());
     }
 
     public function selectVersion(int $versionId): void
@@ -52,6 +72,9 @@ class ViewLessonPlanFamily extends Page
         $this->selectedVersion = $this->record->versions()->findOrFail($versionId);
         $this->compareMode = false;
         $this->compareVersion = null;
+        $this->hasPendingDeletion = (bool) $this->selectedVersion->deletionRequests()
+            ->whereNull('resolved_at')
+            ->exists();
     }
 
     public function enterEditMode(): void
@@ -83,6 +106,7 @@ class ViewLessonPlanFamily extends Page
         $this->selectedVersion = $version;
         $this->editMode = false;
         $this->revisionNote = null;
+        $this->hasPendingDeletion = false; // new versions have no pending requests
 
         Notification::make('version-saved')->title('New version saved.')->success()->send();
     }
@@ -102,7 +126,7 @@ class ViewLessonPlanFamily extends Page
     {
         abort_unless(auth()->check(), 403);
 
-        $favoriteService->upsert(auth()->user(), $this->selectedVersion);
+        $this->userFavorite = $favoriteService->upsert(auth()->user(), $this->selectedVersion);
 
         Notification::make('favorited')->title('Added to favorites.')->success()->send();
     }
@@ -179,7 +203,7 @@ class ViewLessonPlanFamily extends Page
         $user = auth()->user();
         $sg   = $this->record->subjectGrade;
 
-        if (! $user->isSubjectAdminFor($sg)) {
+        if (! $user->isSubjectAdminFor($sg) && ! $user->isSiteAdmin()) {
             Notification::make('deletion-unauthorized')
                 ->title('Not authorized.')
                 ->danger()
@@ -188,7 +212,7 @@ class ViewLessonPlanFamily extends Page
         }
 
         // Prevent duplicate pending requests for the same version.
-        if ($this->selectedVersion->deletionRequests()->whereNull('resolved_at')->exists()) {
+        if ($this->hasPendingDeletion) {
             Notification::make('deletion-already-pending')
                 ->title('A pending deletion request already exists for this version.')
                 ->warning()
@@ -205,6 +229,7 @@ class ViewLessonPlanFamily extends Page
 
         $this->showDeletionForm = false;
         $this->deletionReason   = '';
+        $this->hasPendingDeletion = true;
 
         Notification::make('deletion-requested')
             ->title('Deletion request submitted — Site Admins have been notified.')

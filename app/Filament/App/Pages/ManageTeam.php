@@ -17,6 +17,8 @@ class ManageTeam extends Page
 
     public ?int $addUserId = null;
 
+    private ?SubjectGrade $cachedSubjectGrade = null;
+
     /** Only Subject Admins see this page in the nav. */
     public static function shouldRegisterNavigation(): bool
     {
@@ -35,10 +37,10 @@ class ManageTeam extends Page
         abort_unless(static::canAccess(), 403);
     }
 
-    /** The Subject Admin's one subject_grade (a user can only be SA of one at a time). */
+    /** The Subject Admin's one subject_grade. Cached for the lifetime of this request. */
     public function getSubjectGrade(): SubjectGrade
     {
-        return SubjectGrade::with(['subject', 'users', 'subjectAdmin'])
+        return $this->cachedSubjectGrade ??= SubjectGrade::with(['subject', 'users', 'subjectAdmin'])
             ->where('subject_admin_user_id', auth()->id())
             ->firstOrFail();
     }

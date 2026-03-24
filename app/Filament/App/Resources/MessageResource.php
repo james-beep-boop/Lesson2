@@ -73,14 +73,19 @@ class MessageResource extends Resource
 
     /**
      * Unread count badge shown on the navigation item.
+     * PHP static variable memoizes within the request so repeated nav renders
+     * don't hit the DB more than once.
      */
     public static function getNavigationBadge(): ?string
     {
-        $count = Message::where('to_user_id', auth()->id())
-            ->whereNull('read_at')
-            ->count();
-
-        return $count > 0 ? (string) $count : null;
+        static $cache = [];
+        $userId = auth()->id();
+        if (! array_key_exists($userId, $cache)) {
+            $cache[$userId] = Message::where('to_user_id', $userId)
+                ->whereNull('read_at')
+                ->count();
+        }
+        return $cache[$userId] > 0 ? (string) $cache[$userId] : null;
     }
 
     public static function getNavigationBadgeColor(): ?string
