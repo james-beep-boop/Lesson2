@@ -15,6 +15,7 @@
 /node_modules
 /package-lock.json
 /public/build
+/public/css
 /public/hot
 /public/storage
 /storage/*.key

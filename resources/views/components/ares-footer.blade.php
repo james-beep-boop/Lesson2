@@ -1,7 +1,9 @@
 {{-- Footer: fi-simple-main-ctn/fi-simple-main give exactly the login-box look and centering --}}
-<div class="fi-simple-main-ctn">
-    <div class="fi-simple-main fi-width-lg"
-         style="text-align:center; color:var(--gray-500); font-size:0.75rem; line-height:1rem; padding-block:1.25rem;">
+{{-- Outer: padding gives ~1 button-height (2.5rem) from bottom and sides --}}
+<div class="fi-simple-main-ctn" style="padding:0 2.5rem 2.5rem;">
+    {{-- fi-simple-main without fi-width-lg so it fills the padded space; override its 4rem margin-block --}}
+    <div class="fi-simple-main"
+         style="text-align:center; color:var(--gray-500); font-size:0.75rem; line-height:1rem; padding-block:1.25rem; margin-block:1rem 0;">
         <p>
             Lesson Plans by
             <a href="https://areseducation.org" target="_blank" rel="noopener noreferrer"
