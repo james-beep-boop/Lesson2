@@ -11,16 +11,16 @@
         Copyright
         <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.en" target="_blank" rel="noopener noreferrer"
            class="underline hover:text-gray-700 dark:hover:text-gray-200">CC BY-SA 4.0</a>
-        <span class="ml-0.5 inline-flex items-center gap-0.5 align-middle">
-            <svg class="inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" aria-label="Creative Commons" fill="none" stroke="currentColor" stroke-width="1">
+        <span style="display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-left:2px;">
+            <svg style="display:inline-block;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" aria-label="Creative Commons" fill="none" stroke="currentColor" stroke-width="1">
                 <circle cx="8" cy="8" r="7.25"/>
                 <text x="8" y="11.5" text-anchor="middle" font-size="5.5" font-family="sans-serif" font-weight="bold" stroke="none" fill="currentColor">cc</text>
             </svg>
-            <svg class="inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" aria-label="Attribution" fill="none" stroke="currentColor" stroke-width="1">
+            <svg style="display:inline-block;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" aria-label="Attribution" fill="none" stroke="currentColor" stroke-width="1">
                 <circle cx="8" cy="8" r="7.25"/>
                 <text x="8" y="11.5" text-anchor="middle" font-size="5" font-family="sans-serif" font-weight="bold" stroke="none" fill="currentColor">BY</text>
             </svg>
-            <svg class="inline" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" aria-label="Share Alike" fill="none" stroke="currentColor" stroke-width="1">
+            <svg style="display:inline-block;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" aria-label="Share Alike" fill="none" stroke="currentColor" stroke-width="1">
                 <circle cx="8" cy="8" r="7.25"/>
                 <text x="8" y="11.5" text-anchor="middle" font-size="5" font-family="sans-serif" font-weight="bold" stroke="none" fill="currentColor">SA</text>
             </svg>
