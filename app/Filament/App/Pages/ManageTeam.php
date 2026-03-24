@@ -10,7 +10,7 @@ use Filament\Pages\Page;
 
 class ManageTeam extends Page
 {
-    protected static string $view = 'filament.app.pages.manage-team';
+    protected string $view = 'filament.app.pages.manage-team';
     protected static ?string $navigationLabel = 'My Team';
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?int $navigationSort = 3;
