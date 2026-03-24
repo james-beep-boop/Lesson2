@@ -64,7 +64,6 @@ class AppPanelProvider extends PanelProvider
                 PanelsRenderHook::FOOTER,
                 fn () => view('components.ares-footer')
             )
-            ->viteTheme('resources/css/app.css')
             ->colors([
                 'primary' => Color::Blue,
             ])

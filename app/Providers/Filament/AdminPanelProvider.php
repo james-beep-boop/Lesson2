@@ -29,7 +29,6 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->topNavigation()
             ->brandName('ARES — Admin')
-            ->viteTheme('resources/css/app.css')
             ->colors([
                 'primary' => Color::Slate,
             ])
