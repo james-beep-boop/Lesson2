@@ -17,8 +17,10 @@
         "spatie/laravel-permission": "^6.0"
     },
     "require-dev": {
+        "barryvdh/laravel-debugbar": "^4.1",
         "fakerphp/faker": "^1.23",
         "laravel-shift/blueprint": "*",
+        "laravel/boost": "^2.4",
         "laravel/pail": "^1.2.5",
         "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6",

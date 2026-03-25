@@ -12,10 +12,7 @@ class DeletionRequest extends Model
 
     protected $fillable = [
         'lesson_plan_version_id',
-        'requested_by_user_id',
         'reason',
-        'resolved_at',
-        'resolved_by_user_id',
     ];
 
     protected function casts(): array

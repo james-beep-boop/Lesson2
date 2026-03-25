@@ -4,11 +4,11 @@ use App\Models\DeletionRequest;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\Message;
-use App\Models\User;
 use App\Services\DeletionRequestService;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
-    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
 });
 
 test('deletion request creates messages to contributor and site admins', function () {
@@ -67,7 +67,8 @@ test('resolve marks request resolved and hard-deletes version', function () {
 test('resolve clears official_version_id if deleted version was official', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
-    $family->update(['official_version_id' => $version->id]);
+    $family->official_version_id = $version->id;
+    $family->save();
 
     $subjectAdmin = makeSubjectAdmin($sg);
     $siteAdmin = makeSiteAdmin();
@@ -86,7 +87,8 @@ test('resolve does not clear official_version_id if a different version is offic
         'lesson_plan_family_id' => $family->id,
         'version' => '1.1.0',
     ]);
-    $family->update(['official_version_id' => $v2->id]);
+    $family->official_version_id = $v2->id;
+    $family->save();
 
     $subjectAdmin = makeSubjectAdmin($sg);
     $siteAdmin = makeSiteAdmin();
@@ -123,7 +125,8 @@ test('marking a message read sets read_at', function () {
     $message = Message::where('to_user_id', $siteAdmin->id)->first();
     expect($message->read_at)->toBeNull();
 
-    $message->update(['read_at' => now()]);
+    $message->read_at = now();
+    $message->save();
 
     expect($message->fresh()->read_at)->not->toBeNull();
 });

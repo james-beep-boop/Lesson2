@@ -11,11 +11,9 @@ class Message extends Model
     use HasFactory;
 
     protected $fillable = [
-        'from_user_id',
         'to_user_id',
         'subject',
         'body',
-        'read_at',
     ];
 
     protected function casts(): array

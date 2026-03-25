@@ -43,29 +43,30 @@ class TranslationService
                     $targetVersionNumber = $this->versionService->computeNextVersion($swahiliFamily, 'patch');
                 }
 
-                $swahiliVersion = LessonPlanVersion::create([
+                $swahiliVersion = new LessonPlanVersion([
                     'lesson_plan_family_id' => $swahiliFamily->id,
-                    'contributor_id' => $contributor->id,
-                    'version' => $targetVersionNumber,
                     'content' => $translatedContent,
-                    'revision_note' => 'Translated from English version ' . $sourceVersion->version,
+                    'revision_note' => 'Translated from English version '.$sourceVersion->version,
                 ]);
+                $swahiliVersion->contributor_id = $contributor->id;
+                $swahiliVersion->version = $targetVersionNumber;
+                $swahiliVersion->save();
             } else {
                 // Create the Swahili family (inherits source version number).
                 $swahiliFamily = LessonPlanFamily::create([
                     'subject_grade_id' => $sourceFamily->subject_grade_id,
                     'day' => $sourceFamily->day,
                     'language' => 'sw',
-                    'official_version_id' => null,
                 ]);
 
-                $swahiliVersion = LessonPlanVersion::create([
+                $swahiliVersion = new LessonPlanVersion([
                     'lesson_plan_family_id' => $swahiliFamily->id,
-                    'contributor_id' => $contributor->id,
-                    'version' => $targetVersionNumber,
                     'content' => $translatedContent,
-                    'revision_note' => 'Translated from English version ' . $sourceVersion->version,
+                    'revision_note' => 'Translated from English version '.$sourceVersion->version,
                 ]);
+                $swahiliVersion->contributor_id = $contributor->id;
+                $swahiliVersion->version = $targetVersionNumber;
+                $swahiliVersion->save();
             }
 
             return $swahiliVersion;

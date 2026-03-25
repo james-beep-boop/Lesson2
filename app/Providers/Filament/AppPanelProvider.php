@@ -2,24 +2,24 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\App\Pages\Profile;
+use App\Filament\App\Pages\Register;
+use App\Filament\App\Pages\RequestPasswordReset;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use App\Filament\App\Pages\Profile;
-use App\Filament\App\Pages\Register;
-use App\Filament\App\Pages\RequestPasswordReset;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
-use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AppPanelProvider extends PanelProvider
@@ -56,8 +56,8 @@ class AppPanelProvider extends PanelProvider
                 fn (): HtmlString => auth()->check()
                     ? new HtmlString(
                         '<p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">'
-                        . e(auth()->user()->getRoleLabel())
-                        . '</p>'
+                        .e(auth()->user()->role_label)
+                        .'</p>'
                     )
                     : new HtmlString('')
             )

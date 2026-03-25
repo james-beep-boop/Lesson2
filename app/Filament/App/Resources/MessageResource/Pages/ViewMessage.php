@@ -25,7 +25,8 @@ class ViewMessage extends ViewRecord
 
         // Mark as read the first time the message is opened.
         if (! $this->record->isRead()) {
-            $this->record->update(['read_at' => now()]);
+            $this->record->read_at = now();
+            $this->record->save();
             $this->record->refresh();
         }
     }
@@ -37,8 +38,8 @@ class ViewMessage extends ViewRecord
                 ->label('Reply')
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->url(MessageResource::getUrl('compose', [
-                    'to'      => $this->record->from_user_id,
-                    'subject' => 'Re: ' . $this->record->subject,
+                    'to' => $this->record->from_user_id,
+                    'subject' => 'Re: '.$this->record->subject,
                 ])),
             Action::make('back')
                 ->label('Back to Inbox')

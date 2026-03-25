@@ -5,20 +5,25 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\DeletionRequestResource\Pages;
 use App\Models\DeletionRequest;
 use App\Services\DeletionRequestService;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class DeletionRequestResource extends Resource
 {
     protected static ?string $model = DeletionRequest::class;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-trash';
+
     protected static ?string $navigationLabel = 'Deletion Requests';
+
     protected static ?string $label = 'Deletion Request';
+
     protected static ?int $navigationSort = 4;
 
     /** Site Admins only. */
@@ -27,10 +32,25 @@ class DeletionRequestResource extends Resource
         return auth()->check() && auth()->user()->isSiteAdmin();
     }
 
-    public static function canCreate(): bool  { return false; }
-    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool   { return false; }
-    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool { return false; }
-    public static function canView(\Illuminate\Database\Eloquent\Model $record): bool   { return false; }
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return false;
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -50,8 +70,8 @@ class DeletionRequestResource extends Resource
                     ->label('Lesson Plan')
                     ->state(fn (DeletionRequest $r) => $r->version
                         ? ($r->version->family?->subjectGrade?->subject?->name ?? '?')
-                          . ' — Grade ' . ($r->version->family?->subjectGrade?->grade ?? '?')
-                          . ' · Day ' . ($r->version->family?->day ?? '?')
+                          .' — Grade '.($r->version->family?->subjectGrade?->grade ?? '?')
+                          .' · Day '.($r->version->family?->day ?? '?')
                         : '(version deleted)'
                     ),
                 TextColumn::make('version.version')

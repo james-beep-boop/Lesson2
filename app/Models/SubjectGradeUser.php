@@ -16,8 +16,6 @@ class SubjectGradeUser extends Pivot
 
     protected $fillable = [
         'subject_grade_id',
-        'user_id',
-        'role',
     ];
 
     public function subjectGrade(): BelongsTo

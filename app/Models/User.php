@@ -5,34 +5,31 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements MustVerifyEmail, FilamentUser
+class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
-    use HasFactory, Notifiable, SoftDeletes, HasRoles;
+    use HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'username',
         'name',
         'email',
-        'email_verified_at',
         'password',
-        'is_system',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
     ];
-
-    // Per-instance cache — not persisted, not fillable
-    private ?string $cachedRoleLabel = null;
 
     protected function casts(): array
     {
@@ -58,6 +55,12 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
         return $this->belongsToMany(SubjectGrade::class, 'subject_grade_user')
             ->withPivot('role')
             ->withTimestamps();
+    }
+
+    /** The single SubjectGrade for which this user is Subject Admin, if any. */
+    public function subjectGradeAsAdmin(): HasOne
+    {
+        return $this->hasOne(SubjectGrade::class, 'subject_admin_user_id');
     }
 
     public function sentMessages(): HasMany
@@ -105,9 +108,16 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
 
     public function isEditorFor(SubjectGrade $subjectGrade): bool
     {
+        if ($this->relationLoaded('subjectGrades')) {
+            return $this->subjectGrades
+                ->where('id', $subjectGrade->id)
+                ->where('pivot.role', 'editor')
+                ->isNotEmpty();
+        }
+
         return $this->subjectGrades()
             ->where('subject_grade_id', $subjectGrade->id)
-            ->where('role', 'editor')
+            ->wherePivot('role', 'editor')
             ->exists();
     }
 
@@ -121,26 +131,30 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
     /**
      * Single-word role label for the user avatar dropdown.
      * Priority: Site Admin → Subject Admin → Editor → Teacher (default / no role).
-     * Cached on the model instance to avoid repeated DB hits in the same request.
+     * Cached by Eloquent's Attribute caching (shouldCache) to avoid repeated DB hits.
      */
-    public function getRoleLabel(): string
+    protected function roleLabel(): Attribute
     {
-        if (isset($this->cachedRoleLabel)) {
-            return $this->cachedRoleLabel;
-        }
+        return Attribute::make(
+            get: function () {
+                if ($this->isSiteAdmin()) {
+                    return 'Administrator';
+                }
 
-        if ($this->isSiteAdmin()) {
-            return $this->cachedRoleLabel = 'Administrator';
-        }
+                $isSubjectAdmin = $this->relationLoaded('subjectGradeAsAdmin')
+                    ? $this->subjectGradeAsAdmin !== null
+                    : SubjectGrade::where('subject_admin_user_id', $this->id)->exists();
 
-        if (SubjectGrade::where('subject_admin_user_id', $this->id)->exists()) {
-            return $this->cachedRoleLabel = 'Subject Admin';
-        }
+                if ($isSubjectAdmin) {
+                    return 'Subject Admin';
+                }
 
-        if ($this->subjectGrades()->wherePivot('role', 'editor')->exists()) {
-            return $this->cachedRoleLabel = 'Editor';
-        }
+                $isEditor = $this->relationLoaded('subjectGrades')
+                    ? $this->subjectGrades->where('pivot.role', 'editor')->isNotEmpty()
+                    : $this->subjectGrades()->wherePivot('role', 'editor')->exists();
 
-        return $this->cachedRoleLabel = 'Teacher';
+                return $isEditor ? 'Editor' : 'Teacher';
+            }
+        )->shouldCache();
     }
 }

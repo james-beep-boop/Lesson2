@@ -49,7 +49,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         )
                         ->with('subject')
                         ->get()
-                        ->mapWithKeys(fn ($sg) => [$sg->id => $sg->subject->name . ' — Grade ' . $sg->grade])
+                        ->mapWithKeys(fn ($sg) => [$sg->id => $sg->subject->name.' — Grade '.$sg->grade])
                 )
                 ->required()
                 ->searchable(),
@@ -94,6 +94,7 @@ class CreateLessonPlanFamily extends CreateRecord
 
                     if (in_array($ext, ['md', 'txt'])) {
                         $set('content', $state->get());
+
                         return;
                     }
 
@@ -102,14 +103,14 @@ class CreateLessonPlanFamily extends CreateRecord
                             set_time_limit(60);
 
                             $phpWord = IOFactory::load($state->getRealPath());
-                            $writer  = IOFactory::createWriter($phpWord, 'HTML');
+                            $writer = IOFactory::createWriter($phpWord, 'HTML');
 
                             ob_start();
                             $writer->save('php://output');
                             $html = ob_get_clean();
 
                             $converter = new HtmlConverter([
-                                'strip_tags'   => true,
+                                'strip_tags' => true,
                                 'remove_nodes' => 'head style script',
                             ]);
 
@@ -119,8 +120,8 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->title('Word document converted — please review')
                                 ->body(
                                     'This system stores lesson plans as Markdown. '
-                                    . 'Complex formatting — tables, images, footnotes, and columns — may not have converted correctly. '
-                                    . 'Review the content carefully before saving.'
+                                    .'Complex formatting — tables, images, footnotes, and columns — may not have converted correctly. '
+                                    .'Review the content carefully before saving.'
                                 )
                                 ->warning()
                                 ->persistent()
@@ -129,7 +130,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         } catch (\Throwable $e) {
                             Notification::make()
                                 ->title('Conversion failed')
-                                ->body('The Word document could not be converted: ' . $e->getMessage())
+                                ->body('The Word document could not be converted: '.$e->getMessage())
                                 ->danger()
                                 ->persistent()
                                 ->send();
@@ -187,14 +188,15 @@ class CreateLessonPlanFamily extends CreateRecord
                 // duplicate alert survives navigation and is findable in the inbox.
                 $systemUser = User::where('is_system', true)->first();
                 if ($systemUser) {
-                    Message::create([
-                        'from_user_id' => $systemUser->id,
-                        'to_user_id'   => $user->id,
-                        'subject'      => 'Duplicate lesson plan detected',
-                        'body'         => 'A lesson plan already exists for this subject grade, day, and language. '
-                                        . 'Your submission was not saved. '
-                                        . 'Open the existing plan and use "Edit This Plan" to add a new version instead.',
+                    $message = new Message([
+                        'to_user_id' => $user->id,
+                        'subject' => 'Duplicate lesson plan detected',
+                        'body' => 'A lesson plan already exists for this subject grade, day, and language. '
+                                     .'Your submission was not saved. '
+                                     .'Open the existing plan and use "Edit This Plan" to add a new version instead.',
                     ]);
+                    $message->from_user_id = $systemUser->id;
+                    $message->save();
                 }
 
                 Notification::make('duplicate-family')

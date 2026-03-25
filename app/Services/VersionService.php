@@ -26,16 +26,16 @@ class VersionService
                 'subject_grade_id' => $subjectGradeId,
                 'day' => $day,
                 'language' => $language,
-                'official_version_id' => null,
             ]);
 
-            $version = LessonPlanVersion::create([
+            $version = new LessonPlanVersion([
                 'lesson_plan_family_id' => $family->id,
-                'contributor_id' => $contributor->id,
-                'version' => '1.0.0',
                 'content' => $content,
                 'revision_note' => $revisionNote,
             ]);
+            $version->contributor_id = $contributor->id;
+            $version->version = '1.0.0';
+            $version->save();
 
             return $version;
         });
@@ -55,13 +55,16 @@ class VersionService
         return DB::transaction(function () use ($family, $content, $bump, $revisionNote, $contributor) {
             $nextVersion = $this->computeNextVersion($family, $bump);
 
-            return LessonPlanVersion::create([
+            $version = new LessonPlanVersion([
                 'lesson_plan_family_id' => $family->id,
-                'contributor_id' => $contributor->id,
-                'version' => $nextVersion,
                 'content' => $content,
                 'revision_note' => $revisionNote,
             ]);
+            $version->contributor_id = $contributor->id;
+            $version->version = $nextVersion;
+            $version->save();
+
+            return $version;
         });
     }
 
@@ -72,7 +75,8 @@ class VersionService
     public function setOfficialVersion(LessonPlanFamily $family, ?LessonPlanVersion $version): void
     {
         DB::transaction(function () use ($family, $version) {
-            $family->update(['official_version_id' => $version?->id]);
+            $family->official_version_id = $version?->id;
+            $family->save();
         });
     }
 
@@ -95,9 +99,9 @@ class VersionService
         [$major, $minor, $patch] = $highest;
 
         return match ($bump) {
-            'major' => ($major + 1) . '.0.0',
-            'minor' => $major . '.' . ($minor + 1) . '.0',
-            default => $major . '.' . $minor . '.' . ($patch + 1),
+            'major' => ($major + 1).'.0.0',
+            'minor' => $major.'.'.($minor + 1).'.0',
+            default => $major.'.'.$minor.'.'.($patch + 1),
         };
     }
 
@@ -167,19 +171,21 @@ class VersionService
 
             if ($swahiliFamily === null) {
                 $swahiliFamily = LessonPlanFamily::create([
-                    'subject_grade_id'    => $englishFamily->subject_grade_id,
-                    'day'                 => $englishFamily->day,
-                    'language'            => 'sw',
-                    'official_version_id' => null,
+                    'subject_grade_id' => $englishFamily->subject_grade_id,
+                    'day' => $englishFamily->day,
+                    'language' => 'sw',
                 ]);
 
-                return LessonPlanVersion::create([
+                $swahiliVersion = new LessonPlanVersion([
                     'lesson_plan_family_id' => $swahiliFamily->id,
-                    'contributor_id'        => $contributor->id,
-                    'version'               => $sourceVersion->version,
-                    'content'               => $content,
-                    'revision_note'         => "Translated from English {$sourceVersion->version}",
+                    'content' => $content,
+                    'revision_note' => "Translated from English {$sourceVersion->version}",
                 ]);
+                $swahiliVersion->contributor_id = $contributor->id;
+                $swahiliVersion->version = $sourceVersion->version;
+                $swahiliVersion->save();
+
+                return $swahiliVersion;
             }
 
             // Swahili family already exists — use source version number if not taken.
@@ -191,13 +197,16 @@ class VersionService
                 ? $this->computeNextVersion($swahiliFamily, $fallbackBump)
                 : $sourceVersion->version;
 
-            return LessonPlanVersion::create([
+            $swahiliVersion = new LessonPlanVersion([
                 'lesson_plan_family_id' => $swahiliFamily->id,
-                'contributor_id'        => $contributor->id,
-                'version'               => $targetVersion,
-                'content'               => $content,
-                'revision_note'         => "Translated from English {$sourceVersion->version}",
+                'content' => $content,
+                'revision_note' => "Translated from English {$sourceVersion->version}",
             ]);
+            $swahiliVersion->contributor_id = $contributor->id;
+            $swahiliVersion->version = $targetVersion;
+            $swahiliVersion->save();
+
+            return $swahiliVersion;
         });
     }
 }

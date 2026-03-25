@@ -15,7 +15,6 @@ class SubjectGrade extends Model
     protected $fillable = [
         'subject_id',
         'grade',
-        'subject_admin_user_id',
     ];
 
     protected function casts(): array
@@ -51,6 +50,6 @@ class SubjectGrade extends Model
 
     public function getDisplayNameAttribute(): string
     {
-        return $this->subject->name . ' — Grade ' . $this->grade;
+        return $this->subject->name.' — Grade '.$this->grade;
     }
 }

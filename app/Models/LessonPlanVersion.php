@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class LessonPlanVersion extends Model
 {
@@ -14,8 +13,6 @@ class LessonPlanVersion extends Model
 
     protected $fillable = [
         'lesson_plan_family_id',
-        'contributor_id',
-        'version',
         'content',
         'revision_note',
     ];

@@ -24,15 +24,21 @@ class FavoriteService
                 'Version has no associated family.'
             );
 
-            $favorite = Favorite::updateOrCreate(
-                [
-                    'user_id' => $user->id,
+            $favorite = Favorite::where('user_id', $user->id)
+                ->where('lesson_plan_family_id', $family->id)
+                ->first();
+
+            if ($favorite) {
+                $favorite->lesson_plan_version_id = $version->id;
+                $favorite->save();
+            } else {
+                $favorite = new Favorite([
                     'lesson_plan_family_id' => $family->id,
-                ],
-                [
                     'lesson_plan_version_id' => $version->id,
-                ]
-            );
+                ]);
+                $favorite->user_id = $user->id;
+                $favorite->save();
+            }
 
             return $favorite;
         });

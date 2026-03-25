@@ -37,7 +37,7 @@ class ListLessonPlanFamilies extends ListRecords
     protected function getTableQuery(): Builder
     {
         return LessonPlanVersion::query()
-            ->with(['family.subjectGrade.subject', 'family.subjectGrade', 'contributor']);
+            ->with(['family.subjectGrade.subject', 'contributor']);
     }
 
     /**

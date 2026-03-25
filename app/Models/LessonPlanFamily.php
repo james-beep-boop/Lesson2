@@ -16,7 +16,6 @@ class LessonPlanFamily extends Model
         'subject_grade_id',
         'day',
         'language',
-        'official_version_id',
     ];
 
     protected function casts(): array

@@ -1,7 +1,11 @@
 <?php
 
-use Tests\TestCase;
+use App\Models\LessonPlanFamily;
+use App\Models\LessonPlanVersion;
+use App\Models\SubjectGrade;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
@@ -9,52 +13,57 @@ pest()->extend(TestCase::class)
 
 // --- Helpers ---
 
-function makeTeacher(): \App\Models\User
+function makeTeacher(): User
 {
-    return \App\Models\User::factory()->create();
+    return User::factory()->create();
 }
 
-function makeSiteAdmin(): \App\Models\User
+function makeSiteAdmin(): User
 {
-    $user = \App\Models\User::factory()->create();
+    $user = User::factory()->create();
     $user->assignRole('site_administrator');
+
     return $user;
 }
 
-function makeSubjectGrade(): \App\Models\SubjectGrade
+function makeSubjectGrade(): SubjectGrade
 {
-    return \App\Models\SubjectGrade::factory()->create();
+    return SubjectGrade::factory()->create();
 }
 
-function makeSubjectAdmin(\App\Models\SubjectGrade $sg): \App\Models\User
+function makeSubjectAdmin(SubjectGrade $sg): User
 {
-    $user = \App\Models\User::factory()->create();
-    $sg->update(['subject_admin_user_id' => $user->id]);
+    $user = User::factory()->create();
+    $sg->subject_admin_user_id = $user->id;
+    $sg->save();
+
     return $user;
 }
 
-function makeEditor(\App\Models\SubjectGrade $sg): \App\Models\User
+function makeEditor(SubjectGrade $sg): User
 {
-    $user = \App\Models\User::factory()->create();
-    \DB::table('subject_grade_user')->insert([
+    $user = User::factory()->create();
+    DB::table('subject_grade_user')->insert([
         'subject_grade_id' => $sg->id,
         'user_id' => $user->id,
         'role' => 'editor',
         'created_at' => now(),
         'updated_at' => now(),
     ]);
+
     return $user;
 }
 
-function makeFamilyWithVersion(\App\Models\SubjectGrade $sg, string $language = 'en'): array
+function makeFamilyWithVersion(SubjectGrade $sg, string $language = 'en'): array
 {
-    $family = \App\Models\LessonPlanFamily::factory()->create([
+    $family = LessonPlanFamily::factory()->create([
         'subject_grade_id' => $sg->id,
         'language' => $language,
     ]);
-    $version = \App\Models\LessonPlanVersion::factory()->create([
+    $version = LessonPlanVersion::factory()->create([
         'lesson_plan_family_id' => $family->id,
         'version' => '1.0.0',
     ]);
+
     return [$family, $version];
 }

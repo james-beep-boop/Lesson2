@@ -11,8 +11,11 @@ use Filament\Pages\Page;
 class ManageTeam extends Page
 {
     protected string $view = 'filament.app.pages.manage-team';
+
     protected static ?string $navigationLabel = 'My Team';
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
+
     protected static ?int $navigationSort = 3;
 
     public ?int $addUserId = null;
@@ -22,13 +25,13 @@ class ManageTeam extends Page
     /** Only Subject Admins see this page in the nav. */
     public static function shouldRegisterNavigation(): bool
     {
-        return (bool) auth()->id()
-            && SubjectGrade::where('subject_admin_user_id', auth()->id())->exists();
+        return static::canAccess();
     }
 
     public static function canAccess(): bool
     {
         $user = auth()->user();
+
         return $user && SubjectGrade::where('subject_admin_user_id', $user->id)->exists();
     }
 

@@ -25,7 +25,8 @@ class SubjectAdminService
                 ->first();
 
             if ($previousSubjectGrade) {
-                $previousSubjectGrade->update(['subject_admin_user_id' => null]);
+                $previousSubjectGrade->subject_admin_user_id = null;
+                $previousSubjectGrade->save();
                 $this->upsertEditorRole($user, $previousSubjectGrade);
             }
 
@@ -38,7 +39,8 @@ class SubjectAdminService
             }
 
             // 3. Promote the user.
-            $subjectGrade->update(['subject_admin_user_id' => $user->id]);
+            $subjectGrade->subject_admin_user_id = $user->id;
+            $subjectGrade->save();
 
             // Remove them from the editor pivot if present (they are now Subject Admin, not Editor).
             $subjectGrade->users()->detach($user->id);
@@ -56,7 +58,8 @@ class SubjectAdminService
                 return;
             }
 
-            $subjectGrade->update(['subject_admin_user_id' => null]);
+            $subjectGrade->subject_admin_user_id = null;
+            $subjectGrade->save();
             $this->upsertEditorRole($user, $subjectGrade);
         });
     }
@@ -79,7 +82,8 @@ class SubjectAdminService
     {
         DB::transaction(function () use ($user, $subjectGrade) {
             if ((int) $subjectGrade->subject_admin_user_id === $user->id) {
-                $subjectGrade->update(['subject_admin_user_id' => null]);
+                $subjectGrade->subject_admin_user_id = null;
+                $subjectGrade->save();
             }
 
             $subjectGrade->users()->detach($user->id);

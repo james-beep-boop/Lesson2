@@ -11,7 +11,6 @@ class Favorite extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
         'lesson_plan_family_id',
         'lesson_plan_version_id',
     ];

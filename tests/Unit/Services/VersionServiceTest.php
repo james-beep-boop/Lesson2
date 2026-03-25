@@ -3,6 +3,7 @@
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Services\VersionService;
+use Illuminate\Database\QueryException;
 
 test('first normal family version is 1.0.0', function () {
     $sg = makeSubjectGrade();
@@ -79,16 +80,19 @@ test('official_version_id logic works atomically', function () {
 });
 
 test('version numbers must be unique within a family', function () {
-    $service = new VersionService;
     $sg = makeSubjectGrade();
     [$family, $v1] = makeFamilyWithVersion($sg);
     $contributor = makeTeacher();
 
-    // Attempt to create a version with the same number should throw
-    expect(fn () => LessonPlanVersion::create([
-        'lesson_plan_family_id' => $family->id,
-        'contributor_id' => $contributor->id,
-        'version' => '1.0.0',
-        'content' => '# duplicate',
-    ]))->toThrow(\Illuminate\Database\QueryException::class);
+    // Attempt to create a version with the same number should throw a unique constraint violation.
+    // Direct property assignment is used so the protected fields are actually set.
+    expect(function () use ($family, $contributor) {
+        $duplicate = new LessonPlanVersion([
+            'lesson_plan_family_id' => $family->id,
+            'content' => '# duplicate',
+        ]);
+        $duplicate->contributor_id = $contributor->id;
+        $duplicate->version = '1.0.0';
+        $duplicate->save();
+    })->toThrow(QueryException::class);
 });
