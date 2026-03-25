@@ -4,7 +4,9 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanFamily;
+use App\Models\Message;
 use App\Models\SubjectGrade;
+use App\Models\User;
 use App\Services\VersionService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -181,6 +183,20 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->first();
 
             if ($existing) {
+                // Send a persistent inbox message from the System user so the
+                // duplicate alert survives navigation and is findable in the inbox.
+                $systemUser = User::where('is_system', true)->first();
+                if ($systemUser) {
+                    Message::create([
+                        'from_user_id' => $systemUser->id,
+                        'to_user_id'   => $user->id,
+                        'subject'      => 'Duplicate lesson plan detected',
+                        'body'         => 'A lesson plan already exists for this subject grade, day, and language. '
+                                        . 'Your submission was not saved. '
+                                        . 'Open the existing plan and use "Edit This Plan" to add a new version instead.',
+                    ]);
+                }
+
                 Notification::make('duplicate-family')
                     ->title('A lesson plan already exists for this subject grade, day, and language.')
                     ->body('You\'ve been redirected to the existing lesson plan. Use "Edit This Plan" to add a new version.')

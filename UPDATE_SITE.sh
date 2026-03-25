@@ -109,12 +109,12 @@ echo ""
 old_head=""
 
 if [ ! -d "$APP_DIR/.git" ]; then
-    echo "  [1/8] First-time setup: cloning repository..."
+    echo "  [1/9] First-time setup: cloning repository..."
     rm -rf "$APP_DIR.tmp"
     git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$APP_DIR.tmp"
     mv "$APP_DIR.tmp" "$APP_DIR"
 else
-    echo "  [1/8] Fetching latest from GitHub..."
+    echo "  [1/9] Fetching latest from GitHub..."
     cd "$APP_DIR"
 
     if [ -n "$(git status --porcelain | grep -v '^??')" ]; then
@@ -184,7 +184,7 @@ fi
 
 # --- Composer ---------------------------------------------------------------
 
-echo "  [2/8] Checking Composer dependencies..."
+echo "  [2/9] Checking Composer dependencies..."
 
 need_composer=0
 if [ ! -d vendor ]; then
@@ -197,25 +197,25 @@ fi
 
 if [ "$need_composer" -eq 1 ]; then
     require_cmd "$COMPOSER_BIN"
-    echo "  [2/8] Installing Composer dependencies..."
+    echo "  [2/9] Installing Composer dependencies..."
     "$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction
 else
-    echo "  [2/8] Composer dependencies unchanged — skipping install."
+    echo "  [2/9] Composer dependencies unchanged — skipping install."
 fi
 
 # --- Maintenance mode + migrations ------------------------------------------
 # Put the site into maintenance mode before running migrations to prevent
 # users from hitting a half-migrated database.
 
-echo "  [3/8] Enabling maintenance mode..."
+echo "  [3/9] Enabling maintenance mode..."
 maintenance_down
 
-echo "  [4/8] Running database migrations..."
+echo "  [4/9] Running database migrations..."
 "$PHP_BIN" artisan migrate --force
 
 # --- Storage symlink --------------------------------------------------------
 
-echo "  [5/8] Checking storage symlink..."
+echo "  [5/9] Checking storage symlink..."
 if [ -d storage/app/public ] && [ ! -L public/storage ]; then
     echo "         Creating storage symlink..."
     "$PHP_BIN" artisan storage:link
@@ -223,7 +223,10 @@ fi
 
 # --- Cache ------------------------------------------------------------------
 
-echo "  [6/8] Rebuilding caches..."
+echo "  [6/9] Publishing Filament assets..."
+"$PHP_BIN" artisan filament:assets --quiet
+
+echo "  [7/9] Rebuilding caches..."
 "$PHP_BIN" artisan optimize:clear --quiet
 "$PHP_BIN" artisan config:cache --quiet
 "$PHP_BIN" artisan route:cache --quiet
@@ -240,14 +243,14 @@ echo "  [6/8] Rebuilding caches..."
 
 # --- Version info -----------------------------------------------------------
 
-echo "  [7/8] Writing version info..."
+echo "  [8/9] Writing version info..."
 if [ -d storage/app ]; then
     git rev-parse --short HEAD > storage/app/version.txt
 fi
 
 # --- Lift maintenance mode --------------------------------------------------
 
-echo "  [8/8] Lifting maintenance mode..."
+echo "  [9/9] Lifting maintenance mode..."
 maintenance_up
 
 # trap will also call maintenance_up on exit, which is harmless if already up.
