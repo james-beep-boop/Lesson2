@@ -230,13 +230,13 @@ echo "  [7/9] Rebuilding caches..."
 "$PHP_BIN" artisan optimize:clear --quiet
 "$PHP_BIN" artisan config:cache --quiet
 "$PHP_BIN" artisan route:cache --quiet
-# Omitted intentionally:
-#   view:cache  — pre-compiles all Filament vendor templates; 30-60 s on shared
-#                 hosting. Laravel compiles views on first use automatically.
-#   event:cache — no custom event listeners in this app; empty result, wasted bootstrap.
-#   icons:cache — scans every SVG on disk; slow on shared hosting. blade-icons
-#                 builds the manifest automatically on the first web request
-#                 (triggered by the OPcache-reset HTTP call below).
+# view:cache and icons:cache run here to pre-warm on deploy rather than on the
+# first user request. Both are slow to build (30-60 s total on shared hosting)
+# but eliminate the cold-start delay users would otherwise feel on the first
+# page load after a deploy.
+"$PHP_BIN" artisan view:cache --quiet
+"$PHP_BIN" artisan icons:cache --quiet
+# event:cache omitted — no custom event listeners; empty result, wasted bootstrap.
 # Reset Spatie permission cache so the first authenticated request
 # after deploy does not hit a cold-cache permission load.
 "$PHP_BIN" artisan permission:cache-reset --quiet
