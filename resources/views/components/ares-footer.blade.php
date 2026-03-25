@@ -1,5 +1,5 @@
 {{-- Outer: fixed 2.5rem bottom gap regardless of page height (fi-simple-main-ctn was flex:1 and grew) --}}
-<div style="padding:0 2.5rem 2.5rem;">
+<footer style="padding:0 2.5rem 2.5rem;">
     <div class="fi-simple-main"
          style="text-align:center; color:var(--gray-500); font-size:0.75rem; line-height:1rem; padding-block:1.25rem; margin-block:0;">
         <p>
@@ -57,4 +57,4 @@
             </x-filament::button>
         </div>
     </div>
-</div>
+</footer>

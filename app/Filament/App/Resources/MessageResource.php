@@ -53,8 +53,7 @@ class MessageResource extends Resource
                     ->sortable(),
                 TextColumn::make('subject')
                     ->label('Subject')
-                    ->searchable()
-                    ->weight(fn (Message $record) => $record->isRead() ? null : 'bold'),
+                    ->searchable(),
                 TextColumn::make('body')
                     ->label('Preview')
                     ->limit(60)
@@ -65,6 +64,7 @@ class MessageResource extends Resource
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
+            ->recordClasses(fn (Message $record) => $record->isRead() ? null : 'font-semibold bg-primary-50 dark:bg-primary-950/20')
             ->recordUrl(fn (Message $record): string => static::getUrl('view', ['record' => $record->id]))
             ->emptyStateIcon('heroicon-o-inbox')
             ->emptyStateHeading('Your inbox is empty')

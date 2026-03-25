@@ -197,10 +197,9 @@ For full spec details (data model, auth rules, UX flows, test requirements) alwa
 - **Deletion workflow**: Request Deletion button (Subject Admin), admin `DeletionRequestResource` with hard-delete action
 - **Admin dashboard**: stat cards (users, subjects, grades, families, versions, official), pending deletions banner (red when pending), clickable cards, quick links
 
-### 🔧 Next
-**AI features** — LessonPlanAdvisor (Ask AI streaming panel) and LessonPlanTranslator (Translate to Swahili flow), both gated by `AI_SUGGESTIONS_ENABLED` config flag.
-
-Following features (in order):
+### 🔧 Next (in order)
 1. **System-generated messages** — duplicate alert from System user on Create
 2. **Filter by subject_grade in admin user list**
 3. **Tests** — Pest test suite (Section 17)
+4. **Translation to Swahili** — LessonPlanTranslator agent, review panel, transactional save, version inheritance
+5. **AI Ask AI panel** — LessonPlanAdvisor streaming panel, gated by `AI_SUGGESTIONS_ENABLED`
