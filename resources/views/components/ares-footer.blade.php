@@ -1,7 +1,31 @@
-{{-- Outer: fixed 2.5rem bottom gap regardless of page height (fi-simple-main-ctn was flex:1 and grew) --}}
+<style>
+    .ares-footer-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    .ares-footer-btn {
+        display: inline-block;
+        padding: 0.5rem 1.125rem;
+        border-radius: 0.375rem;
+        background-color: #3b82f6;
+        color: #fff !important;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.25rem;
+        white-space: nowrap;
+        transition: background-color 0.15s;
+    }
+    .ares-footer-btn:hover { background-color: #2563eb; }
+    @media (max-width: 420px) {
+        .ares-footer-btn { width: 100%; text-align: center; }
+    }
+</style>
 <footer style="padding:0 2.5rem 2.5rem;">
-    <div class="fi-simple-main"
-         style="text-align:center; color:var(--gray-500); font-size:0.75rem; line-height:1rem; padding-block:1.25rem; margin-block:0;">
+    <div style="text-align:center; color:#6b7280; font-size:0.75rem; line-height:1rem; padding-block:1.25rem; margin-block:0;">
         <p>
             Lesson Plans by
             <a href="https://areseducation.org" target="_blank" rel="noopener noreferrer"
@@ -30,31 +54,19 @@
             <br>
             Adapt, transform, redistribute, provided appropriate credit is given.
         </p>
-        <div
-            style="margin-top:1rem;display:flex;justify-content:center;gap:0.5rem;"
-            x-data
-            x-init="$nextTick(() => { const els = [...$el.children]; const w = Math.max(...els.map(e => e.offsetWidth)); els.forEach(e => e.style.minWidth = w + 'px') })"
-        >
-            <x-filament::button
-                tag="a"
-                href="https://areseducation.org/donate.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="!w-auto shrink-0"
-                style="white-space:nowrap;"
-            >
+        <div class="ares-footer-buttons">
+            <a href="https://areseducation.org/donate.html"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="ares-footer-btn">
                 Donate to ARES Education
-            </x-filament::button>
-            <x-filament::button
-                tag="a"
-                href="https://www.seavuria.org/donate"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="!w-auto shrink-0"
-                style="white-space:nowrap;"
-            >
+            </a>
+            <a href="https://www.seavuria.org/donate"
+               target="_blank"
+               rel="noopener noreferrer"
+               class="ares-footer-btn">
                 Donate to SeaVuria
-            </x-filament::button>
+            </a>
         </div>
     </div>
 </footer>
