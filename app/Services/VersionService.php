@@ -16,22 +16,14 @@ class VersionService
     public function createFamilyWithFirstVersion(
         int $subjectGradeId,
         string $day,
-        ?int $strandNumber,
-        ?string $strandName,
-        ?int $substrandNumber,
-        ?string $substrandName,
         string $content,
         ?string $revisionNote,
         User $contributor
     ): LessonPlanVersion {
-        return DB::transaction(function () use ($subjectGradeId, $day, $strandNumber, $strandName, $substrandNumber, $substrandName, $content, $revisionNote, $contributor) {
+        return DB::transaction(function () use ($subjectGradeId, $day, $content, $revisionNote, $contributor) {
             $family = LessonPlanFamily::create([
                 'subject_grade_id' => $subjectGradeId,
                 'day' => $day,
-                'strand_number' => $strandNumber,
-                'strand_name' => $strandName,
-                'substrand_number' => $substrandNumber,
-                'substrand_name' => $substrandName,
             ]);
 
             $version = new LessonPlanVersion([
@@ -142,16 +134,8 @@ class VersionService
      */
     public function translationHasVersionConflict(LessonPlanFamily $sourceFamily, string $sourceVersion): bool
     {
-        // TODO: redesign when Swahili translation feature is implemented (language column removed)
-        $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $sourceFamily->subject_grade_id)
-            ->where('day', $sourceFamily->day)
-            ->first();
-
-        if ($swahiliFamily === null) {
-            return false;
-        }
-
-        return $swahiliFamily->versions()->where('version', $sourceVersion)->exists();
+        // Translation feature is pending redesign after language column removal.
+        throw new \RuntimeException('Translation feature is not yet available — pending redesign.');
     }
 
     /**
@@ -169,8 +153,19 @@ class VersionService
         User $contributor,
         string $fallbackBump = 'patch',
     ): LessonPlanVersion {
+        // Translation feature is pending redesign after language column removal.
+        throw new \RuntimeException('Translation feature is not yet available — pending redesign.');
+    }
+
+    /** @deprecated Preserved for future redesign reference only. */
+    private function createTranslatedVersionImpl(
+        LessonPlanFamily $englishFamily,
+        LessonPlanVersion $sourceVersion,
+        string $content,
+        User $contributor,
+        string $fallbackBump = 'patch',
+    ): LessonPlanVersion {
         return DB::transaction(function () use ($englishFamily, $sourceVersion, $content, $contributor, $fallbackBump) {
-            // TODO: redesign when Swahili translation feature is implemented (language column removed)
             $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $englishFamily->subject_grade_id)
                 ->where('day', $englishFamily->day)
                 ->first();

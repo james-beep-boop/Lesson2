@@ -52,17 +52,16 @@ class LessonPlanVersion extends Model
 
     /**
      * Generate the canonical filename for this version.
-     * Format: SUBJ_Grade_StrandNum_SubstrandNum_REV_Major.Minor.Patch.md
-     * Example: ENGL_10_1_1_REV_1.0.0.md
+     * Format: SUBJ_Grade_Day_REV_Major.Minor.Patch.md
+     * Example: ENGL_10_1_REV_1.1.1.md
      * Requires family.subjectGrade.subject to be loaded.
      */
     public function getFilename(): string
     {
         $subject = strtoupper(substr($this->family->subjectGrade->subject->name, 0, 4));
         $grade = $this->family->subjectGrade->grade;
-        $strandNum = $this->family->strand_number ?? 0;
-        $substrandNum = $this->family->substrand_number ?? 0;
+        $day = $this->family->day;
 
-        return "{$subject}_{$grade}_{$strandNum}_{$substrandNum}_REV_{$this->version}.md";
+        return "{$subject}_{$grade}_{$day}_REV_{$this->version}.md";
     }
 }

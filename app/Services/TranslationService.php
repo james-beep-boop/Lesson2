@@ -21,10 +21,17 @@ class TranslationService
      */
     public function translate(LessonPlanVersion $sourceVersion, string $translatedContent, User $contributor): LessonPlanVersion
     {
+        // Translation requires a language identifier to distinguish the target family.
+        // This feature must be redesigned now that the language column has been removed.
+        throw new \RuntimeException('Translation feature is not yet available — pending redesign.');
+    }
+
+    /** @deprecated Preserved for future redesign reference only. */
+    private function translateImpl(LessonPlanVersion $sourceVersion, string $translatedContent, User $contributor): LessonPlanVersion
+    {
         return DB::transaction(function () use ($sourceVersion, $translatedContent, $contributor) {
             $sourceFamily = $sourceVersion->family;
 
-            // TODO: redesign when Swahili translation feature is implemented (language column removed)
             $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $sourceFamily->subject_grade_id)
                 ->where('day', $sourceFamily->day)
                 ->first();

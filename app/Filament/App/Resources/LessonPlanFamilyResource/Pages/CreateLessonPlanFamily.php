@@ -58,24 +58,6 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->required()
                 ->placeholder('e.g. 1'),
 
-            TextInput::make('strand_number')
-                ->label('Strand Number')
-                ->numeric()
-                ->required(),
-
-            TextInput::make('strand_name')
-                ->label('Strand Name')
-                ->required(),
-
-            TextInput::make('substrand_number')
-                ->label('Substrand Number')
-                ->numeric()
-                ->required(),
-
-            TextInput::make('substrand_name')
-                ->label('Substrand Name')
-                ->required(),
-
             FileUpload::make('lesson_file')
                 ->label('Upload file (optional)')
                 ->helperText('Upload a .md or .txt file to populate the editor below, or a .docx Word document to convert to Markdown. You can edit the result before saving.')
@@ -177,10 +159,6 @@ class CreateLessonPlanFamily extends CreateRecord
             $version = app(VersionService::class)->createFamilyWithFirstVersion(
                 (int) $data['subject_grade_id'],
                 $data['day'],
-                filled($data['strand_number']) ? (int) $data['strand_number'] : null,
-                $data['strand_name'] ?? null,
-                filled($data['substrand_number']) ? (int) $data['substrand_number'] : null,
-                $data['substrand_name'] ?? null,
                 $data['content'],
                 $data['revision_note'] ?? null,
                 $user

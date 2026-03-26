@@ -63,11 +63,11 @@ class AppPanelProvider extends PanelProvider
                 'profile' => fn (Action $action) => $action->url(null)->label('')->icon(null),
                 Action::make('messages')
                     ->label(function (): string {
-                        $user = auth()->user();
-                        $total = Message::where('to_user_id', $user->id)->count();
-                        $unread = Message::where('to_user_id', $user->id)->whereNull('read_at')->count();
+                        $counts = Message::where('to_user_id', auth()->id())
+                            ->selectRaw('COUNT(*) as total, SUM(read_at IS NULL) as unread')
+                            ->first();
 
-                        return "Inbox: {$unread} / {$total}";
+                        return 'Inbox: '.($counts->unread ?? 0).' / '.($counts->total ?? 0);
                     })
                     ->icon('heroicon-o-inbox')
                     ->url(fn (): string => MessageResource::getUrl('index'))

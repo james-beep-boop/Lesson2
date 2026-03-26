@@ -15,10 +15,6 @@ class LessonPlanFamily extends Model
     protected $fillable = [
         'subject_grade_id',
         'day',
-        'strand_number',
-        'strand_name',
-        'substrand_number',
-        'substrand_name',
     ];
 
     protected function casts(): array
@@ -26,8 +22,6 @@ class LessonPlanFamily extends Model
         return [
             'subject_grade_id' => 'integer',
             'official_version_id' => 'integer',
-            'strand_number' => 'integer',
-            'substrand_number' => 'integer',
         ];
     }
 

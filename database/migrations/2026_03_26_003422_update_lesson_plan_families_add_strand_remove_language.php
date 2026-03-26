@@ -15,13 +15,7 @@ return new class extends Migration
             // Drop the language column
             $table->dropColumn('language');
 
-            // Add strand and substrand fields (nullable to support existing rows)
-            $table->unsignedSmallInteger('strand_number')->nullable()->after('day');
-            $table->string('strand_name')->nullable()->after('strand_number');
-            $table->unsignedSmallInteger('substrand_number')->nullable()->after('strand_name');
-            $table->string('substrand_name')->nullable()->after('substrand_number');
-
-            // New unique constraint without language
+            // New unique constraint on subject_grade_id + day
             $table->unique(['subject_grade_id', 'day']);
         });
     }
@@ -30,7 +24,6 @@ return new class extends Migration
     {
         Schema::table('lesson_plan_families', function (Blueprint $table) {
             $table->dropUnique(['subject_grade_id', 'day']);
-            $table->dropColumn(['strand_number', 'strand_name', 'substrand_number', 'substrand_name']);
             $table->string('language', 5)->after('day');
             $table->unique(['subject_grade_id', 'day', 'language']);
         });

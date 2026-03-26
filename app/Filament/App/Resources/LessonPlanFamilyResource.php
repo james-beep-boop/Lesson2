@@ -36,10 +36,6 @@ class LessonPlanFamilyResource extends Resource
                 ->searchable()
                 ->required(),
             TextInput::make('day')->required(),
-            TextInput::make('strand_number')->label('Strand Number')->numeric()->required(),
-            TextInput::make('strand_name')->label('Strand Name')->required(),
-            TextInput::make('substrand_number')->label('Substrand Number')->numeric()->required(),
-            TextInput::make('substrand_name')->label('Substrand Name')->required(),
         ]);
     }
 
@@ -60,20 +56,9 @@ class LessonPlanFamilyResource extends Resource
                     ->label('Grade')
                     ->formatStateUsing(fn ($state) => 'Grade '.$state)
                     ->sortable(),
-                TextColumn::make('family.strand_number')
-                    ->label('Strand #')
+                TextColumn::make('family.day')
+                    ->label('Day')
                     ->sortable(),
-                TextColumn::make('family.strand_name')
-                    ->label('Strand Name')
-                    ->sortable()
-                    ->searchable(),
-                TextColumn::make('family.substrand_number')
-                    ->label('Substrand #')
-                    ->sortable(),
-                TextColumn::make('family.substrand_name')
-                    ->label('Substrand Name')
-                    ->sortable()
-                    ->searchable(),
                 TextColumn::make('version')
                     ->label('Version')
                     ->sortable(),
