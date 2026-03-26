@@ -14,7 +14,7 @@ test('subject admin can create a family only in own subject_grade', function () 
     $service = new VersionService;
 
     $version = $service->createFamilyWithFirstVersion(
-        $sg->id, '1', 'en', '# Content', null, $subjectAdmin
+        $sg->id, '1', 1, 'Numbers', 1, 'Counting', '# Content', null,$subjectAdmin
     );
 
     expect($version)->not->toBeNull();
@@ -28,7 +28,7 @@ test('site admin can create a family in any subject_grade', function () {
     $service = new VersionService;
 
     $version = $service->createFamilyWithFirstVersion(
-        $sg->id, '1', 'en', '# Content', null, $siteAdmin
+        $sg->id, '1', 1, 'Numbers', 1, 'Counting', '# Content', null,$siteAdmin
     );
 
     expect($version)->not->toBeNull();
@@ -39,10 +39,10 @@ test('duplicate family key causes unique constraint violation', function () {
     $contributor = makeTeacher();
     $service = new VersionService;
 
-    $service->createFamilyWithFirstVersion($sg->id, '1', 'en', '# Content', null, $contributor);
+    $service->createFamilyWithFirstVersion($sg->id, '1', 1, 'Numbers', 1, 'Counting', '# Content', null,$contributor);
 
     expect(fn () => $service->createFamilyWithFirstVersion(
-        $sg->id, '1', 'en', '# Duplicate', null, $contributor
+        $sg->id, '1', 1, 'Numbers', 1, 'Counting', '# Duplicate', null, $contributor
     ))->toThrow(\Illuminate\Database\UniqueConstraintViolationException::class);
 });
 
@@ -59,7 +59,7 @@ test('partial family creation rolled back on version failure', function () {
     // The duplicate family test above already exercises the rollback path via UniqueConstraintViolation.
     // Here we verify that a transaction with no exception still requires BOTH records.
     $service = new VersionService;
-    $version = $service->createFamilyWithFirstVersion($sg->id, '2', 'en', '# Content', null, $contributor);
+    $version = $service->createFamilyWithFirstVersion($sg->id, '2', 1, 'Numbers', 1, 'Counting', '# Content', null,$contributor);
 
     expect(LessonPlanFamily::count())->toBe($familyBefore + 1);
     expect(LessonPlanVersion::count())->toBe($versionBefore + 1);
@@ -84,7 +84,7 @@ test('saving a new family creates family and first version in one transaction', 
     $familyBefore = LessonPlanFamily::count();
     $versionBefore = LessonPlanVersion::count();
 
-    $service->createFamilyWithFirstVersion($sg->id, '3', 'en', '# Test', null, $contributor);
+    $service->createFamilyWithFirstVersion($sg->id, '3', 1, 'Numbers', 1, 'Counting', '# Test', null,$contributor);
 
     expect(LessonPlanFamily::count())->toBe($familyBefore + 1);
     expect(LessonPlanVersion::count())->toBe($versionBefore + 1);

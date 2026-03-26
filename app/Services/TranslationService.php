@@ -24,10 +24,9 @@ class TranslationService
         return DB::transaction(function () use ($sourceVersion, $translatedContent, $contributor) {
             $sourceFamily = $sourceVersion->family;
 
-            // Find or create Swahili family.
+            // TODO: redesign when Swahili translation feature is implemented (language column removed)
             $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $sourceFamily->subject_grade_id)
                 ->where('day', $sourceFamily->day)
-                ->where('language', 'sw')
                 ->first();
 
             $targetVersionNumber = $sourceVersion->version;
@@ -52,11 +51,10 @@ class TranslationService
                 $swahiliVersion->version = $targetVersionNumber;
                 $swahiliVersion->save();
             } else {
-                // Create the Swahili family (inherits source version number).
+                // TODO: redesign when Swahili translation feature is implemented (language column removed)
                 $swahiliFamily = LessonPlanFamily::create([
                     'subject_grade_id' => $sourceFamily->subject_grade_id,
                     'day' => $sourceFamily->day,
-                    'language' => 'sw',
                 ]);
 
                 $swahiliVersion = new LessonPlanVersion([

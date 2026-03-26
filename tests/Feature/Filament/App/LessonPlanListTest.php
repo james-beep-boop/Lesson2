@@ -1,7 +1,6 @@
 <?php
 
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ListLessonPlanFamilies;
-use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Services\FavoriteService;
 use Filament\Facades\Filament;
@@ -33,7 +32,7 @@ test('lesson plan versions appear in the table', function () {
 test('official tab shows only official versions', function () {
     $sg = makeSubjectGrade();
     [$family1, $official] = makeFamilyWithVersion($sg);
-    // Use a separate subject grade to avoid the (subject_grade_id, day, language) unique constraint.
+    // Use a separate subject grade to avoid the (subject_grade_id, day) unique constraint.
     [, $unofficial] = makeFamilyWithVersion(makeSubjectGrade());
 
     $family1->official_version_id = $official->id;
@@ -78,27 +77,6 @@ test('favorites tab shows only versions the user has favorited', function () {
         ->set('activeTab', 'favorites')
         ->assertCanSeeTableRecords([$favored])
         ->assertCanNotSeeTableRecords([$unfavored]);
-});
-
-test('language filter narrows results to selected language', function () {
-    $sg = makeSubjectGrade();
-    [, $enVersion] = makeFamilyWithVersion($sg, 'en');
-
-    $swFamily = LessonPlanFamily::factory()->create([
-        'subject_grade_id' => $sg->id,
-        'language' => 'sw',
-    ]);
-    $swVersion = LessonPlanVersion::factory()->create([
-        'lesson_plan_family_id' => $swFamily->id,
-        'version' => '1.0.0',
-    ]);
-
-    $this->actingAs(makeTeacher());
-
-    Livewire::test(ListLessonPlanFamilies::class)
-        ->filterTable('language', 'sw')
-        ->assertCanSeeTableRecords([$swVersion])
-        ->assertCanNotSeeTableRecords([$enVersion]);
 });
 
 test('teacher does not see create button', function () {

@@ -67,7 +67,7 @@ class AppPanelProvider extends PanelProvider
                         $total = Message::where('to_user_id', $user->id)->count();
                         $unread = Message::where('to_user_id', $user->id)->whereNull('read_at')->count();
 
-                        return "Messages: {$unread} / {$total}";
+                        return "Inbox: {$unread} / {$total}";
                     })
                     ->icon('heroicon-o-inbox')
                     ->url(fn (): string => MessageResource::getUrl('index'))
@@ -79,9 +79,11 @@ class AppPanelProvider extends PanelProvider
                     ? new HtmlString(
                         '<div class="fi-dropdown-list">'
                         .'<div style="padding:0.625rem 0.875rem 0.5rem;">'
-                        .'<p style="font-size:0.8125rem;line-height:1.5;"><span style="opacity:0.55;font-size:0.75rem;">Username:</span> '.e(auth()->user()->name).'</p>'
-                        .'<p style="font-size:0.8125rem;line-height:1.5;"><span style="opacity:0.55;font-size:0.75rem;">Role:</span> '.e(auth()->user()->role_label).'</p>'
-                        .'<p style="font-size:0.8125rem;line-height:1.5;"><span style="opacity:0.55;font-size:0.75rem;">Email:</span> '.e(auth()->user()->email).'</p>'
+                        .'<table style="border-collapse:collapse;font-size:0.8125rem;line-height:1.6;">'
+                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Username:</td><td>'.e(auth()->user()->name).'</td></tr>'
+                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Role:</td><td>'.e(auth()->user()->role_label).'</td></tr>'
+                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Email:</td><td>'.e(auth()->user()->email).'</td></tr>'
+                        .'</table>'
                         .'</div>'
                         .'</div>'
                     )

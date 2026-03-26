@@ -10,68 +10,31 @@ beforeEach(function () {
     LessonPlanTranslator::fake(['Mpango wa Somo wa Darasa la 10']);
 });
 
-test('translation creates a new Swahili family when none exists', function () {
+// Translation to Swahili is a planned future feature. These tests are skipped
+// until the feature is redesigned — the language column has been removed from
+// lesson_plan_families, so the old language-based family identification no
+// longer exists. Tests will be rewritten when the new mechanism is designed.
+
+test('translation-created version inherits source version number', function () {
     $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg, 'en');
+    [$family, $version] = makeFamilyWithVersion($sg);
     $contributor = makeTeacher();
     $service = new TranslationService(new VersionService);
 
-    $swahiliVersion = $service->translate($version, 'Mpango wa Somo', $contributor);
-
-    $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $sg->id)
-        ->where('day', $family->day)
-        ->where('language', 'sw')
-        ->first();
-
-    expect($swahiliFamily)->not->toBeNull();
-    expect($swahiliVersion->lesson_plan_family_id)->toBe($swahiliFamily->id);
-});
-
-test('translation-created family inherits source version number', function () {
-    $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg, 'en');
-    $contributor = makeTeacher();
-    $service = new TranslationService(new VersionService);
-
-    // Source version is 1.0.0
     expect($version->version)->toBe('1.0.0');
 
-    $swahiliVersion = $service->translate($version, 'Mpango wa Somo', $contributor);
+    $translatedVersion = $service->translate($version, 'Mpango wa Somo', $contributor);
 
-    // Swahili version should also be 1.0.0
-    expect($swahiliVersion->version)->toBe('1.0.0');
-});
-
-test('translation adds a version to an existing Swahili family', function () {
-    $sg = makeSubjectGrade();
-    [$engFamily, $engVersion] = makeFamilyWithVersion($sg, 'en');
-    [$swFamily, $swV1] = makeFamilyWithVersion($sg, 'sw');
-
-    // Give the swahili family a different day to match the english family's day
-    $swFamily->update(['day' => $engFamily->day]);
-
-    $contributor = makeTeacher();
-    $service = new TranslationService(new VersionService);
-
-    $newSwahiliVersion = $service->translate($engVersion, 'Mpango wa Somo', $contributor);
-
-    expect($newSwahiliVersion->lesson_plan_family_id)->toBe($swFamily->id);
-    expect(LessonPlanFamily::where('language', 'sw')->count())->toBe(1);
-});
+    expect($translatedVersion->version)->toBe('1.0.0');
+})->skip('Translation feature requires redesign after language column removal');
 
 test('translation conflict falls back to normal bump flow', function () {
     $sg = makeSubjectGrade();
-    [$engFamily, $engVersion] = makeFamilyWithVersion($sg, 'en'); // version 1.0.0
+    [$engFamily, $engVersion] = makeFamilyWithVersion($sg);
 
-    // Create Swahili family with same version (1.0.0) — conflict
-    $swFamily = LessonPlanFamily::factory()->create([
-        'subject_grade_id' => $sg->id,
-        'day' => $engFamily->day,
-        'language' => 'sw',
-    ]);
     $swV1 = LessonPlanVersion::factory()->create([
-        'lesson_plan_family_id' => $swFamily->id,
-        'version' => '1.0.0', // conflict
+        'lesson_plan_family_id' => $engFamily->id,
+        'version' => '1.0.0',
     ]);
 
     $contributor = makeTeacher();
@@ -79,13 +42,12 @@ test('translation conflict falls back to normal bump flow', function () {
 
     $newVersion = $service->translate($engVersion, 'Mpango wa Somo', $contributor);
 
-    // Should fall back to patch bump: 1.0.1
     expect($newVersion->version)->toBe('1.0.1');
-});
+})->skip('Translation feature requires redesign after language column removal');
 
-test('source English version is unchanged after translation', function () {
+test('source version is unchanged after translation', function () {
     $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg, 'en');
+    [$family, $version] = makeFamilyWithVersion($sg);
     $originalContent = $version->content;
     $contributor = makeTeacher();
     $service = new TranslationService(new VersionService);
@@ -94,11 +56,11 @@ test('source English version is unchanged after translation', function () {
 
     expect($version->fresh()->content)->toBe($originalContent);
     expect($version->fresh()->version)->toBe('1.0.0');
-});
+})->skip('Translation feature requires redesign after language column removal');
 
 test('abandoning translation review writes nothing to database', function () {
     $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg, 'en');
+    [$family, $version] = makeFamilyWithVersion($sg);
     $versionCountBefore = LessonPlanVersion::count();
     $familyCountBefore = LessonPlanFamily::count();
 

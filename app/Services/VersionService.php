@@ -16,16 +16,22 @@ class VersionService
     public function createFamilyWithFirstVersion(
         int $subjectGradeId,
         string $day,
-        string $language,
+        ?int $strandNumber,
+        ?string $strandName,
+        ?int $substrandNumber,
+        ?string $substrandName,
         string $content,
         ?string $revisionNote,
         User $contributor
     ): LessonPlanVersion {
-        return DB::transaction(function () use ($subjectGradeId, $day, $language, $content, $revisionNote, $contributor) {
+        return DB::transaction(function () use ($subjectGradeId, $day, $strandNumber, $strandName, $substrandNumber, $substrandName, $content, $revisionNote, $contributor) {
             $family = LessonPlanFamily::create([
                 'subject_grade_id' => $subjectGradeId,
                 'day' => $day,
-                'language' => $language,
+                'strand_number' => $strandNumber,
+                'strand_name' => $strandName,
+                'substrand_number' => $substrandNumber,
+                'substrand_name' => $substrandName,
             ]);
 
             $version = new LessonPlanVersion([
@@ -134,11 +140,11 @@ class VersionService
      * Return true if a Swahili family already has a version matching $sourceVersion,
      * indicating a conflict that requires the user to choose a fallback bump.
      */
-    public function translationHasVersionConflict(LessonPlanFamily $englishFamily, string $sourceVersion): bool
+    public function translationHasVersionConflict(LessonPlanFamily $sourceFamily, string $sourceVersion): bool
     {
-        $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $englishFamily->subject_grade_id)
-            ->where('day', $englishFamily->day)
-            ->where('language', 'sw')
+        // TODO: redesign when Swahili translation feature is implemented (language column removed)
+        $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $sourceFamily->subject_grade_id)
+            ->where('day', $sourceFamily->day)
             ->first();
 
         if ($swahiliFamily === null) {
@@ -164,16 +170,15 @@ class VersionService
         string $fallbackBump = 'patch',
     ): LessonPlanVersion {
         return DB::transaction(function () use ($englishFamily, $sourceVersion, $content, $contributor, $fallbackBump) {
+            // TODO: redesign when Swahili translation feature is implemented (language column removed)
             $swahiliFamily = LessonPlanFamily::where('subject_grade_id', $englishFamily->subject_grade_id)
                 ->where('day', $englishFamily->day)
-                ->where('language', 'sw')
                 ->first();
 
             if ($swahiliFamily === null) {
                 $swahiliFamily = LessonPlanFamily::create([
                     'subject_grade_id' => $englishFamily->subject_grade_id,
                     'day' => $englishFamily->day,
-                    'language' => 'sw',
                 ]);
 
                 $swahiliVersion = new LessonPlanVersion([

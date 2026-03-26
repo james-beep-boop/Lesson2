@@ -9,7 +9,6 @@ use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\VersionService;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Set;
@@ -59,10 +58,22 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->required()
                 ->placeholder('e.g. 1'),
 
-            Select::make('language')
-                ->label('Language')
-                ->options(['en' => 'English', 'sw' => 'Swahili'])
-                ->default('en')
+            TextInput::make('strand_number')
+                ->label('Strand Number')
+                ->numeric()
+                ->required(),
+
+            TextInput::make('strand_name')
+                ->label('Strand Name')
+                ->required(),
+
+            TextInput::make('substrand_number')
+                ->label('Substrand Number')
+                ->numeric()
+                ->required(),
+
+            TextInput::make('substrand_name')
+                ->label('Substrand Name')
                 ->required(),
 
             FileUpload::make('lesson_file')
@@ -166,7 +177,10 @@ class CreateLessonPlanFamily extends CreateRecord
             $version = app(VersionService::class)->createFamilyWithFirstVersion(
                 (int) $data['subject_grade_id'],
                 $data['day'],
-                $data['language'],
+                filled($data['strand_number']) ? (int) $data['strand_number'] : null,
+                $data['strand_name'] ?? null,
+                filled($data['substrand_number']) ? (int) $data['substrand_number'] : null,
+                $data['substrand_name'] ?? null,
                 $data['content'],
                 $data['revision_note'] ?? null,
                 $user
@@ -180,7 +194,6 @@ class CreateLessonPlanFamily extends CreateRecord
         } catch (UniqueConstraintViolationException) {
             $existing = LessonPlanFamily::where('subject_grade_id', $data['subject_grade_id'])
                 ->where('day', $data['day'])
-                ->where('language', $data['language'])
                 ->first();
 
             if ($existing) {
@@ -191,7 +204,7 @@ class CreateLessonPlanFamily extends CreateRecord
                     $message = new Message([
                         'to_user_id' => $user->id,
                         'subject' => 'Duplicate lesson plan detected',
-                        'body' => 'A lesson plan already exists for this subject grade, day, and language. '
+                        'body' => 'A lesson plan already exists for this subject grade and day. '
                                      .'Your submission was not saved. '
                                      .'Open the existing plan and use "Edit This Plan" to add a new version instead.',
                     ]);
@@ -200,7 +213,7 @@ class CreateLessonPlanFamily extends CreateRecord
                 }
 
                 Notification::make('duplicate-family')
-                    ->title('A lesson plan already exists for this subject grade, day, and language.')
+                    ->title('A lesson plan already exists for this subject grade and day.')
                     ->body('You\'ve been redirected to the existing lesson plan. Use "Edit This Plan" to add a new version.')
                     ->warning()
                     ->persistent()

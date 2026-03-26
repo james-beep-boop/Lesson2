@@ -13,15 +13,17 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class LessonPlanFamilyResource extends Resource
 {
     protected static ?string $model = LessonPlanFamily::class;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
+
     protected static ?string $navigationLabel = 'Lessons';
+
     protected static ?string $label = 'Lesson Plan';
 
     public static function form(Schema $schema): Schema
@@ -30,14 +32,14 @@ class LessonPlanFamilyResource extends Resource
             Select::make('subject_grade_id')
                 ->label('Subject Grade')
                 ->relationship('subjectGrade', 'id', fn ($query) => $query->with('subject'))
-                ->getOptionLabelFromRecordUsing(fn ($record) => $record->subject->name . ' — Grade ' . $record->grade)
+                ->getOptionLabelFromRecordUsing(fn ($record) => $record->subject->name.' — Grade '.$record->grade)
                 ->searchable()
                 ->required(),
             TextInput::make('day')->required(),
-            Select::make('language')
-                ->options(['en' => 'English', 'sw' => 'Swahili'])
-                ->default('en')
-                ->required(),
+            TextInput::make('strand_number')->label('Strand Number')->numeric()->required(),
+            TextInput::make('strand_name')->label('Strand Name')->required(),
+            TextInput::make('substrand_number')->label('Substrand Number')->numeric()->required(),
+            TextInput::make('substrand_name')->label('Substrand Name')->required(),
         ]);
     }
 
@@ -56,25 +58,31 @@ class LessonPlanFamilyResource extends Resource
                     ->searchable(),
                 TextColumn::make('family.subjectGrade.grade')
                     ->label('Grade')
-                    ->formatStateUsing(fn ($state) => 'Grade ' . $state)
+                    ->formatStateUsing(fn ($state) => 'Grade '.$state)
                     ->sortable(),
-                TextColumn::make('family.day')
-                    ->label('Day')
+                TextColumn::make('family.strand_number')
+                    ->label('Strand #')
                     ->sortable(),
-                TextColumn::make('family.language')
-                    ->label('Language')
-                    ->formatStateUsing(fn ($state) => $state === 'en' ? 'English' : 'Swahili'),
+                TextColumn::make('family.strand_name')
+                    ->label('Strand Name')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('family.substrand_number')
+                    ->label('Substrand #')
+                    ->sortable(),
+                TextColumn::make('family.substrand_name')
+                    ->label('Substrand Name')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('version')
                     ->label('Version')
                     ->sortable(),
                 TextColumn::make('official_indicator')
                     ->label('Official')
-                    ->state(fn (LessonPlanVersion $record): string =>
-                        ($record->family && (int) $record->family->official_version_id === $record->id)
+                    ->state(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
                             ? '✓' : ''
                     )
-                    ->color(fn (LessonPlanVersion $record): string =>
-                        ($record->family && (int) $record->family->official_version_id === $record->id)
+                    ->color(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
                             ? 'success' : 'gray'
                     ),
                 TextColumn::make('contributor.name')
@@ -97,6 +105,7 @@ class LessonPlanFamilyResource extends Resource
                         if (! filled($data['subject_id'] ?? null)) {
                             return $query;
                         }
+
                         return $query->whereHas(
                             'family',
                             fn (Builder $q) => $q->whereHas(
@@ -105,9 +114,8 @@ class LessonPlanFamilyResource extends Resource
                             )
                         );
                     })
-                    ->indicateUsing(fn (array $data): ?string =>
-                        filled($data['subject_id'] ?? null)
-                            ? 'Subject: ' . (Subject::find($data['subject_id'])?->name ?? $data['subject_id'])
+                    ->indicateUsing(fn (array $data): ?string => filled($data['subject_id'] ?? null)
+                            ? 'Subject: '.(Subject::find($data['subject_id'])?->name ?? $data['subject_id'])
                             : null
                     ),
 
@@ -115,12 +123,11 @@ class LessonPlanFamilyResource extends Resource
                     ->form([
                         Select::make('grade')
                             ->label('Grade')
-                            ->options(fn () =>
-                                SubjectGrade::query()
-                                    ->distinct()
-                                    ->orderBy('grade')
-                                    ->pluck('grade', 'grade')
-                                    ->mapWithKeys(fn ($g) => [$g => 'Grade ' . $g])
+                            ->options(fn () => SubjectGrade::query()
+                                ->distinct()
+                                ->orderBy('grade')
+                                ->pluck('grade', 'grade')
+                                ->mapWithKeys(fn ($g) => [$g => 'Grade '.$g])
                             )
                             ->placeholder('All grades'),
                     ])
@@ -128,6 +135,7 @@ class LessonPlanFamilyResource extends Resource
                         if (! filled($data['grade'] ?? null)) {
                             return $query;
                         }
+
                         return $query->whereHas(
                             'family',
                             fn (Builder $q) => $q->whereHas(
@@ -136,25 +144,11 @@ class LessonPlanFamilyResource extends Resource
                             )
                         );
                     })
-                    ->indicateUsing(fn (array $data): ?string =>
-                        filled($data['grade'] ?? null) ? 'Grade ' . $data['grade'] : null
+                    ->indicateUsing(fn (array $data): ?string => filled($data['grade'] ?? null) ? 'Grade '.$data['grade'] : null
                     ),
 
-                SelectFilter::make('language')
-                    ->label('Language')
-                    ->options(['en' => 'English', 'sw' => 'Swahili'])
-                    ->modifyQueryUsing(function (Builder $query, array $data): Builder {
-                        if (! filled($data['value'] ?? null)) {
-                            return $query;
-                        }
-                        return $query->whereHas(
-                            'family',
-                            fn (Builder $q) => $q->where('language', $data['value'])
-                        );
-                    }),
             ])
-            ->recordUrl(fn (LessonPlanVersion $record): string =>
-                static::getUrl('view', ['record' => $record->lesson_plan_family_id])
+            ->recordUrl(fn (LessonPlanVersion $record): string => static::getUrl('view', ['record' => $record->lesson_plan_family_id])
             )
             ->defaultSort('created_at', 'desc');
     }

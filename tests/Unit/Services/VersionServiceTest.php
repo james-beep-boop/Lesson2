@@ -11,7 +11,7 @@ test('first normal family version is 1.0.0', function () {
     $service = new VersionService;
 
     $version = $service->createFamilyWithFirstVersion(
-        $sg->id, '1', 'en', '# Content', null, $contributor
+        $sg->id, '1', 1, 'Numbers', 1, 'Counting', '# Content', null, $contributor
     );
 
     expect($version->version)->toBe('1.0.0');
@@ -54,7 +54,7 @@ test('saving a new family creates family and version in one transaction', functi
     $versionCountBefore = LessonPlanVersion::count();
 
     $version = $service->createFamilyWithFirstVersion(
-        $sg->id, '2', 'en', '# Content', null, $contributor
+        $sg->id, '2', 1, 'Numbers', 1, 'Counting', '# Content', null, $contributor
     );
 
     expect(LessonPlanFamily::count())->toBe($familyCountBefore + 1);

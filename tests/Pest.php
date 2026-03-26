@@ -54,11 +54,10 @@ function makeEditor(SubjectGrade $sg): User
     return $user;
 }
 
-function makeFamilyWithVersion(SubjectGrade $sg, string $language = 'en'): array
+function makeFamilyWithVersion(SubjectGrade $sg): array
 {
     $family = LessonPlanFamily::factory()->create([
         'subject_grade_id' => $sg->id,
-        'language' => $language,
     ]);
     $version = LessonPlanVersion::factory()->create([
         'lesson_plan_family_id' => $family->id,

@@ -18,31 +18,45 @@ use Laravel\Ai\Streaming\Events\TextDelta;
 class ViewLessonPlanFamily extends Page
 {
     protected static string $resource = LessonPlanFamilyResource::class;
+
     protected string $view = 'filament.app.pages.view-lesson-plan-family';
 
     public LessonPlanFamily $record;
+
     public ?LessonPlanVersion $selectedVersion = null;
+
     public ?LessonPlanVersion $compareVersion = null;
+
     public bool $compareMode = false;
+
     public bool $editMode = false;
+
     public string $editContent = '';
+
     public string $versionBump = 'patch';
+
     public ?string $revisionNote = null;
 
     public ?Favorite $userFavorite = null;
+
     public bool $hasPendingDeletion = false;
 
     public bool $showDeletionForm = false;
+
     public string $deletionReason = '';
 
     // AI panel state
     public bool $aiPanelOpen = false;
+
     public string $aiPrompt = '';
+
     public string $aiResponse = '';
 
     // Translation state: idle | streaming | review | conflict
     public string $translationState = 'idle';
+
     public string $translateContent = '';
+
     public string $translationBump = 'patch';
 
     public function mount(LessonPlanFamily $record): void
@@ -187,6 +201,7 @@ class ViewLessonPlanFamily extends Page
     public function versionPreviews(): array
     {
         $svc = app(VersionService::class);
+
         return [
             'major' => $svc->computeNextVersion($this->record, 'major'),
             'minor' => $svc->computeNextVersion($this->record, 'minor'),
@@ -201,13 +216,14 @@ class ViewLessonPlanFamily extends Page
         }
 
         $user = auth()->user();
-        $sg   = $this->record->subjectGrade;
+        $sg = $this->record->subjectGrade;
 
         if (! $user->isSubjectAdminFor($sg) && ! $user->isSiteAdmin()) {
             Notification::make('deletion-unauthorized')
                 ->title('Not authorized.')
                 ->danger()
                 ->send();
+
             return;
         }
 
@@ -218,6 +234,7 @@ class ViewLessonPlanFamily extends Page
                 ->warning()
                 ->send();
             $this->showDeletionForm = false;
+
             return;
         }
 
@@ -228,7 +245,7 @@ class ViewLessonPlanFamily extends Page
         );
 
         $this->showDeletionForm = false;
-        $this->deletionReason   = '';
+        $this->deletionReason = '';
         $this->hasPendingDeletion = true;
 
         Notification::make('deletion-requested')
@@ -269,8 +286,8 @@ class ViewLessonPlanFamily extends Page
         }
 
         $content = $this->selectedVersion?->content ?? '';
-        $prompt  = "The following is the current lesson plan content:\n\n{$content}"
-                 . "\n\n---\n\nUser's request: {$this->aiPrompt}";
+        $prompt = "The following is the current lesson plan content:\n\n{$content}"
+                 ."\n\n---\n\nUser's request: {$this->aiPrompt}";
 
         $this->aiResponse = '';
         $accumulated = '';
@@ -311,7 +328,7 @@ class ViewLessonPlanFamily extends Page
             return;
         }
 
-        if (! $this->selectedVersion || $this->record->language !== 'en') {
+        if (! $this->selectedVersion) {
             return;
         }
 
@@ -388,6 +405,6 @@ class ViewLessonPlanFamily extends Page
     {
         $this->translationState = 'idle';
         $this->translateContent = '';
-        $this->translationBump  = 'patch';
+        $this->translationBump = 'patch';
     }
 }
