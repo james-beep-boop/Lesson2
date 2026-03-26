@@ -9,19 +9,27 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class MessageResource extends Resource
 {
     protected static ?string $model = Message::class;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-inbox';
+
     protected static ?string $navigationLabel = 'Inbox';
+
     protected static ?string $label = 'Message';
+
     protected static ?int $navigationSort = 2;
+
+    protected static bool $shouldRegisterNavigation = false;
 
     /**
      * Scope to messages received by the current user only.
      */
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
             ->where('to_user_id', auth()->id())
@@ -85,6 +93,7 @@ class MessageResource extends Resource
                 ->whereNull('read_at')
                 ->count();
         }
+
         return $cache[$userId] > 0 ? (string) $cache[$userId] : null;
     }
 
@@ -96,9 +105,9 @@ class MessageResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'   => Pages\ListMessages::route('/'),
+            'index' => Pages\ListMessages::route('/'),
             'compose' => Pages\ComposeMessage::route('/compose'),
-            'view'    => Pages\ViewMessage::route('/{record}'),
+            'view' => Pages\ViewMessage::route('/{record}'),
         ];
     }
 
@@ -108,17 +117,17 @@ class MessageResource extends Resource
         return (bool) auth()->id();
     }
 
-    public static function canView(\Illuminate\Database\Eloquent\Model $record): bool
+    public static function canView(Model $record): bool
     {
         return $record->to_user_id === auth()->id();
     }
 
-    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    public static function canEdit(Model $record): bool
     {
         return false;
     }
 
-    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    public static function canDelete(Model $record): bool
     {
         return false;
     }

@@ -5,6 +5,9 @@ namespace App\Providers\Filament;
 use App\Filament\App\Pages\Profile;
 use App\Filament\App\Pages\Register;
 use App\Filament\App\Pages\RequestPasswordReset;
+use App\Filament\App\Resources\MessageResource;
+use App\Models\Message;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -44,20 +47,35 @@ class AppPanelProvider extends PanelProvider
 /* Brand name — ~35% bigger than default body text (1rem → 1.5rem) */
 .fi-logo { font-size: 1.5rem !important; font-weight: 700 !important; letter-spacing: -0.01em; }
 
-/* Push nav items (Dashboard, Lessons, Inbox) to the right, just left of the user avatar */
+/* Push nav items (Dashboard, Lessons) to the right, just left of the user avatar */
 .fi-topbar { display: flex; align-items: center; gap: 0; }
 .fi-topbar-nav-groups { margin-left: auto !important; }
 .fi-topbar-end { margin-left: 1rem !important; flex-shrink: 0; }
 </style>
                 ')
             )
+            ->userMenuItems([
+                'profile' => fn (Action $action) => $action->hidden(),
+                Action::make('messages')
+                    ->label(function (): string {
+                        $user = auth()->user();
+                        $total = Message::where('to_user_id', $user->id)->count();
+                        $unread = Message::where('to_user_id', $user->id)->whereNull('read_at')->count();
+
+                        return "Messages: {$unread} / {$total}";
+                    })
+                    ->icon('heroicon-o-inbox')
+                    ->url(fn (): string => MessageResource::getUrl('index')),
+            ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_PROFILE_BEFORE,
                 fn (): HtmlString => auth()->check()
                     ? new HtmlString(
-                        '<p class="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">'
-                        .e(auth()->user()->role_label)
-                        .'</p>'
+                        '<div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 space-y-0.5">'
+                        .'<p class="text-sm text-gray-800 dark:text-gray-200"><span class="text-xs text-gray-400 dark:text-gray-500">Username:</span> '.e(auth()->user()->name).'</p>'
+                        .'<p class="text-sm text-gray-800 dark:text-gray-200"><span class="text-xs text-gray-400 dark:text-gray-500">Role:</span> '.e(auth()->user()->role_label).'</p>'
+                        .'<p class="text-sm text-gray-800 dark:text-gray-200"><span class="text-xs text-gray-400 dark:text-gray-500">Email:</span> '.e(auth()->user()->email).'</p>'
+                        .'</div>'
                     )
                     : new HtmlString('')
             )
