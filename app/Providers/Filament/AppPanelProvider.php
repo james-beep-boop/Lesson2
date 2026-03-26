@@ -89,10 +89,6 @@ class AppPanelProvider extends PanelProvider
                     )
                     : new HtmlString('')
             )
-            ->renderHook(
-                PanelsRenderHook::SIMPLE_LAYOUT_END,
-                fn () => view('components.ares-footer'),
-            )
             ->colors([
                 'primary' => Color::Blue,
             ])
