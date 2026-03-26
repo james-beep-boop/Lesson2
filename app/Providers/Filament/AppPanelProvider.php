@@ -51,11 +51,16 @@ class AppPanelProvider extends PanelProvider
 .fi-topbar { display: flex; align-items: center; gap: 0; }
 .fi-topbar-nav-groups { margin-left: auto !important; }
 .fi-topbar-end { margin-left: 1rem !important; flex-shrink: 0; }
+
+/* Hide the empty profile header placeholder in the user menu */
+.fi-user-menu .fi-dropdown-header { display: none !important; }
 </style>
                 ')
             )
             ->userMenuItems([
-                'profile' => fn (Action $action) => $action->hidden(),
+                // url(null) + no label + no icon → becomes a $hasProfileHeader = true,
+                // which places USER_MENU_PROFILE_BEFORE inside the dropdown (hidden via CSS above)
+                'profile' => fn (Action $action) => $action->url(null)->label('')->icon(null),
                 Action::make('messages')
                     ->label(function (): string {
                         $user = auth()->user();
@@ -65,16 +70,19 @@ class AppPanelProvider extends PanelProvider
                         return "Messages: {$unread} / {$total}";
                     })
                     ->icon('heroicon-o-inbox')
-                    ->url(fn (): string => MessageResource::getUrl('index')),
+                    ->url(fn (): string => MessageResource::getUrl('index'))
+                    ->sort(-2),
             ])
             ->renderHook(
                 PanelsRenderHook::USER_MENU_PROFILE_BEFORE,
                 fn (): HtmlString => auth()->check()
                     ? new HtmlString(
-                        '<div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 space-y-0.5">'
-                        .'<p class="text-sm text-gray-800 dark:text-gray-200"><span class="text-xs text-gray-400 dark:text-gray-500">Username:</span> '.e(auth()->user()->name).'</p>'
-                        .'<p class="text-sm text-gray-800 dark:text-gray-200"><span class="text-xs text-gray-400 dark:text-gray-500">Role:</span> '.e(auth()->user()->role_label).'</p>'
-                        .'<p class="text-sm text-gray-800 dark:text-gray-200"><span class="text-xs text-gray-400 dark:text-gray-500">Email:</span> '.e(auth()->user()->email).'</p>'
+                        '<div class="fi-dropdown-list">'
+                        .'<div style="padding:0.625rem 0.875rem 0.5rem;">'
+                        .'<p style="font-size:0.8125rem;line-height:1.5;"><span style="opacity:0.55;font-size:0.75rem;">Username:</span> '.e(auth()->user()->name).'</p>'
+                        .'<p style="font-size:0.8125rem;line-height:1.5;"><span style="opacity:0.55;font-size:0.75rem;">Role:</span> '.e(auth()->user()->role_label).'</p>'
+                        .'<p style="font-size:0.8125rem;line-height:1.5;"><span style="opacity:0.55;font-size:0.75rem;">Email:</span> '.e(auth()->user()->email).'</p>'
+                        .'</div>'
                         .'</div>'
                     )
                     : new HtmlString('')
