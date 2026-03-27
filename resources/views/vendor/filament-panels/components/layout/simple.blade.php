@@ -1,3 +1,4 @@
+{{-- ARES override: <x-ares-footer /> added after fi-simple-main-ctn. Re-apply after Filament upgrades. --}}
 @php
     use Filament\Support\Enums\Width;
 

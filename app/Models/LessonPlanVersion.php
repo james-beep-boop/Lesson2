@@ -54,10 +54,19 @@ class LessonPlanVersion extends Model
      * Generate the canonical filename for this version.
      * Format: SUBJ_Grade_Day_REV_Major.Minor.Patch.md
      * Example: ENGL_10_1_REV_1.1.1.md
-     * Requires family.subjectGrade.subject to be loaded.
+     *
+     * Relations are eager-loaded automatically if not already present.
      */
     public function getFilename(): string
     {
+        if (! $this->relationLoaded('family')) {
+            $this->load('family.subjectGrade.subject');
+        } elseif (! $this->family->relationLoaded('subjectGrade')) {
+            $this->family->load('subjectGrade.subject');
+        } elseif (! $this->family->subjectGrade->relationLoaded('subject')) {
+            $this->family->subjectGrade->load('subject');
+        }
+
         $subject = strtoupper(substr($this->family->subjectGrade->subject->name, 0, 4));
         $grade = $this->family->subjectGrade->grade;
         $day = $this->family->day;
