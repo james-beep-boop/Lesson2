@@ -17,8 +17,7 @@
     {{-- Header info --}}
     <div class="mb-4">
         <h1 class="text-xl font-bold">
-            {{ $sg->subject->name }} — Grade {{ $sg->grade }} · Day {{ $record->day }} ·
-            {{ $record->language === 'en' ? 'English' : 'Swahili' }}
+            {{ $sg->subject->name }} — Grade {{ $sg->grade }} · Day {{ $record->day }}
         </h1>
 
         @if($differsFromOfficial)
@@ -32,11 +31,30 @@
         {{-- Edit mode: full-width --}}
         @php $previews = $this->versionPreviews(); @endphp
         <x-filament::section heading="Edit This Plan — new version">
-            <textarea
-                wire:model="editContent"
-                rows="28"
-                class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm"
-            ></textarea>
+            <div x-data="{ tab: 'edit' }">
+                <div class="mb-3 flex gap-1 border-b border-gray-200">
+                    <button
+                        @click="tab = 'edit'"
+                        :class="tab === 'edit' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
+                        class="px-4 py-1.5 text-sm -mb-px"
+                    >Edit</button>
+                    <button
+                        @click="tab = 'preview'; $wire.$refresh()"
+                        :class="tab === 'preview' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
+                        class="px-4 py-1.5 text-sm -mb-px"
+                    >Preview</button>
+                </div>
+                <div x-show="tab === 'edit'">
+                    <textarea
+                        wire:model="editContent"
+                        rows="28"
+                        class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm"
+                    ></textarea>
+                </div>
+                <div x-show="tab === 'preview'" class="prose max-w-none min-h-[7rem] rounded-lg border border-gray-200 p-4">
+                    {!! \Illuminate\Support\Str::markdown($editContent) !!}
+                </div>
+            </div>
 
             <div class="mt-4 flex flex-wrap items-center gap-6">
                 <div>
@@ -146,77 +164,31 @@
                     @if($compareMode && $compareVersion)
                         {{-- Compare mode: diff view --}}
                         @php $diff = $this->computeDiff(); @endphp
-                        <x-filament::section
-                            x-data="{ layout: 'side' }"
-                        >
+                        <x-filament::section>
                             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                <div class="flex items-center gap-3">
-                                    <span class="font-semibold">
-                                        v{{ $selectedVersion->version }}
-                                        <span class="text-gray-400 mx-1">vs</span>
-                                        v{{ $compareVersion->version }}
-                                    </span>
-                                    <span class="flex items-center gap-1 text-xs">
-                                        <span class="inline-block w-3 h-3 rounded bg-red-100 border border-red-200"></span> removed
-                                        <span class="inline-block w-3 h-3 rounded bg-green-100 border border-green-200 ml-2"></span> added
-                                    </span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex rounded border border-gray-300 overflow-hidden text-xs">
-                                        <button
-                                            @click="layout = 'side'"
-                                            :class="layout === 'side' ? 'bg-gray-200 font-semibold' : 'bg-white hover:bg-gray-50'"
-                                            class="px-3 py-1"
-                                        >Side by side</button>
-                                        <button
-                                            @click="layout = 'unified'"
-                                            :class="layout === 'unified' ? 'bg-gray-200 font-semibold' : 'bg-white hover:bg-gray-50'"
-                                            class="px-3 py-1 border-l border-gray-300"
-                                        >Unified</button>
+                                <span class="font-semibold">
+                                    v{{ $selectedVersion->version }}
+                                    <span class="text-gray-400 mx-1">vs</span>
+                                    v{{ $compareVersion->version }}
+                                </span>
+                                <x-filament::button wire:click="$set('compareMode', false)" color="gray" size="sm">
+                                    Exit Compare
+                                </x-filament::button>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">v{{ $selectedVersion->version }}</p>
+                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
+                                        {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
                                     </div>
-                                    <x-filament::button wire:click="$set('compareMode', false)" color="gray" size="sm">
-                                        Exit Compare
-                                    </x-filament::button>
                                 </div>
-                            </div>
-
-                            {{-- Side-by-side view --}}
-                            <div x-show="layout === 'side'" class="overflow-auto rounded border border-gray-200">
-                                <table class="w-full border-collapse font-mono text-xs leading-5">
-                                    <thead>
-                                        <tr class="bg-gray-100 text-gray-600 text-left">
-                                            <th class="px-3 py-1 w-1/2 border-b border-r border-gray-200">v{{ $selectedVersion->version }}</th>
-                                            <th class="px-3 py-1 w-1/2 border-b border-gray-200">v{{ $compareVersion->version }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($diff as $line)
-                                            <tr class="align-top">
-                                                <td class="px-3 py-0 border-r border-gray-100 whitespace-pre-wrap {{ $line['type'] === 'deleted' ? 'bg-red-50' : ($line['type'] === 'added' ? 'bg-gray-50' : '') }}">{{ $line['left'] !== '' ? $line['left'] : ($line['type'] === 'deleted' ? $line['left'] : "\u{00A0}") }}</td>
-                                                <td class="px-3 py-0 whitespace-pre-wrap {{ $line['type'] === 'added' ? 'bg-green-50' : ($line['type'] === 'deleted' ? 'bg-gray-50' : '') }}">{{ $line['right'] !== '' ? $line['right'] : "\u{00A0}" }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {{-- Unified view --}}
-                            <div x-show="layout === 'unified'" class="overflow-auto rounded border border-gray-200 font-mono text-xs leading-5">
-                                @foreach($diff as $line)
-                                    @if($line['type'] === 'deleted')
-                                        <div class="flex bg-red-50 px-3 py-0 whitespace-pre-wrap">
-                                            <span class="select-none text-red-400 mr-2 shrink-0">−</span><span>{{ $line['left'] }}</span>
-                                        </div>
-                                    @elseif($line['type'] === 'added')
-                                        <div class="flex bg-green-50 px-3 py-0 whitespace-pre-wrap">
-                                            <span class="select-none text-green-600 mr-2 shrink-0">+</span><span>{{ $line['right'] }}</span>
-                                        </div>
-                                    @else
-                                        <div class="flex px-3 py-0 whitespace-pre-wrap text-gray-700">
-                                            <span class="select-none text-gray-300 mr-2 shrink-0">&nbsp;</span><span>{{ $line['left'] }}</span>
-                                        </div>
-                                    @endif
-                                @endforeach
+                                <div>
+                                    <p class="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">v{{ $compareVersion->version }}</p>
+                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
+                                        {!! \Illuminate\Support\Str::markdown($compareVersion->content) !!}
+                                    </div>
+                                </div>
                             </div>
                         </x-filament::section>
 
@@ -308,13 +280,13 @@
 
                             {{-- Content viewer --}}
                             <div class="prose max-w-none">
-                                {!! \Illuminate\Support\Str::markdown(e($selectedVersion->content)) !!}
+                                {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
                             </div>
                         </x-filament::section>
                     @endif
 
                     {{-- Translation panel --}}
-                    @if($canTranslate && $record->language === 'en' && $translationState !== 'idle')
+                    @if($canTranslate && $translationState !== 'idle')
                         <x-filament::section heading="Translate to Swahili" class="mt-4">
 
                             @if($translationState === 'streaming')
