@@ -2,13 +2,13 @@
     @php
         $user = auth()->user();
         $sg = $record->subjectGrade;
-        $canEdit = $user && $user->canEditSubjectGrade($sg);
-        $canMarkOfficial = $user && ($user->isSiteAdmin() || $user->isSubjectAdminFor($sg));
-        $canTranslate = $user && config('features.ai_suggestions') && ($user->isSiteAdmin() || $user->isSubjectAdminFor($sg));
+        $canEdit = $user && $user->can('create', [App\Models\LessonPlanVersion::class, $record]);
+        $canMarkOfficial = $user && $selectedVersion && $user->can('markOfficial', $selectedVersion);
+        $canTranslate = $user && $user->can('translate', $record);
         $canRequestDeletion = $user && $selectedVersion
-            && ($user->isSubjectAdminFor($sg) || $user->isSiteAdmin())
+            && $user->can('requestDeletion', $selectedVersion)
             && ! $this->hasPendingDeletion;
-        $canAskAi = $user && config('features.ai_suggestions') && $canEdit;
+        $canAskAi = $user && $selectedVersion && $user->can('askAi', $selectedVersion);
         $favorite = $this->userFavorite;
         $isOfficialSelected = $selectedVersion && $record->official_version_id === $selectedVersion->id;
         $differsFromOfficial = $favorite && $record->official_version_id && $favorite->lesson_plan_version_id !== $record->official_version_id;
@@ -90,27 +90,7 @@
         </x-filament::section>
 
         {{-- AI panel --}}
-        @if($aiPanelOpen && $canAskAi)
-            <x-filament::section heading="Ask AI" class="mt-4">
-                <p class="mb-2 text-sm text-gray-500">AI suggestions are read-only. Copy anything useful into your editor manually.</p>
-                <div class="flex gap-2 mb-3">
-                    @foreach(['Suggest improvements', 'Check for clarity', 'Simplify language', 'Ask a question'] as $quick)
-                        <x-filament::button wire:click="$set('aiPrompt', '{{ $quick }}')" color="gray" size="sm">
-                            {{ $quick }}
-                        </x-filament::button>
-                    @endforeach
-                </div>
-                <textarea wire:model="aiPrompt" rows="3" class="w-full rounded border border-gray-300 p-2 text-sm" placeholder="What would you like help with?"></textarea>
-                <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap min-h-[2rem]">
-                    <span wire:stream="aiResponse">{{ $aiResponse }}</span>
-                    <span wire:loading wire:target="submitAiPrompt" class="text-gray-400 italic">Thinking…</span>
-                </div>
-                <div class="mt-3 flex gap-2">
-                    <x-filament::button wire:click="submitAiPrompt" wire:loading.attr="disabled" wire:target="submitAiPrompt" size="sm">Submit</x-filament::button>
-                    <x-filament::button wire:click="$set('aiPanelOpen', false)" color="gray" size="sm">Close</x-filament::button>
-                </div>
-            </x-filament::section>
-        @endif
+        @include('filament.app.partials.ai-panel')
 
     @else
         {{-- Normal view: sidebar + content --}}
@@ -353,28 +333,8 @@
                         </x-filament::section>
                     @endif
 
-                    {{-- AI panel (slide-over style) --}}
-                    @if($aiPanelOpen && $canAskAi)
-                        <x-filament::section heading="Ask AI" class="mt-4">
-                            <p class="mb-2 text-sm text-gray-500">AI suggestions are read-only. Copy anything useful into your editor manually.</p>
-                            <div class="flex gap-2 mb-3">
-                                @foreach(['Suggest improvements', 'Check for clarity', 'Simplify language', 'Ask a question'] as $quick)
-                                    <x-filament::button wire:click="$set('aiPrompt', '{{ $quick }}')" color="gray" size="sm">
-                                        {{ $quick }}
-                                    </x-filament::button>
-                                @endforeach
-                            </div>
-                            <textarea wire:model="aiPrompt" rows="3" class="w-full rounded border border-gray-300 p-2 text-sm" placeholder="What would you like help with?"></textarea>
-                            <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap min-h-[2rem]">
-                                <span wire:stream="aiResponse">{{ $aiResponse }}</span>
-                                <span wire:loading wire:target="submitAiPrompt" class="text-gray-400 italic">Thinking…</span>
-                            </div>
-                            <div class="mt-3 flex gap-2">
-                                <x-filament::button wire:click="submitAiPrompt" wire:loading.attr="disabled" wire:target="submitAiPrompt" size="sm">Submit</x-filament::button>
-                                <x-filament::button wire:click="$set('aiPanelOpen', false)" color="gray" size="sm">Close</x-filament::button>
-                            </div>
-                        </x-filament::section>
-                    @endif
+                    {{-- AI panel --}}
+                    @include('filament.app.partials.ai-panel')
                 @else
                     <p class="text-gray-500">No versions yet.</p>
                 @endif

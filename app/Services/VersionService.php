@@ -104,6 +104,33 @@ class VersionService
     }
 
     /**
+     * Compute all three next version strings (major/minor/patch) in a single
+     * DB round-trip. Use this instead of calling computeNextVersion() three times.
+     *
+     * @return array{major: string, minor: string, patch: string}
+     */
+    public function computeAllNextVersions(LessonPlanFamily $family): array
+    {
+        $highest = $family->versions()
+            ->pluck('version')
+            ->map(fn ($v) => $this->parseVersion($v))
+            ->sort(fn ($a, $b) => $b <=> $a)
+            ->first();
+
+        if (! $highest) {
+            return ['major' => '1.0.0', 'minor' => '1.0.0', 'patch' => '1.0.0'];
+        }
+
+        [$major, $minor, $patch] = $highest;
+
+        return [
+            'major' => ($major + 1).'.0.0',
+            'minor' => $major.'.'.($minor + 1).'.0',
+            'patch' => $major.'.'.$minor.'.'.($patch + 1),
+        ];
+    }
+
+    /**
      * Parse a semver string into [major, minor, patch].
      */
     public function parseVersion(string $version): array

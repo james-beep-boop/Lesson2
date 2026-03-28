@@ -83,7 +83,13 @@ class ViewLessonPlanFamily extends Page
 
     public function selectVersion(int $versionId): void
     {
-        $this->selectedVersion = $this->record->versions()->findOrFail($versionId);
+        $version = $this->record->versions->find($versionId);
+
+        if (! $version) {
+            return;
+        }
+
+        $this->selectedVersion = $version;
         $this->compareMode = false;
         $this->compareVersion = null;
         $this->hasPendingDeletion = (bool) $this->selectedVersion->deletionRequests()
@@ -148,13 +154,7 @@ class ViewLessonPlanFamily extends Page
     /** Returns ['major' => '2.0.0', 'minor' => '1.1.0', 'patch' => '1.0.1'] based on current versions. */
     public function versionPreviews(): array
     {
-        $svc = app(VersionService::class);
-
-        return [
-            'major' => $svc->computeNextVersion($this->record, 'major'),
-            'minor' => $svc->computeNextVersion($this->record, 'minor'),
-            'patch' => $svc->computeNextVersion($this->record, 'patch'),
-        ];
+        return app(VersionService::class)->computeAllNextVersions($this->record);
     }
 
     public function requestDeletion(DeletionRequestService $service): void
@@ -163,17 +163,9 @@ class ViewLessonPlanFamily extends Page
             return;
         }
 
+        $this->authorize('requestDeletion', $this->selectedVersion);
+
         $user = auth()->user();
-        $sg = $this->record->subjectGrade;
-
-        if (! $user->isSubjectAdminFor($sg) && ! $user->isSiteAdmin()) {
-            Notification::make('deletion-unauthorized')
-                ->title('Not authorized.')
-                ->danger()
-                ->send();
-
-            return;
-        }
 
         // Prevent duplicate pending requests for the same version.
         if ($this->hasPendingDeletion) {
@@ -204,7 +196,12 @@ class ViewLessonPlanFamily extends Page
 
     public function enterCompareMode(int $versionId): void
     {
-        $other = $this->record->versions()->findOrFail($versionId);
+        $other = $this->record->versions->find($versionId);
+
+        if (! $other) {
+            return;
+        }
+
         $this->compareVersion = $other;
         $this->compareMode = true;
     }
@@ -219,15 +216,11 @@ class ViewLessonPlanFamily extends Page
      */
     public function submitAiPrompt(): void
     {
-        if (! config('features.ai_suggestions')) {
+        if (! $this->selectedVersion) {
             return;
         }
 
-        $user = auth()->user();
-
-        if (! $user->canEditSubjectGrade($this->record->subjectGrade)) {
-            return;
-        }
+        $this->authorize('askAi', $this->selectedVersion);
 
         if (blank($this->aiPrompt)) {
             return;
@@ -266,15 +259,7 @@ class ViewLessonPlanFamily extends Page
      */
     public function startTranslation(): void
     {
-        if (! config('features.ai_suggestions')) {
-            return;
-        }
-
-        $user = auth()->user();
-
-        if (! ($user->isSiteAdmin() || $user->isSubjectAdminFor($this->record->subjectGrade))) {
-            return;
-        }
+        $this->authorize('translate', $this->record);
 
         if (! $this->selectedVersion) {
             return;
@@ -306,15 +291,9 @@ class ViewLessonPlanFamily extends Page
      */
     public function saveTranslation(VersionService $versionService): void
     {
-        if (! config('features.ai_suggestions')) {
-            return;
-        }
+        $this->authorize('translate', $this->record);
 
         $user = auth()->user();
-
-        if (! ($user->isSiteAdmin() || $user->isSubjectAdminFor($this->record->subjectGrade))) {
-            return;
-        }
 
         // First save attempt: detect version conflict and ask user to choose a bump.
         if ($this->translationState !== 'conflict') {

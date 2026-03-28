@@ -83,22 +83,21 @@ test('teacher does not see create button', function () {
     $this->actingAs(makeTeacher());
 
     Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionDoesNotExist('create');
+        ->assertActionHidden('create');
 });
 
-test('subject admin does not see create button on list page', function () {
+test('subject admin sees create button on list page', function () {
     $sg = makeSubjectGrade();
-    $admin = makeSubjectAdmin($sg);
 
-    $this->actingAs($admin);
+    $this->actingAs(makeSubjectAdmin($sg));
 
     Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionDoesNotExist('create');
+        ->assertActionExists('create');
 });
 
-test('site admin does not see create button on list page', function () {
+test('site admin sees create button on list page', function () {
     $this->actingAs(makeSiteAdmin());
 
     Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionDoesNotExist('create');
+        ->assertActionExists('create');
 });
