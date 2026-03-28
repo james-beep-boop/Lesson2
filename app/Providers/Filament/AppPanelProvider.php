@@ -22,6 +22,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
@@ -69,9 +70,10 @@ class AppPanelProvider extends PanelProvider
                 'profile' => fn (Action $action) => $action->url(null)->label('')->icon(null),
                 Action::make('messages')
                     ->label(function (): string {
-                        $counts = Message::where('to_user_id', auth()->id())
+                        $userId = auth()->id();
+                        $counts = Cache::remember("user.{$userId}.inbox_counts", 30, fn () => Message::where('to_user_id', $userId)
                             ->selectRaw('COUNT(*) as total, SUM(read_at IS NULL) as unread')
-                            ->first();
+                            ->first());
 
                         return 'Inbox: '.($counts->unread ?? 0).' / '.($counts->total ?? 0);
                     })

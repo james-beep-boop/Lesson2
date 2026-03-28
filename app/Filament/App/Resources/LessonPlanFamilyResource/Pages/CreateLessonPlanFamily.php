@@ -14,10 +14,10 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -63,7 +63,11 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->label('Subject name')
                                 ->required(),
                         ])
-                        ->createOptionUsing(fn (array $data): int => Subject::create(['name' => $data['name']])->id)
+                        ->createOptionUsing(function (array $data): int {
+                            abort_unless(auth()->user()->isSiteAdmin(), 403, 'Only site administrators can create subjects.');
+
+                            return Subject::create(['name' => $data['name']])->id;
+                        })
                         ->afterStateUpdated(fn (Set $set) => $set('grade', null)),
 
                     Select::make('grade')

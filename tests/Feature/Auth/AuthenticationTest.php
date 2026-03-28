@@ -1,10 +1,15 @@
 <?php
 
+use App\Filament\App\Resources\LessonPlanFamilyResource;
+use App\Http\Responses\LoginResponse;
 use App\Models\User;
+use Filament\Facades\Filament;
 use Filament\Panel;
+use Illuminate\Http\Request;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
-    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
 });
 
 // ----------------------------------------------------------------
@@ -100,4 +105,30 @@ test('regular user cannot access admin panel', function () {
 
     $adminPanel = Panel::make()->id('admin');
     expect($user->canAccessPanel($adminPanel))->toBeFalse();
+});
+
+// ----------------------------------------------------------------
+// Post-login redirect
+// ----------------------------------------------------------------
+
+test('app panel login redirects to lesson plan families index', function () {
+    Filament::setCurrentPanel(Filament::getPanel('app'));
+
+    $response = (new LoginResponse)->toResponse(Request::create('/'));
+
+    $expectedUrl = LessonPlanFamilyResource::getUrl('index');
+
+    expect($response->getTargetUrl())->toBe($expectedUrl);
+});
+
+test('non-app panel login falls back to filament home', function () {
+    // When no 'app' panel is current, the standard Filament URL is used.
+    // We verify by ensuring the LoginResponse does not redirect to the lesson plan index.
+    $response = (new LoginResponse)->toResponse(Request::create('/'));
+
+    $lessonPlanUrl = LessonPlanFamilyResource::getUrl('index');
+
+    // Without the app panel being active the redirect target differs from the lesson plan index.
+    // (Panel is not set here, so getCurrentPanel() returns null.)
+    expect($response->getTargetUrl())->not->toBe($lessonPlanUrl);
 });
