@@ -9,6 +9,7 @@ use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\VersionService;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -17,7 +18,6 @@ use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -34,13 +34,12 @@ class CreateLessonPlanFamily extends CreateRecord
     public function form(Schema $schema): Schema
     {
         $user = auth()->user();
-
         $englishId = Subject::where('name', 'English')->value('id');
 
         return $schema->schema([
 
-            // ── Compact metadata grid ─────────────────────────────────────────
-            Grid::make(4)
+            // ── Row 1: Subject · Grade · Day ─────────────────────────────────
+            Grid::make(3)
                 ->schema([
                     Select::make('subject_id')
                         ->label('Subject')
@@ -57,37 +56,22 @@ class CreateLessonPlanFamily extends CreateRecord
                         })
                         ->default($englishId)
                         ->required()
-                        ->searchable()
                         ->live()
+                        ->searchable()
                         ->createOptionForm([
                             TextInput::make('name')
                                 ->label('Subject name')
                                 ->required(),
                         ])
                         ->createOptionUsing(fn (array $data): int => Subject::create(['name' => $data['name']])->id)
-                        ->afterStateUpdated(fn (Set $set) => $set('grade', null))
-                        ->columnSpan(2),
+                        ->afterStateUpdated(fn (Set $set) => $set('grade', null)),
 
                     Select::make('grade')
                         ->label('Grade')
-                        ->options(function (Get $get) use ($user) {
-                            $subjectId = $get('subject_id');
-                            if (! $subjectId) {
-                                return [];
-                            }
-
-                            return SubjectGrade::where('subject_id', $subjectId)
-                                ->when(
-                                    ! $user->isSiteAdmin(),
-                                    fn ($q) => $q->where('subject_admin_user_id', $user->id)
-                                )
-                                ->orderBy('grade')
-                                ->pluck('grade', 'grade')
-                                ->mapWithKeys(fn ($g) => [$g => 'Grade '.$g]);
-                        })
+                        ->options([10 => 'Grade 10', 11 => 'Grade 11', 12 => 'Grade 12'])
                         ->default(10)
                         ->required()
-                        ->searchable()
+                        ->live()
                         ->createOptionForm([
                             TextInput::make('grade')
                                 ->label('Grade number')
@@ -95,14 +79,14 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->minValue(1)
                                 ->required(),
                         ])
-                        ->createOptionUsing(fn (array $data): int => (int) $data['grade'])
-                        ->columnSpan(1),
+                        ->createOptionUsing(fn (array $data): int => (int) $data['grade']),
 
                     Select::make('day')
                         ->label('Day')
                         ->options(array_combine(range(1, 20), range(1, 20)))
+                        ->default(1)
                         ->required()
-                        ->searchable()
+                        ->live()
                         ->createOptionForm([
                             TextInput::make('day')
                                 ->label('Day number')
@@ -110,14 +94,18 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->minValue(1)
                                 ->required(),
                         ])
-                        ->createOptionUsing(fn (array $data): int => (int) $data['day'])
-                        ->columnSpan(1),
+                        ->createOptionUsing(fn (array $data): int => (int) $data['day']),
+                ]),
 
+            // ── Row 2: Version · Major Revision · Minor Revision ──────────────
+            Grid::make(3)
+                ->schema([
                     Select::make('version_number')
                         ->label('Version')
                         ->options(array_combine(range(1, 9), range(1, 9)))
                         ->default(1)
                         ->required()
+                        ->live()
                         ->createOptionForm([
                             TextInput::make('version_number')
                                 ->label('Version number')
@@ -125,14 +113,14 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->minValue(1)
                                 ->required(),
                         ])
-                        ->createOptionUsing(fn (array $data): int => (int) $data['version_number'])
-                        ->columnSpan(1),
+                        ->createOptionUsing(fn (array $data): int => (int) $data['version_number']),
 
                     Select::make('version_major')
                         ->label('Major Revision')
                         ->options(array_combine(range(0, 9), range(0, 9)))
                         ->default(0)
                         ->required()
+                        ->live()
                         ->createOptionForm([
                             TextInput::make('version_major')
                                 ->label('Major revision number')
@@ -140,14 +128,14 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->minValue(0)
                                 ->required(),
                         ])
-                        ->createOptionUsing(fn (array $data): int => (int) $data['version_major'])
-                        ->columnSpan(1),
+                        ->createOptionUsing(fn (array $data): int => (int) $data['version_major']),
 
                     Select::make('version_minor')
                         ->label('Minor Revision')
                         ->options(array_combine(range(0, 9), range(0, 9)))
                         ->default(0)
                         ->required()
+                        ->live()
                         ->createOptionForm([
                             TextInput::make('version_minor')
                                 ->label('Minor revision number')
@@ -155,14 +143,14 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->minValue(0)
                                 ->required(),
                         ])
-                        ->createOptionUsing(fn (array $data): int => (int) $data['version_minor'])
-                        ->columnSpan(1),
+                        ->createOptionUsing(fn (array $data): int => (int) $data['version_minor']),
                 ]),
 
             // ── Content ───────────────────────────────────────────────────────
             FileUpload::make('lesson_file')
                 ->label('Upload file (optional)')
                 ->helperText('Upload a .md or .txt file to populate the editor below, or a .docx Word document to convert to Markdown. You can edit the result before saving.')
+                ->placeholder('Drag & Drop your file or Browse')
                 ->acceptedFileTypes([
                     'text/plain',
                     'text/markdown',
@@ -173,8 +161,10 @@ class CreateLessonPlanFamily extends CreateRecord
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 ])
                 ->maxSize(32768)
+                ->maxFiles(1)
                 ->dehydrated(false)
                 ->live()
+                ->disabled(fn (): bool => ! $this->allMetadataFilled())
                 ->columnSpanFull()
                 ->afterStateUpdated(function (mixed $state, Set $set): void {
                     if (is_string($state)) {
@@ -254,6 +244,29 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->placeholder('Brief note about this version')
                 ->columnSpanFull(),
         ]);
+    }
+
+    /**
+     * All six metadata fields must have a value before the file upload
+     * widget and the submit button are enabled.
+     */
+    private function allMetadataFilled(): bool
+    {
+        $d = $this->data ?? [];
+
+        return ! empty($d['subject_id'])
+            && isset($d['grade']) && $d['grade'] !== '' && $d['grade'] !== null
+            && isset($d['day']) && $d['day'] !== '' && $d['day'] !== null
+            && isset($d['version_number']) && $d['version_number'] !== '' && $d['version_number'] !== null
+            && isset($d['version_major']) && $d['version_major'] !== '' && $d['version_major'] !== null
+            && isset($d['version_minor']) && $d['version_minor'] !== '' && $d['version_minor'] !== null;
+    }
+
+    protected function getCreateFormAction(): Action
+    {
+        return parent::getCreateFormAction()
+            ->label('Upload Lesson Plan')
+            ->disabled(fn (): bool => ! $this->allMetadataFilled());
     }
 
     protected function handleRecordCreation(array $data): Model

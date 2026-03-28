@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Responses\LoginResponse;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\SubjectGrade;
@@ -10,13 +11,19 @@ use App\Policies\LessonPlanFamilyPolicy;
 use App\Policies\LessonPlanVersionPolicy;
 use App\Policies\SubjectGradePolicy;
 use App\Policies\UserPolicy;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContract;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        // Always redirect to the Lesson Plans index after login,
+        // bypassing any stored "intended" URL from a timed-out session.
+        $this->app->bind(LoginResponseContract::class, LoginResponse::class);
+    }
 
     public function boot(): void
     {
