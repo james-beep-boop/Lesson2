@@ -31,7 +31,7 @@
         <h2 class="fi-header-heading">Lesson Plans Admin</h2>
         <x-filament::button
             tag="a"
-            href="{{ \App\Filament\App\Resources\LessonPlanFamilyResource::getUrl('create') }}"
+            href="{{ \App\Filament\App\Pages\UploadLessonPlan::getUrl() }}"
         >
             Add Lesson Plan
         </x-filament::button>
