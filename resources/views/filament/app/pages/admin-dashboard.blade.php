@@ -28,7 +28,7 @@
 
     {{-- ── Lesson Plans Admin section ──────────────────────────────────────────── --}}
     <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Lesson Plans Admin</h2>
+        <h2 class="fi-header-heading">Lesson Plans Admin</h2>
         <x-filament::button
             tag="a"
             href="{{ \App\Filament\App\Resources\LessonPlanFamilyResource::getUrl('create') }}"
@@ -40,7 +40,7 @@
     @livewire(\App\Filament\App\Widgets\LessonVersionsWidget::class)
 
     {{-- ── User Admin section ──────────────────────────────────────────────────── --}}
-    <h2 class="mb-3 mt-8 text-3xl font-bold text-gray-900 dark:text-white">User Admin</h2>
+    <h2 class="fi-header-heading mb-3 mt-8">User Admin</h2>
 
     @livewire(\App\Filament\App\Widgets\UsersWidget::class)
 </x-filament-panels::page>
