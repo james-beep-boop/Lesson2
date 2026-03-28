@@ -22,7 +22,7 @@
 
     {{-- ── Lesson Plans section ───────────────────────────────────────────────── --}}
     <div class="mb-3 flex items-center justify-between">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Lesson Plans</h2>
+        <h2 class="text-xl font-bold text-gray-900 dark:text-white">Lesson Plans Admin</h2>
         <x-filament::button
             tag="a"
             href="{{ \App\Filament\App\Resources\LessonPlanFamilyResource::getUrl('create') }}"
@@ -39,7 +39,7 @@
     @livewire(\App\Filament\App\Widgets\UsersWidget::class)
 
     {{-- ── Lessons (full view, identical to Lessons page) ────────────────────── --}}
-    <h2 class="mb-3 mt-8 text-xl font-bold text-gray-900 dark:text-white">Lesson Plans</h2>
+    <h2 class="mb-3 mt-8 text-xl font-bold text-gray-900 dark:text-white">Lesson Plans Preview</h2>
 
     @livewire(\App\Filament\App\Widgets\AdminLessonsWidget::class)
 </x-filament-panels::page>

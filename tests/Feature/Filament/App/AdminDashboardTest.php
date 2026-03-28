@@ -1,14 +1,18 @@
 <?php
 
 use App\Filament\App\Pages\AdminDashboard;
+use App\Filament\App\Widgets\AdminLessonsWidget;
 use App\Filament\App\Widgets\LessonVersionsWidget;
 use App\Filament\App\Widgets\UsersWidget;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
+use App\Models\Message;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
+
+use function Pest\Laravel\assertDatabaseHas;
 
 beforeEach(function () {
     Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
@@ -52,6 +56,13 @@ test('non-admin cannot mount UsersWidget', function () {
     $this->actingAs(makeTeacher());
 
     Livewire::test(UsersWidget::class)
+        ->assertForbidden();
+});
+
+test('non-admin cannot mount AdminLessonsWidget', function () {
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(AdminLessonsWidget::class)
         ->assertForbidden();
 });
 
@@ -133,6 +144,41 @@ test('bulk delete clears official_version_id before deleting the official versio
     expect(LessonPlanFamily::find($family->id))->toBeNull();
 });
 
+// ── AdminLessonsWidget – bulk delete ─────────────────────────────────────────
+
+test('admin-lessons bulk delete removes a version but keeps the family when others remain', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(AdminLessonsWidget::class)
+        ->callTableBulkAction('delete', [$v1])
+        ->assertNotified();
+
+    expect(LessonPlanVersion::find($v1->id))->toBeNull();
+    expect(LessonPlanFamily::find($family->id))->not->toBeNull();
+});
+
+test('admin-lessons bulk delete clears official_version_id before deleting the official version', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $family->update(['official_version_id' => $version->id]);
+
+    $this->actingAs(makeSiteAdmin());
+
+    // Would fail with FK constraint if official_version_id were not cleared first.
+    Livewire::test(AdminLessonsWidget::class)
+        ->callTableBulkAction('delete', [$version])
+        ->assertNotified();
+
+    expect(LessonPlanFamily::find($family->id))->toBeNull();
+});
+
 // ── UsersWidget – bulk delete ─────────────────────────────────────────────────
 
 test('bulk delete removes the target user', function () {
@@ -159,40 +205,86 @@ test('bulk delete refuses to delete own account', function () {
     expect(User::find($admin->id))->not->toBeNull();
 });
 
-// ── UsersWidget – SelectColumn role change ────────────────────────────────────
+// ── UsersWidget – changeRole action ──────────────────────────────────────────
 
-test('status column promotes a user to site administrator', function () {
+test('changeRole action promotes a user to site administrator', function () {
     $target = makeTeacher();
 
     $this->actingAs(makeSiteAdmin());
 
     Livewire::test(UsersWidget::class)
-        ->call('updateTableColumnState', 'site_role', (string) $target->id, 'site_admin')
+        ->callTableAction('changeRole', $target, data: ['new_role' => 'site_admin'])
         ->assertNotified();
 
     expect($target->fresh()->isSiteAdmin())->toBeTrue();
 });
 
-test('status column demotes an admin when another admin remains', function () {
+test('changeRole action demotes an admin when another admin remains', function () {
     $admin1 = makeSiteAdmin();
     $admin2 = makeSiteAdmin();
 
     $this->actingAs($admin1);
 
     Livewire::test(UsersWidget::class)
-        ->call('updateTableColumnState', 'site_role', (string) $admin2->id, 'user')
+        ->callTableAction('changeRole', $admin2, data: ['new_role' => 'user'])
         ->assertNotified();
 
     expect($admin2->fresh()->isSiteAdmin())->toBeFalse();
 });
 
-test('status column refuses to remove the last site administrator', function () {
+// Note: the last-admin server-side guard in demoteToUser() is intentional
+// defense-in-depth but cannot be triggered via the UI: the ->hidden() guard on
+// the changeRole action prevents an admin from targeting themselves, and you
+// cannot reach a state where you are the sole admin targeting a different sole admin
+// (the actor must be an admin to mount the widget, so ≥1 admin always remains).
+
+test('changeRole action demoting to user removes all scoped role assignments', function () {
+    $sg = makeSubjectGrade();
+    $editor = makeEditor($sg);
     $admin = makeSiteAdmin();
 
     $this->actingAs($admin);
 
     Livewire::test(UsersWidget::class)
-        ->call('updateTableColumnState', 'site_role', (string) $admin->id, 'user');
+        ->callTableAction('changeRole', $editor, data: ['new_role' => 'user'])
+        ->assertNotified();
 
-    expect($admin->fresh()->isSiteAdmin())->toBeTrue();
+    expect(DB::table('subject_grade_user')->where('user_id', $editor->id)->exists())->toBeFalse();
+});
+
+test('changeRole action demoting to user clears subject_admin_user_id', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $admin = makeSiteAdmin();
+
+    $this->actingAs($admin);
+
+    Livewire::test(UsersWidget::class)
+        ->callTableAction('changeRole', $subjectAdmin, data: ['new_role' => 'user'])
+        ->assertNotified();
+
+    expect($sg->fresh()->subject_admin_user_id)->toBeNull();
+});
+
+// ── UsersWidget – message action ──────────────────────────────────────────────
+
+test('message action creates a message record', function () {
+    $target = makeTeacher();
+    $admin = makeSiteAdmin();
+
+    $this->actingAs($admin);
+
+    Livewire::test(UsersWidget::class)
+        ->callTableAction('message', $target, data: [
+            'subject' => 'Hello',
+            'body' => 'Test message body.',
+        ])
+        ->assertNotified();
+
+    assertDatabaseHas(Message::class, [
+        'from_user_id' => $admin->id,
+        'to_user_id' => $target->id,
+        'subject' => 'Hello',
+        'body' => 'Test message body.',
+    ]);
 });
