@@ -15,6 +15,7 @@ class LessonPlanFamily extends Model
     protected $fillable = [
         'subject_grade_id',
         'day',
+        'official_version_id',
     ];
 
     protected function casts(): array

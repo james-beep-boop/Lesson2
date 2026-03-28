@@ -52,7 +52,7 @@
                     ></textarea>
                 </div>
                 <div x-show="tab === 'preview'" class="prose max-w-none min-h-[7rem] rounded-lg border border-gray-200 p-4">
-                    {!! \Illuminate\Support\Str::markdown($editContent) !!}
+                    @markdown($editContent)
                 </div>
             </div>
 
@@ -179,13 +179,13 @@
                                 <div>
                                     <p class="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">v{{ $selectedVersion->version }}</p>
                                     <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
+                                        @markdown($selectedVersion->content)
                                     </div>
                                 </div>
                                 <div>
                                     <p class="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">v{{ $compareVersion->version }}</p>
                                     <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        {!! \Illuminate\Support\Str::markdown($compareVersion->content) !!}
+                                        @markdown($compareVersion->content)
                                     </div>
                                 </div>
                             </div>
@@ -279,7 +279,7 @@
 
                             {{-- Content viewer --}}
                             <div class="prose max-w-none">
-                                {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
+                                @markdown($selectedVersion->content)
                             </div>
                         </x-filament::section>
                     @endif

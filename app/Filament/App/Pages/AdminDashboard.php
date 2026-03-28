@@ -165,6 +165,9 @@ class AdminDashboard extends Page
         $family = LessonPlanFamily::findOrFail($familyId);
         $version = LessonPlanVersion::findOrFail($versionId);
 
+        // Verify the version actually belongs to this family.
+        abort_unless((int) $version->lesson_plan_family_id === $familyId, 422);
+
         // Toggle: if already official, unset; otherwise set.
         $newOfficial = ((int) $family->official_version_id === $versionId) ? null : $version;
 
@@ -200,7 +203,8 @@ class AdminDashboard extends Page
                 $version->delete();
 
                 // Remove orphaned family (favorites cascade via FK).
-                if ($family && $family->fresh()?->versions()->doesntExist()) {
+                // No fresh() needed — versions() is always a live query.
+                if ($family && $family->versions()->doesntExist()) {
                     $family->delete();
                 }
             }
@@ -273,8 +277,24 @@ class AdminDashboard extends Page
             }
 
             if ($shouldBeAdmin) {
-                $user->syncRoles(['site_administrator']);
+                // assignRole is additive — does not strip unrelated Spatie roles.
+                $user->assignRole('site_administrator');
             } else {
+                // Guard: refuse if this would remove the last site administrator.
+                $remainingAdmins = User::role('site_administrator')
+                    ->where('is_system', false)
+                    ->where('id', '!=', $user->id)
+                    ->exists();
+
+                if (! $remainingAdmins) {
+                    Notification::make('last-admin')
+                        ->title('Cannot remove the last Site Administrator.')
+                        ->danger()
+                        ->send();
+
+                    continue;
+                }
+
                 $user->removeRole('site_administrator');
             }
 

@@ -122,18 +122,28 @@
             </table>
         </div>
 
-        {{-- Delete Now button --}}
-        <div class="mt-4 flex items-center gap-3">
+        {{-- Delete Now button with two-click confirmation --}}
+        <div x-data="{ confirm: false }" class="mt-4 flex items-center gap-3">
             <button
-                wire:click="deleteSelectedVersions"
+                x-show="! confirm"
+                @click="confirm = true"
                 @disabled(! $hasVersionsSelected)
                 class="rounded-lg px-4 py-2 text-sm font-semibold transition-colors {{ $hasVersionsSelected ? 'bg-primary-600 text-white hover:bg-primary-700 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }}"
             >Delete Now</button>
-            @if ($hasVersionsSelected)
-                <span class="text-xs text-gray-500">
-                    {{ count($selectedVersionIds) }} {{ str('item')->plural(count($selectedVersionIds)) }} selected
-                </span>
-            @endif
+            <template x-if="confirm">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-red-700">Delete {{ count($selectedVersionIds) }} {{ str('item')->plural(count($selectedVersionIds)) }}? This cannot be undone.</span>
+                    <button
+                        wire:click="deleteSelectedVersions"
+                        @click="confirm = false"
+                        class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                    >Yes, delete</button>
+                    <button
+                        @click="confirm = false"
+                        class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                    >Cancel</button>
+                </div>
+            </template>
         </div>
     </x-filament::section>
 
@@ -196,11 +206,29 @@
 
         {{-- Action buttons --}}
         <div class="mt-4 flex flex-wrap items-center gap-3">
-            <button
-                wire:click="deleteSelectedUsers"
-                @disabled(! $hasUsersSelected)
-                class="rounded-lg px-4 py-2 text-sm font-semibold transition-colors {{ $hasUsersSelected ? 'bg-primary-600 text-white hover:bg-primary-700 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }}"
-            >Confirm Deletion</button>
+            {{-- User deletion — two-click confirmation --}}
+            <div x-data="{ confirm: false }" class="flex items-center gap-2">
+                <button
+                    x-show="! confirm"
+                    @click="confirm = true"
+                    @disabled(! $hasUsersSelected)
+                    class="rounded-lg px-4 py-2 text-sm font-semibold transition-colors {{ $hasUsersSelected ? 'bg-primary-600 text-white hover:bg-primary-700 cursor-pointer' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }}"
+                >Confirm Deletion</button>
+                <template x-if="confirm">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium text-red-700">Delete {{ count($selectedUserIds) }} {{ str('user')->plural(count($selectedUserIds)) }}? This cannot be undone.</span>
+                        <button
+                            wire:click="deleteSelectedUsers"
+                            @click="confirm = false"
+                            class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                        >Yes, delete</button>
+                        <button
+                            @click="confirm = false"
+                            class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-200"
+                        >Cancel</button>
+                    </div>
+                </template>
+            </div>
 
             <button
                 wire:click="confirmStatusChanges"
