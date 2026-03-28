@@ -15,6 +15,16 @@ use Illuminate\Database\Eloquent\Collection;
 
 class UsersWidget extends TableWidget
 {
+    /**
+     * Enforce site-admin access at mount time.
+     * Widgets are standalone Livewire components; their methods are reachable
+     * via HTTP independently of the parent page's abort_unless guard.
+     */
+    public function mount(): void
+    {
+        abort_unless(auth()->user()?->isSiteAdmin(), 403);
+    }
+
     /** Return empty string so TableWidget::makeTable() sets no visible heading. */
     protected function getTableHeading(): string|Htmlable|null
     {
@@ -25,6 +35,7 @@ class UsersWidget extends TableWidget
     {
         return $table
             ->query(fn () => User::where('is_system', false)->orderBy('name'))
+            ->queryStringIdentifier('users')
             ->columns([
                 TextColumn::make('name')
                     ->label('Name')
@@ -61,6 +72,8 @@ class UsersWidget extends TableWidget
 
     private function applyRoleChange(User $record, string $state): void
     {
+        abort_unless(auth()->user()?->isSiteAdmin(), 403);
+
         // Self-modification guard.
         if ($record->id === auth()->id()) {
             Notification::make('cannot-self-change')
@@ -116,6 +129,8 @@ class UsersWidget extends TableWidget
 
     private function deleteUsers(Collection $records): void
     {
+        abort_unless(auth()->user()?->isSiteAdmin(), 403);
+
         $currentUserId = auth()->id();
 
         $toDelete = $records->reject(fn (User $user) => $user->id === $currentUserId);

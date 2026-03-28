@@ -39,6 +39,22 @@ test('admin nav item is visible to site admins', function () {
     expect(AdminDashboard::shouldRegisterNavigation())->toBeTrue();
 });
 
+// ── Widget mount auth guards ───────────────────────────────────────────────────
+
+test('non-admin cannot mount LessonVersionsWidget', function () {
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(LessonVersionsWidget::class)
+        ->assertForbidden();
+});
+
+test('non-admin cannot mount UsersWidget', function () {
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(UsersWidget::class)
+        ->assertForbidden();
+});
+
 // ── LessonVersionsWidget – toggleOfficial ─────────────────────────────────────
 
 test('toggleOfficial marks a version as official', function () {
