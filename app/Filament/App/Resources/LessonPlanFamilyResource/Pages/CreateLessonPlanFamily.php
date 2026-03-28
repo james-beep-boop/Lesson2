@@ -87,13 +87,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         ->default(1)
                         ->required()
                         ->live()
-                        ->createOptionForm([
-                            TextInput::make('day')
-                                ->label('Day number')
-                                ->numeric()
-                                ->minValue(1)
-                                ->required(),
-                        ])
+                        ->createOptionForm($this->integerOptionForm('day', 'Day number', 1))
                         ->createOptionUsing(fn (array $data): int => (int) $data['day']),
                 ]),
 
@@ -105,14 +99,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         ->options(array_combine(range(1, 9), range(1, 9)))
                         ->default(1)
                         ->required()
-                        ->live()
-                        ->createOptionForm([
-                            TextInput::make('version_number')
-                                ->label('Version number')
-                                ->numeric()
-                                ->minValue(1)
-                                ->required(),
-                        ])
+                        ->createOptionForm($this->integerOptionForm('version_number', 'Version number', 1))
                         ->createOptionUsing(fn (array $data): int => (int) $data['version_number']),
 
                     Select::make('version_major')
@@ -120,14 +107,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         ->options(array_combine(range(0, 9), range(0, 9)))
                         ->default(0)
                         ->required()
-                        ->live()
-                        ->createOptionForm([
-                            TextInput::make('version_major')
-                                ->label('Major revision number')
-                                ->numeric()
-                                ->minValue(0)
-                                ->required(),
-                        ])
+                        ->createOptionForm($this->integerOptionForm('version_major', 'Major revision number', 0))
                         ->createOptionUsing(fn (array $data): int => (int) $data['version_major']),
 
                     Select::make('version_minor')
@@ -135,14 +115,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         ->options(array_combine(range(0, 9), range(0, 9)))
                         ->default(0)
                         ->required()
-                        ->live()
-                        ->createOptionForm([
-                            TextInput::make('version_minor')
-                                ->label('Minor revision number')
-                                ->numeric()
-                                ->minValue(0)
-                                ->required(),
-                        ])
+                        ->createOptionForm($this->integerOptionForm('version_minor', 'Minor revision number', 0))
                         ->createOptionUsing(fn (array $data): int => (int) $data['version_minor']),
                 ]),
 
@@ -246,20 +219,29 @@ class CreateLessonPlanFamily extends CreateRecord
         ]);
     }
 
-    /**
-     * All six metadata fields must have a value before the file upload
-     * widget and the submit button are enabled.
-     */
+    /** File upload and submit button are gated until all six metadata fields have a value. */
     private function allMetadataFilled(): bool
     {
         $d = $this->data ?? [];
 
-        return ! empty($d['subject_id'])
-            && isset($d['grade']) && $d['grade'] !== '' && $d['grade'] !== null
-            && isset($d['day']) && $d['day'] !== '' && $d['day'] !== null
-            && isset($d['version_number']) && $d['version_number'] !== '' && $d['version_number'] !== null
-            && isset($d['version_major']) && $d['version_major'] !== '' && $d['version_major'] !== null
-            && isset($d['version_minor']) && $d['version_minor'] !== '' && $d['version_minor'] !== null;
+        return filled($d['subject_id'] ?? null)
+            && filled($d['grade'] ?? null)
+            && filled($d['day'] ?? null)
+            && filled($d['version_number'] ?? null)
+            && filled($d['version_major'] ?? null)
+            && filled($d['version_minor'] ?? null);
+    }
+
+    /** Shared createOptionForm schema for any integer-value Select. */
+    private function integerOptionForm(string $key, string $label, int $minValue): array
+    {
+        return [
+            TextInput::make($key)
+                ->label($label)
+                ->numeric()
+                ->minValue($minValue)
+                ->required(),
+        ];
     }
 
     protected function getCreateFormAction(): Action

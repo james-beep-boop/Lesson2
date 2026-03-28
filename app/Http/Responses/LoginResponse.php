@@ -2,6 +2,7 @@
 
 namespace App\Http\Responses;
 
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContract;
 use Filament\Facades\Filament;
 use Illuminate\Http\RedirectResponse;
@@ -17,7 +18,7 @@ class LoginResponse implements LoginResponseContract
     public function toResponse($request): RedirectResponse|Redirector
     {
         if (Filament::getCurrentPanel()?->getId() === 'app') {
-            return redirect()->to('/lesson-plan-families');
+            return redirect()->to(LessonPlanFamilyResource::getUrl('index'));
         }
 
         return redirect()->intended(Filament::getUrl());
