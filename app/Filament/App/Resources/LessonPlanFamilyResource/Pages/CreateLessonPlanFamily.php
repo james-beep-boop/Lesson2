@@ -84,6 +84,12 @@ class CreateLessonPlanFamily extends CreateRecord
                         return;
                     }
 
+                    // Auto-populate Day from filenames following the canonical convention:
+                    // SUBJ_GRADE_DAY_REV_VER.MAJ.MIN.md  e.g. ENGL_10_1_REV_1.0.0.md
+                    if (preg_match('/^[A-Z]{1,4}_\d+_(\d+)_REV_\d+\.\d+\.\d+\.md$/i', $state->getClientOriginalName(), $m)) {
+                        $set('day', $m[1]);
+                    }
+
                     $ext = strtolower($state->getClientOriginalExtension());
 
                     if (in_array($ext, ['md', 'txt'])) {
