@@ -2,14 +2,16 @@
 
 namespace App\Filament\App\Widgets;
 
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
-use App\Services\VersionService;
-use Filament\Actions\Action;
+use App\Models\Subject;
+use App\Models\SubjectGrade;
 use Filament\Actions\BulkAction;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Enums\RecordActionsPosition;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Contracts\Support\Htmlable;
@@ -17,7 +19,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
-class LessonVersionsWidget extends TableWidget
+class AdminLessonsWidget extends TableWidget
 {
     /** Active filter tab: all | official | latest | favorites */
     public string $activeTab = 'all';
@@ -27,17 +29,12 @@ class LessonVersionsWidget extends TableWidget
      *
      * @var view-string
      */
-    protected string $view = 'filament.app.widgets.lesson-versions-widget';
+    protected string $view = 'filament.app.widgets.admin-lessons-widget';
 
     // -------------------------------------------------------------------------
     // Authorization
     // -------------------------------------------------------------------------
 
-    /**
-     * Enforce site-admin access at mount time.
-     * Widgets are standalone Livewire components; their methods are reachable
-     * via HTTP independently of the parent page's abort_unless guard.
-     */
     public function mount(): void
     {
         abort_unless(auth()->user()?->isSiteAdmin(), 403);
@@ -47,7 +44,6 @@ class LessonVersionsWidget extends TableWidget
     // Heading
     // -------------------------------------------------------------------------
 
-    /** Return empty string so TableWidget::makeTable() sets no visible heading. */
     protected function getTableHeading(): string|Htmlable|null
     {
         return '';
@@ -61,12 +57,12 @@ class LessonVersionsWidget extends TableWidget
     {
         return $table
             ->query(fn (): Builder => $this->buildQuery())
-            ->queryStringIdentifier('versions')
+            ->queryStringIdentifier('admin-lessons')
             ->columns([
                 TextColumn::make('family.subjectGrade.subject.name')
                     ->label('Subject')
-                    ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('family.subjectGrade.grade')
                     ->label('Grade')
                     ->formatStateUsing(fn ($state) => 'Grade '.$state)
@@ -77,6 +73,14 @@ class LessonVersionsWidget extends TableWidget
                 TextColumn::make('version')
                     ->label('Version')
                     ->sortable(),
+                TextColumn::make('official_indicator')
+                    ->label('Official')
+                    ->state(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
+                        ? '✓' : ''
+                    )
+                    ->color(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
+                        ? 'success' : 'gray'
+                    ),
                 TextColumn::make('contributor.name')
                     ->label('By')
                     ->sortable(),
@@ -85,49 +89,60 @@ class LessonVersionsWidget extends TableWidget
                     ->date()
                     ->sortable(),
             ])
-            ->recordActions([
-                Action::make('toggleOfficial')
-                    ->label(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
-                        ? '✓ Official'
-                        : 'Set Official'
-                    )
-                    ->color(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
-                        ? 'success'
-                        : 'gray'
-                    )
-                    ->tooltip(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
-                        ? 'Remove official status from this version'
-                        : 'Mark this version as the official one for this plan'
-                    )
-                    ->button()
-                    ->size('xs')
-                    ->action(function (LessonPlanVersion $record): void {
-                        abort_unless(auth()->user()?->isSiteAdmin(), 403);
-
-                        // Reload family fresh to avoid acting on a stale official_version_id.
-                        $family = $record->lesson_plan_family_id
-                            ? LessonPlanFamily::find($record->lesson_plan_family_id)
-                            : null;
-
-                        if (! $family) {
-                            return;
+            ->filters([
+                Filter::make('subject')
+                    ->form([
+                        Select::make('subject_id')
+                            ->label('Subject')
+                            ->options(fn () => Subject::orderBy('name')->pluck('name', 'id'))
+                            ->placeholder('All subjects'),
+                    ])
+                    ->modifyQueryUsing(function (Builder $query, array $data): Builder {
+                        if (! filled($data['subject_id'] ?? null)) {
+                            return $query;
                         }
 
-                        $isCurrentlyOfficial = (int) $family->official_version_id === $record->id;
-
-                        app(VersionService::class)->setOfficialVersion(
-                            $family,
-                            $isCurrentlyOfficial ? null : $record,
+                        return $query->whereHas(
+                            'family',
+                            fn (Builder $q) => $q->whereHas(
+                                'subjectGrade',
+                                fn (Builder $q2) => $q2->where('subject_id', $data['subject_id'])
+                            )
                         );
+                    })
+                    ->indicateUsing(fn (array $data): ?string => filled($data['subject_id'] ?? null)
+                        ? 'Subject: '.(Subject::find($data['subject_id'])?->name ?? $data['subject_id'])
+                        : null
+                    ),
 
-                        Notification::make('official-updated')
-                            ->title($isCurrentlyOfficial ? 'Official status removed.' : 'Official version set.')
-                            ->success()
-                            ->send();
+                Filter::make('grade')
+                    ->form([
+                        Select::make('grade')
+                            ->label('Grade')
+                            ->options(fn () => SubjectGrade::query()
+                                ->distinct()
+                                ->orderBy('grade')
+                                ->pluck('grade', 'grade')
+                                ->mapWithKeys(fn ($g) => [$g => 'Grade '.$g])
+                            )
+                            ->placeholder('All grades'),
+                    ])
+                    ->modifyQueryUsing(function (Builder $query, array $data): Builder {
+                        if (! filled($data['grade'] ?? null)) {
+                            return $query;
+                        }
 
-                        $this->resetTable();
-                    }),
-            ], RecordActionsPosition::BeforeColumns)
+                        return $query->whereHas(
+                            'family',
+                            fn (Builder $q) => $q->whereHas(
+                                'subjectGrade',
+                                fn (Builder $q2) => $q2->where('grade', $data['grade'])
+                            )
+                        );
+                    })
+                    ->indicateUsing(fn (array $data): ?string => filled($data['grade'] ?? null) ? 'Grade '.$data['grade'] : null),
+            ])
+            ->recordUrl(fn (LessonPlanVersion $record): string => LessonPlanFamilyResource::getUrl('view', ['record' => $record->lesson_plan_family_id]))
             ->toolbarActions([
                 BulkAction::make('delete')
                     ->button()
@@ -138,7 +153,7 @@ class LessonVersionsWidget extends TableWidget
                     ->modalSubmitActionLabel('Delete')
                     ->modalSubmitAction(fn ($action) => $action->color('danger'))
                     ->requiresConfirmation()
-                    ->action(fn (Collection $records) => $this->deleteVersions($records))
+                    ->action(fn (Collection $records) => $this->deleteLessons($records))
                     ->deselectRecordsAfterCompletion(),
             ])
             ->defaultSort('created_at', 'desc');
@@ -193,28 +208,23 @@ class LessonVersionsWidget extends TableWidget
     // Bulk delete
     // -------------------------------------------------------------------------
 
-    private function deleteVersions(Collection $records): void
+    private function deleteLessons(Collection $records): void
     {
         abort_unless(auth()->user()?->isSiteAdmin(), 403);
 
         DB::transaction(function () use ($records): void {
             foreach ($records as $version) {
-                // Load a fresh family instance to avoid acting on a stale
-                // official_version_id that may have changed since the table was rendered.
                 $family = $version->lesson_plan_family_id
                     ? LessonPlanFamily::find($version->lesson_plan_family_id)
                     : null;
 
-                // Clear official pointer before deleting to avoid FK issues.
                 if ($family && (int) $family->official_version_id === $version->id) {
                     $family->official_version_id = null;
                     $family->save();
                 }
 
-                // Favorites cascade via FK; deletion_requests nullOnDelete.
                 $version->delete();
 
-                // Remove orphaned family.
                 if ($family && $family->versions()->doesntExist()) {
                     $family->delete();
                 }
@@ -223,7 +233,7 @@ class LessonVersionsWidget extends TableWidget
 
         $count = $records->count();
 
-        Notification::make('versions-deleted')
+        Notification::make('lessons-deleted')
             ->title('Deleted '.$count.' '.str('version')->plural($count).'.')
             ->success()
             ->send();

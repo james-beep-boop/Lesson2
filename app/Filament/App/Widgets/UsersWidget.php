@@ -2,9 +2,13 @@
 
 namespace App\Filament\App\Widgets;
 
+use App\Models\Message;
+use App\Models\SubjectGrade;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
-use Filament\Actions\BulkActionGroup;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -46,23 +50,67 @@ class UsersWidget extends TableWidget
                     ->label('Status')
                     ->options([
                         'user' => 'User',
-                        'administrator' => 'Administrator',
+                        'editor' => 'Editor',
+                        'subject_admin' => 'Subject Admin',
+                        'site_admin' => 'Site Admin',
                     ])
-                    ->state(fn (User $record): string => $record->isSiteAdmin() ? 'administrator' : 'user')
+                    ->state(fn (User $record): string => match ($record->role_label) {
+                        'Administrator' => 'site_admin',
+                        'Subject Admin' => 'subject_admin',
+                        'Editor' => 'editor',
+                        default => 'user',
+                    })
                     ->updateStateUsing(fn (User $record, string $state) => $this->applyRoleChange($record, $state))
                     ->disabled(fn (User $record): bool => $record->id === auth()->id()),
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
             ])
+            ->recordActions([
+                Action::make('message')
+                    ->label('Message')
+                    ->button()
+                    ->size('xs')
+                    ->modalHeading(fn (User $record): string => 'Message '.$record->name)
+                    ->modalSubmitActionLabel('Send')
+                    ->schema([
+                        TextInput::make('subject')
+                            ->label('Subject')
+                            ->required(),
+                        Textarea::make('body')
+                            ->label('Message')
+                            ->rows(4)
+                            ->required(),
+                    ])
+                    ->action(function (User $record, array $data): void {
+                        abort_unless(auth()->user()?->isSiteAdmin(), 403);
+
+                        $message = new Message([
+                            'to_user_id' => $record->id,
+                            'subject' => $data['subject'],
+                            'body' => $data['body'],
+                        ]);
+                        $message->from_user_id = auth()->id();
+                        $message->save();
+
+                        Notification::make('message-sent')
+                            ->title('Message sent to '.$record->name.'.')
+                            ->success()
+                            ->send();
+                    }),
+            ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    BulkAction::make('delete')
-                        ->requiresConfirmation()
-                        ->color('danger')
-                        ->action(fn (Collection $records) => $this->deleteUsers($records))
-                        ->deselectRecordsAfterCompletion(),
-                ]),
+                BulkAction::make('delete')
+                    ->button()
+                    ->label('Delete')
+                    ->color('primary')
+                    ->modalHeading('Delete selected items?')
+                    ->modalDescription('This cannot be undone.')
+                    ->modalSubmitActionLabel('Delete')
+                    ->modalSubmitAction(fn ($action) => $action->color('danger'))
+                    ->requiresConfirmation()
+                    ->action(fn (Collection $records) => $this->deleteUsers($records))
+                    ->deselectRecordsAfterCompletion(),
             ]);
     }
 
@@ -84,15 +132,38 @@ class UsersWidget extends TableWidget
             return;
         }
 
-        $shouldBeAdmin = $state === 'administrator';
+        match ($state) {
+            'site_admin' => $this->promoteToSiteAdmin($record),
+            'user' => $this->demoteToUser($record),
+            // Editor and Subject Admin are per-subject-grade assignments and cannot
+            // be set from this global dropdown — inform the admin instead.
+            default => Notification::make('scoped-role-notice')
+                ->title('Editor and Subject Admin roles are managed per subject-grade, not globally.')
+                ->info()
+                ->send(),
+        };
 
-        // No-op if already in the desired state.
-        if ($record->isSiteAdmin() === $shouldBeAdmin) {
+        $this->resetTable();
+    }
+
+    private function promoteToSiteAdmin(User $record): void
+    {
+        if ($record->isSiteAdmin()) {
             return;
         }
 
-        if (! $shouldBeAdmin) {
-            // Last-admin guard: refuse if this would remove the only site admin.
+        $record->assignRole('site_administrator');
+
+        Notification::make('role-updated')
+            ->title('Status updated to Site Admin.')
+            ->success()
+            ->send();
+    }
+
+    private function demoteToUser(User $record): void
+    {
+        // Last-admin guard: refuse if this would remove the only site admin.
+        if ($record->isSiteAdmin()) {
             $remainingAdmins = User::role('site_administrator')
                 ->where('is_system', false)
                 ->where('id', '!=', $record->id)
@@ -108,19 +179,19 @@ class UsersWidget extends TableWidget
             }
 
             $record->removeRole('site_administrator');
-        } else {
-            // assignRole is additive — does not strip unrelated Spatie roles.
-            $record->assignRole('site_administrator');
         }
 
-        $label = $shouldBeAdmin ? 'Administrator' : 'User';
+        // Revoke all subject_grade_user pivot entries (editor roles).
+        $record->subjectGrades()->detach();
+
+        // Clear subject_admin_user_id on all subject_grades this user owned.
+        SubjectGrade::where('subject_admin_user_id', $record->id)
+            ->update(['subject_admin_user_id' => null]);
 
         Notification::make('role-updated')
-            ->title("Status updated to {$label}.")
+            ->title('Status updated to User.')
             ->success()
             ->send();
-
-        $this->resetTable();
     }
 
     // -------------------------------------------------------------------------

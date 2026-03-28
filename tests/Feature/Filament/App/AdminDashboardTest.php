@@ -167,7 +167,7 @@ test('status column promotes a user to site administrator', function () {
     $this->actingAs(makeSiteAdmin());
 
     Livewire::test(UsersWidget::class)
-        ->call('updateTableColumnState', 'site_role', (string) $target->id, 'administrator')
+        ->call('updateTableColumnState', 'site_role', (string) $target->id, 'site_admin')
         ->assertNotified();
 
     expect($target->fresh()->isSiteAdmin())->toBeTrue();
