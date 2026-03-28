@@ -1,5 +1,5 @@
 <x-filament-widgets::widget class="fi-wi-table">
-    <div class="px-2 py-3">
+    <div class="fi-sc-tabs py-3">
         <x-filament::tabs>
             @foreach ($this->getCachedTabs() as $key => $tab)
                 <x-filament::tabs.item
