@@ -2,15 +2,16 @@
 
 namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
+use App\Filament\App\Concerns\HasLessonPlanVersionTabs;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanVersion;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
 
 class ListLessonPlanFamilies extends ListRecords
 {
+    use HasLessonPlanVersionTabs;
+
     protected static string $resource = LessonPlanFamilyResource::class;
 
     protected function getHeaderActions(): array
@@ -27,38 +28,5 @@ class ListLessonPlanFamilies extends ListRecords
     {
         return LessonPlanVersion::query()
             ->with(['family.subjectGrade.subject', 'contributor']);
-    }
-
-    /**
-     * Tabs displayed to the left of the search bar.
-     * All | Official | Latest (newest version per family) | Favorites
-     */
-    public function getTabs(): array
-    {
-        return [
-            'all' => Tab::make('All'),
-
-            'official' => Tab::make('Official')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn(
-                    'lesson_plan_versions.id',
-                    DB::table('lesson_plan_families')
-                        ->whereNotNull('official_version_id')
-                        ->pluck('official_version_id')
-                )),
-
-            'latest' => Tab::make('Latest')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn(
-                    'lesson_plan_versions.id',
-                    DB::table('lesson_plan_versions')
-                        ->selectRaw('MAX(id) as id')
-                        ->groupBy('lesson_plan_family_id')
-                )),
-
-            'favorites' => Tab::make('Favorites')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
-                    'favorites',
-                    fn (Builder $fq) => $fq->where('user_id', auth()->id())
-                )),
-        ];
     }
 }

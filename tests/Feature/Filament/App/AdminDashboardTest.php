@@ -3,6 +3,7 @@
 use App\Filament\App\Pages\AdminDashboard;
 use App\Filament\App\Widgets\LessonVersionsWidget;
 use App\Filament\App\Widgets\UsersWidget;
+use App\Models\Favorite;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\Message;
@@ -251,4 +252,74 @@ test('message action creates a message record', function () {
         'subject' => 'Hello',
         'body' => 'Test message body.',
     ]);
+});
+
+// ── LessonVersionsWidget – tab switching ──────────────────────────────────────
+
+test('all tab shows every version', function () {
+    [, $versionA] = makeFamilyWithVersion(makeSubjectGrade());
+    [, $versionB] = makeFamilyWithVersion(makeSubjectGrade());
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(LessonVersionsWidget::class)
+        ->set('activeTab', 'all')
+        ->assertCanSeeTableRecords([$versionA, $versionB]);
+});
+
+test('official tab shows only official versions', function () {
+    [$familyA, $official] = makeFamilyWithVersion(makeSubjectGrade());
+    [, $unofficial] = makeFamilyWithVersion(makeSubjectGrade());
+    $familyA->update(['official_version_id' => $official->id]);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(LessonVersionsWidget::class)
+        ->set('activeTab', 'official')
+        ->assertCanSeeTableRecords([$official])
+        ->assertCanNotSeeTableRecords([$unofficial]);
+});
+
+test('latest tab shows only the newest version per family', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(LessonVersionsWidget::class)
+        ->set('activeTab', 'latest')
+        ->assertCanSeeTableRecords([$v2])
+        ->assertCanNotSeeTableRecords([$v1]);
+});
+
+test('favorites tab shows only versions from favorited families', function () {
+    $admin = makeSiteAdmin();
+    [$familyA, $favoritedVersion] = makeFamilyWithVersion(makeSubjectGrade());
+    [, $unfavoritedVersion] = makeFamilyWithVersion(makeSubjectGrade());
+
+    Favorite::factory()->for($admin, 'user')->create([
+        'lesson_plan_family_id' => $familyA->id,
+        'lesson_plan_version_id' => $favoritedVersion->id,
+    ]);
+
+    $this->actingAs($admin);
+
+    Livewire::test(LessonVersionsWidget::class)
+        ->set('activeTab', 'favorites')
+        ->assertCanSeeTableRecords([$favoritedVersion])
+        ->assertCanNotSeeTableRecords([$unfavoritedVersion]);
+});
+
+test('favorites tab is empty when user has no favorites', function () {
+    [, $version] = makeFamilyWithVersion(makeSubjectGrade());
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(LessonVersionsWidget::class)
+        ->set('activeTab', 'favorites')
+        ->assertCanNotSeeTableRecords([$version]);
 });

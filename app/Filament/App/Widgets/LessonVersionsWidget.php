@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Widgets;
 
+use App\Filament\App\Concerns\HasLessonPlanVersionTabs;
 use App\Filament\App\Widgets\Concerns\HasVersionTable;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
@@ -10,7 +11,6 @@ use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Concerns\HasTabs;
-use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Table;
@@ -18,12 +18,12 @@ use Filament\Widgets\TableWidget;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 
 class LessonVersionsWidget extends TableWidget
 {
-    use HasTabs;
-    use HasVersionTable;
+    use HasLessonPlanVersionTabs, HasTabs, HasVersionTable {
+        HasLessonPlanVersionTabs::getTabs insteadof HasTabs;
+    }
 
     /**
      * Custom view renders the tab bar above the Filament table.
@@ -45,39 +45,6 @@ class LessonVersionsWidget extends TableWidget
     {
         abort_unless(auth()->user()?->isSiteAdmin(), 403);
         $this->loadDefaultActiveTab();
-    }
-
-    // -------------------------------------------------------------------------
-    // Tabs — mirrors ListLessonPlanFamilies::getTabs() exactly
-    // -------------------------------------------------------------------------
-
-    public function getTabs(): array
-    {
-        return [
-            'all' => Tab::make('All'),
-
-            'official' => Tab::make('Official')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn(
-                    'lesson_plan_versions.id',
-                    DB::table('lesson_plan_families')
-                        ->whereNotNull('official_version_id')
-                        ->pluck('official_version_id')
-                )),
-
-            'latest' => Tab::make('Latest')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn(
-                    'lesson_plan_versions.id',
-                    DB::table('lesson_plan_versions')
-                        ->selectRaw('MAX(id) as id')
-                        ->groupBy('lesson_plan_family_id')
-                )),
-
-            'favorites' => Tab::make('Favorites')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
-                    'favorites',
-                    fn (Builder $fq) => $fq->where('user_id', auth()->id())
-                )),
-        ];
     }
 
     public function updatedActiveTab(): void
