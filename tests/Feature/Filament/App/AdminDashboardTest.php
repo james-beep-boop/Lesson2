@@ -205,28 +205,33 @@ test('bulk delete refuses to delete own account', function () {
     expect(User::find($admin->id))->not->toBeNull();
 });
 
-// ── UsersWidget – changeRole action ──────────────────────────────────────────
+// ── UsersWidget – confirmRole action ─────────────────────────────────────────
+// The Status column is a SelectColumn. Changing it stores a pending role in
+// $pendingRoleChanges; clicking "Confirm" applies the change. Tests set the
+// pending state directly via Livewire's set() before calling the action.
 
-test('changeRole action promotes a user to site administrator', function () {
+test('confirmRole action promotes a user to site administrator', function () {
     $target = makeTeacher();
 
     $this->actingAs(makeSiteAdmin());
 
     Livewire::test(UsersWidget::class)
-        ->callTableAction('changeRole', $target, data: ['new_role' => 'site_admin'])
+        ->set('pendingRoleChanges', [$target->id => 'site_admin'])
+        ->callTableAction('confirmRole', $target)
         ->assertNotified();
 
     expect($target->fresh()->isSiteAdmin())->toBeTrue();
 });
 
-test('changeRole action demotes an admin when another admin remains', function () {
+test('confirmRole action demotes an admin when another admin remains', function () {
     $admin1 = makeSiteAdmin();
     $admin2 = makeSiteAdmin();
 
     $this->actingAs($admin1);
 
     Livewire::test(UsersWidget::class)
-        ->callTableAction('changeRole', $admin2, data: ['new_role' => 'user'])
+        ->set('pendingRoleChanges', [$admin2->id => 'user'])
+        ->callTableAction('confirmRole', $admin2)
         ->assertNotified();
 
     expect($admin2->fresh()->isSiteAdmin())->toBeFalse();
@@ -234,11 +239,11 @@ test('changeRole action demotes an admin when another admin remains', function (
 
 // Note: the last-admin server-side guard in demoteToUser() is intentional
 // defense-in-depth but cannot be triggered via the UI: the ->hidden() guard on
-// the changeRole action prevents an admin from targeting themselves, and you
+// the confirmRole action prevents an admin from targeting themselves, and you
 // cannot reach a state where you are the sole admin targeting a different sole admin
 // (the actor must be an admin to mount the widget, so ≥1 admin always remains).
 
-test('changeRole action demoting to user removes all scoped role assignments', function () {
+test('confirmRole action demoting to user removes all scoped role assignments', function () {
     $sg = makeSubjectGrade();
     $editor = makeEditor($sg);
     $admin = makeSiteAdmin();
@@ -246,13 +251,14 @@ test('changeRole action demoting to user removes all scoped role assignments', f
     $this->actingAs($admin);
 
     Livewire::test(UsersWidget::class)
-        ->callTableAction('changeRole', $editor, data: ['new_role' => 'user'])
+        ->set('pendingRoleChanges', [$editor->id => 'user'])
+        ->callTableAction('confirmRole', $editor)
         ->assertNotified();
 
     expect(DB::table('subject_grade_user')->where('user_id', $editor->id)->exists())->toBeFalse();
 });
 
-test('changeRole action demoting to user clears subject_admin_user_id', function () {
+test('confirmRole action demoting to user clears subject_admin_user_id', function () {
     $sg = makeSubjectGrade();
     $subjectAdmin = makeSubjectAdmin($sg);
     $admin = makeSiteAdmin();
@@ -260,7 +266,8 @@ test('changeRole action demoting to user clears subject_admin_user_id', function
     $this->actingAs($admin);
 
     Livewire::test(UsersWidget::class)
-        ->callTableAction('changeRole', $subjectAdmin, data: ['new_role' => 'user'])
+        ->set('pendingRoleChanges', [$subjectAdmin->id => 'user'])
+        ->callTableAction('confirmRole', $subjectAdmin)
         ->assertNotified();
 
     expect($sg->fresh()->subject_admin_user_id)->toBeNull();

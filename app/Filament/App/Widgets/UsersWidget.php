@@ -7,10 +7,10 @@ use App\Models\SubjectGrade;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -20,6 +20,14 @@ use Illuminate\Support\Facades\DB;
 
 class UsersWidget extends TableWidget
 {
+    /**
+     * Tracks pending role changes per user ID.
+     * Populated when the user changes the Status select; cleared after confirm.
+     *
+     * @var array<int, string>
+     */
+    public array $pendingRoleChanges = [];
+
     /**
      * Enforce site-admin access at mount time.
      * Widgets are standalone Livewire components; their methods are reachable
@@ -47,50 +55,43 @@ class UsersWidget extends TableWidget
                     ->searchable()
                     ->sortable()
                     ->description(fn (User $record): ?string => $record->id === auth()->id() ? '(you)' : null),
-                TextColumn::make('role_display')
+                SelectColumn::make('role_key')
                     ->label('Status')
-                    ->state(fn (User $record): string => match ($record->role_label) {
-                        'Administrator' => 'Site Admin',
-                        'Subject Admin' => 'Subject Admin',
-                        'Editor' => 'Editor',
-                        default => 'User',
+                    ->options([
+                        'user' => 'User',
+                        'editor' => 'Editor',
+                        'subject_admin' => 'Subject Admin',
+                        'site_admin' => 'Site Admin',
+                    ])
+                    ->getStateUsing(fn (User $record): string => $this->pendingRoleChanges[$record->id] ?? $this->roleKey($record))
+                    ->updateStateUsing(function (User $record, string $state): void {
+                        $pending = $this->pendingRoleChanges;
+                        if ($state === $this->roleKey($record)) {
+                            unset($pending[$record->id]);
+                        } else {
+                            $pending[$record->id] = $state;
+                        }
+                        $this->pendingRoleChanges = $pending;
                     })
-                    ->badge()
-                    ->color(fn (User $record): string => match ($record->role_label) {
-                        'Administrator' => 'success',
-                        'Subject Admin' => 'warning',
-                        'Editor' => 'info',
-                        default => 'gray',
-                    }),
+                    ->disabled(fn (User $record): bool => $record->id === auth()->id()),
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
             ])
             ->recordActions([
-                Action::make('changeRole')
-                    ->label('Change Role')
+                Action::make('confirmRole')
+                    ->label('Confirm')
                     ->button()
                     ->size('xs')
-                    ->color('gray')
-                    ->modalHeading(fn (User $record): string => 'Change role for '.$record->name)
-                    ->modalDescription('Changing a user to "User" permanently removes all their Editor and Subject Admin assignments across all subject-grades.')
-                    ->modalSubmitActionLabel('Change Role')
-                    ->schema([
-                        Select::make('new_role')
-                            ->label('New role')
-                            ->options([
-                                'user' => 'User',
-                                'site_admin' => 'Site Admin',
-                            ])
-                            ->required(),
-                    ])
-                    ->fillForm(fn (User $record): array => [
-                        'new_role' => $record->isSiteAdmin() ? 'site_admin' : 'user',
-                    ])
-                    ->action(function (User $record, array $data): void {
-                        $this->applyRoleChange($record, $data['new_role']);
+                    ->color(fn (User $record): string => isset($this->pendingRoleChanges[$record->id]) ? 'primary' : 'gray')
+                    ->disabled(fn (User $record): bool => ! isset($this->pendingRoleChanges[$record->id]))
+                    ->action(function (User $record): void {
+                        $newRole = $this->pendingRoleChanges[$record->id];
+                        $this->applyRoleChange($record, $newRole);
+                        $pending = $this->pendingRoleChanges;
+                        unset($pending[$record->id]);
+                        $this->pendingRoleChanges = $pending;
                     })
-                    // Hidden for the current logged-in admin — cannot change own role.
                     ->hidden(fn (User $record): bool => $record->id === auth()->id()),
 
                 Action::make('message')
@@ -143,7 +144,26 @@ class UsersWidget extends TableWidget
     }
 
     // -------------------------------------------------------------------------
-    // Role change — modal action
+    // Role key helper
+    // -------------------------------------------------------------------------
+
+    /**
+     * Map a User record to its canonical role key for the Status select.
+     * Subject Admin and Editor can only be assigned via subject-grade context
+     * (Team Management), so they appear in the select for display only.
+     */
+    private function roleKey(User $record): string
+    {
+        return match ($record->role_label) {
+            'Administrator' => 'site_admin',
+            'Subject Admin' => 'subject_admin',
+            'Editor' => 'editor',
+            default => 'user',
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // Role change — confirm action
     // -------------------------------------------------------------------------
 
     private function applyRoleChange(User $record, string $state): void
@@ -153,7 +173,11 @@ class UsersWidget extends TableWidget
         match ($state) {
             'site_admin' => $this->promoteToSiteAdmin($record),
             'user' => $this->demoteToUser($record),
-            default => null, // Defensive — form options are constrained to the two above.
+            // Editor and Subject Admin are subject-grade-scoped; assign via Team Management.
+            default => Notification::make('scoped-role-required')
+                ->title(($state === 'editor' ? 'Editor' : 'Subject Admin').' is a subject-grade role. Assign it via Team Management.')
+                ->warning()
+                ->send(),
         };
     }
 
