@@ -40,7 +40,6 @@ class AppPanelProvider extends PanelProvider
             ->profile(Profile::class, isSimple: false)
             ->topNavigation()
             ->brandName('ARES Lesson Repository')
-            ->viteTheme('resources/css/app.css')
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => new HtmlString('
@@ -55,6 +54,12 @@ class AppPanelProvider extends PanelProvider
 
 /* Hide the empty profile header placeholder in the user menu */
 .fi-user-menu .fi-dropdown-header { display: none !important; }
+
+/* Tailwind-compatible utility classes for custom blade views */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.mb-3 { margin-bottom: 0.75rem; }
 </style>
                 ')
             )
