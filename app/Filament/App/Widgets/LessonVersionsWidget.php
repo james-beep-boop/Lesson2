@@ -9,6 +9,8 @@ use App\Services\VersionService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Notifications\Notification;
+use Filament\Resources\Concerns\HasTabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Table;
@@ -16,9 +18,11 @@ use Filament\Widgets\TableWidget;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class LessonVersionsWidget extends TableWidget
 {
+    use HasTabs;
     use HasVersionTable;
 
     /**
@@ -40,6 +44,47 @@ class LessonVersionsWidget extends TableWidget
     public function mount(): void
     {
         abort_unless(auth()->user()?->isSiteAdmin(), 403);
+        $this->loadDefaultActiveTab();
+    }
+
+    // -------------------------------------------------------------------------
+    // Tabs — mirrors ListLessonPlanFamilies::getTabs() exactly
+    // -------------------------------------------------------------------------
+
+    public function getTabs(): array
+    {
+        return [
+            'all' => Tab::make('All'),
+
+            'official' => Tab::make('Official')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn(
+                    'lesson_plan_versions.id',
+                    DB::table('lesson_plan_families')
+                        ->whereNotNull('official_version_id')
+                        ->pluck('official_version_id')
+                )),
+
+            'latest' => Tab::make('Latest')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn(
+                    'lesson_plan_versions.id',
+                    DB::table('lesson_plan_versions')
+                        ->selectRaw('MAX(id) as id')
+                        ->groupBy('lesson_plan_family_id')
+                )),
+
+            'favorites' => Tab::make('Favorites')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
+                    'favorites',
+                    fn (Builder $fq) => $fq->where('user_id', auth()->id())
+                )),
+        ];
+    }
+
+    public function updatedActiveTab(): void
+    {
+        $this->resetTable();
+        $this->cachedDefaultTableColumnState = null;
+        $this->applyTableColumnManager();
     }
 
     // -------------------------------------------------------------------------
@@ -60,6 +105,7 @@ class LessonVersionsWidget extends TableWidget
     {
         return $table
             ->query(fn (): Builder => $this->buildVersionQuery())
+            ->modifyQueryUsing(fn (Builder $query): Builder => $this->modifyQueryWithActiveTab($query))
             ->queryStringIdentifier('versions')
             ->columns([
                 TextColumn::make('family.subjectGrade.subject.name')
@@ -138,7 +184,8 @@ class LessonVersionsWidget extends TableWidget
                     ->modalSubmitAction(fn ($action) => $action->color('danger'))
                     ->requiresConfirmation()
                     ->action(fn (Collection $records) => $this->deleteVersions($records))
-                    ->deselectRecordsAfterCompletion(),
+                    ->deselectRecordsAfterCompletion()
+                    ->extraAttributes(['x-show' => '1']),
             ])
             ->defaultSort('created_at', 'desc');
     }

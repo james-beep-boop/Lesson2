@@ -10,59 +10,26 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Shared query, tab, and delete logic used by every version-table widget.
+ * Shared query and delete logic used by every version-table widget.
  *
  * Using classes must extend Filament\Widgets\TableWidget so that
  * $this->resetTable() and abort_unless() are available.
+ * Tab filtering is handled by the widget's getTabs() via HasTabs.
  */
 trait HasVersionTable
 {
-    /** Active filter tab: all | official | latest | favorites */
-    public string $activeTab = 'all';
-
     // -------------------------------------------------------------------------
-    // Query builder (shared by LessonVersionsWidget and AdminLessonsWidget)
+    // Base query (tab filtering applied via HasTabs::modifyQueryWithActiveTab)
     // -------------------------------------------------------------------------
 
     protected function buildVersionQuery(): Builder
     {
-        $query = LessonPlanVersion::query()
+        return LessonPlanVersion::query()
             ->with(['family.subjectGrade.subject', 'contributor'])
             ->join('lesson_plan_families', 'lesson_plan_versions.lesson_plan_family_id', '=', 'lesson_plan_families.id')
             ->join('subject_grades', 'lesson_plan_families.subject_grade_id', '=', 'subject_grades.id')
             ->join('subjects', 'subject_grades.subject_id', '=', 'subjects.id')
             ->select('lesson_plan_versions.*');
-
-        match ($this->activeTab) {
-            'official' => $query->whereIn(
-                'lesson_plan_versions.id',
-                DB::table('lesson_plan_families')
-                    ->whereNotNull('official_version_id')
-                    ->pluck('official_version_id')
-            ),
-            'latest' => $query->whereIn(
-                'lesson_plan_versions.id',
-                DB::table('lesson_plan_versions')
-                    ->selectRaw('MAX(id) as id')
-                    ->groupBy('lesson_plan_family_id')
-            ),
-            'favorites' => $query->whereHas(
-                'favorites',
-                fn ($q) => $q->where('user_id', auth()->id())
-            ),
-            default => null,
-        };
-
-        return $query;
-    }
-
-    // -------------------------------------------------------------------------
-    // Tab change
-    // -------------------------------------------------------------------------
-
-    public function updatedActiveTab(): void
-    {
-        $this->resetTable();
     }
 
     // -------------------------------------------------------------------------

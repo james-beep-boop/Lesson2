@@ -139,7 +139,8 @@ class UsersWidget extends TableWidget
                     ->modalSubmitAction(fn ($action) => $action->color('danger'))
                     ->requiresConfirmation()
                     ->action(fn (Collection $records) => $this->deleteUsers($records))
-                    ->deselectRecordsAfterCompletion(),
+                    ->deselectRecordsAfterCompletion()
+                    ->extraAttributes(['x-show' => '1']),
             ]);
     }
 

@@ -1,7 +1,6 @@
 <?php
 
 use App\Filament\App\Pages\AdminDashboard;
-use App\Filament\App\Widgets\AdminLessonsWidget;
 use App\Filament\App\Widgets\LessonVersionsWidget;
 use App\Filament\App\Widgets\UsersWidget;
 use App\Models\LessonPlanFamily;
@@ -56,13 +55,6 @@ test('non-admin cannot mount UsersWidget', function () {
     $this->actingAs(makeTeacher());
 
     Livewire::test(UsersWidget::class)
-        ->assertForbidden();
-});
-
-test('non-admin cannot mount AdminLessonsWidget', function () {
-    $this->actingAs(makeTeacher());
-
-    Livewire::test(AdminLessonsWidget::class)
         ->assertForbidden();
 });
 
@@ -138,41 +130,6 @@ test('bulk delete clears official_version_id before deleting the official versio
 
     // Would fail with FK constraint if official_version_id were not cleared first.
     Livewire::test(LessonVersionsWidget::class)
-        ->callTableBulkAction('delete', [$version])
-        ->assertNotified();
-
-    expect(LessonPlanFamily::find($family->id))->toBeNull();
-});
-
-// ── AdminLessonsWidget – bulk delete ─────────────────────────────────────────
-
-test('admin-lessons bulk delete removes a version but keeps the family when others remain', function () {
-    $sg = makeSubjectGrade();
-    [$family, $v1] = makeFamilyWithVersion($sg);
-    LessonPlanVersion::factory()->create([
-        'lesson_plan_family_id' => $family->id,
-        'version' => '1.0.1',
-    ]);
-
-    $this->actingAs(makeSiteAdmin());
-
-    Livewire::test(AdminLessonsWidget::class)
-        ->callTableBulkAction('delete', [$v1])
-        ->assertNotified();
-
-    expect(LessonPlanVersion::find($v1->id))->toBeNull();
-    expect(LessonPlanFamily::find($family->id))->not->toBeNull();
-});
-
-test('admin-lessons bulk delete clears official_version_id before deleting the official version', function () {
-    $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg);
-    $family->update(['official_version_id' => $version->id]);
-
-    $this->actingAs(makeSiteAdmin());
-
-    // Would fail with FK constraint if official_version_id were not cleared first.
-    Livewire::test(AdminLessonsWidget::class)
         ->callTableBulkAction('delete', [$version])
         ->assertNotified();
 

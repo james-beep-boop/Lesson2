@@ -10,6 +10,9 @@ use App\Filament\App\Resources\LessonPlanFamilyResource;
  */
 class Dashboard extends \Filament\Pages\Dashboard
 {
+    // Redirects to Lessons; hiding avoids a redundant nav item.
+    protected static bool $shouldRegisterNavigation = false;
+
     public function mount(): void
     {
         $this->redirect(LessonPlanFamilyResource::getUrl('index'));
