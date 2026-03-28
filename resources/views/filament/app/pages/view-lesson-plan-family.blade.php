@@ -162,8 +162,7 @@
             <div class="lg:col-span-3">
                 @if($selectedVersion)
                     @if($compareMode && $compareVersion)
-                        {{-- Compare mode: diff view --}}
-                        @php $diff = $this->computeDiff(); @endphp
+                        {{-- Compare mode: rendered side-by-side --}}
                         <x-filament::section>
                             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <span class="font-semibold">
