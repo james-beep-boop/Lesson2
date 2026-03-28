@@ -18,9 +18,10 @@ class VersionService
         string $day,
         string $content,
         ?string $revisionNote,
-        User $contributor
+        User $contributor,
+        string $versionString = '1.0.0'
     ): LessonPlanVersion {
-        return DB::transaction(function () use ($subjectGradeId, $day, $content, $revisionNote, $contributor) {
+        return DB::transaction(function () use ($subjectGradeId, $day, $content, $revisionNote, $contributor, $versionString) {
             $family = LessonPlanFamily::create([
                 'subject_grade_id' => $subjectGradeId,
                 'day' => $day,
@@ -32,7 +33,7 @@ class VersionService
                 'revision_note' => $revisionNote,
             ]);
             $version->contributor_id = $contributor->id;
-            $version->version = '1.0.0';
+            $version->version = $versionString;
             $version->save();
 
             return $version;

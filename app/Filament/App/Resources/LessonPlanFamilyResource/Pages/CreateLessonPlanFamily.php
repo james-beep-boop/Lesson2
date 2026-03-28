@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanFamily;
 use App\Models\Message;
+use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\VersionService;
@@ -15,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -39,25 +41,58 @@ class CreateLessonPlanFamily extends CreateRecord
         $user = auth()->user();
 
         return $schema->schema([
+            Select::make('subject_id')
+                ->label('Subject')
+                ->options(function () use ($user) {
+                    $query = Subject::orderBy('name');
+
+                    if (! $user->isSiteAdmin()) {
+                        $allowedSubjectIds = SubjectGrade::where('subject_admin_user_id', $user->id)
+                            ->pluck('subject_id');
+                        $query->whereIn('id', $allowedSubjectIds);
+                    }
+
+                    return $query->pluck('name', 'id');
+                })
+                ->required()
+                ->searchable()
+                ->live()
+                ->dehydrated(false)
+                ->afterStateUpdated(fn (Set $set) => $set('subject_grade_id', null)),
+
             Select::make('subject_grade_id')
-                ->label('Subject Grade')
-                ->options(
-                    SubjectGrade::query()
+                ->label('Grade')
+                ->options(function (Get $get) use ($user) {
+                    $subjectId = $get('subject_id');
+                    if (! $subjectId) {
+                        return [];
+                    }
+
+                    return SubjectGrade::where('subject_id', $subjectId)
                         ->when(
                             ! $user->isSiteAdmin(),
                             fn ($q) => $q->where('subject_admin_user_id', $user->id)
                         )
-                        ->with('subject')
+                        ->orderBy('grade')
                         ->get()
-                        ->mapWithKeys(fn ($sg) => [$sg->id => $sg->subject->name.' — Grade '.$sg->grade])
-                )
+                        ->mapWithKeys(fn ($sg) => [$sg->id => 'Grade '.$sg->grade]);
+                })
                 ->required()
                 ->searchable(),
 
-            TextInput::make('day')
+            Select::make('day')
                 ->label('Day')
+                ->options(array_combine(range(1, 20), range(1, 20)))
                 ->required()
-                ->placeholder('e.g. 1'),
+                ->searchable()
+                ->createOptionForm([
+                    TextInput::make('day')
+                        ->label('Day number')
+                        ->numeric()
+                        ->minValue(1)
+                        ->required(),
+                ])
+                ->createOptionUsing(fn (array $data): int => (int) $data['day']),
 
             FileUpload::make('lesson_file')
                 ->label('Upload file (optional)')
@@ -84,10 +119,13 @@ class CreateLessonPlanFamily extends CreateRecord
                         return;
                     }
 
-                    // Auto-populate Day from filenames following the canonical convention:
+                    // Auto-populate Day and version fields from filenames following the canonical convention:
                     // SUBJ_GRADE_DAY_REV_VER.MAJ.MIN.md  e.g. ENGL_10_1_REV_1.0.0.md
-                    if (preg_match('/^[A-Z]{1,4}_\d+_(\d+)_REV_\d+\.\d+\.\d+\.md$/i', $state->getClientOriginalName(), $m)) {
-                        $set('day', $m[1]);
+                    if (preg_match('/^[A-Z]{1,4}_\d+_(\d+)_REV_(\d+)\.(\d+)\.(\d+)\.md$/i', $state->getClientOriginalName(), $m)) {
+                        $set('day', (int) $m[1]);
+                        $set('version_number', (int) $m[2]);
+                        $set('version_major', (int) $m[3]);
+                        $set('version_minor', (int) $m[4]);
                     }
 
                     $ext = strtolower($state->getClientOriginalExtension());
@@ -145,6 +183,48 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->columnSpanFull()
                 ->placeholder('Write or paste your lesson plan in Markdown, or upload a file above...'),
 
+            Select::make('version_number')
+                ->label('Version')
+                ->options(array_combine(range(1, 9), range(1, 9)))
+                ->default(1)
+                ->required()
+                ->createOptionForm([
+                    TextInput::make('version_number')
+                        ->label('Version number')
+                        ->numeric()
+                        ->minValue(1)
+                        ->required(),
+                ])
+                ->createOptionUsing(fn (array $data): int => (int) $data['version_number']),
+
+            Select::make('version_major')
+                ->label('Major Revision')
+                ->options(array_combine(range(0, 9), range(0, 9)))
+                ->default(0)
+                ->required()
+                ->createOptionForm([
+                    TextInput::make('version_major')
+                        ->label('Major revision number')
+                        ->numeric()
+                        ->minValue(0)
+                        ->required(),
+                ])
+                ->createOptionUsing(fn (array $data): int => (int) $data['version_major']),
+
+            Select::make('version_minor')
+                ->label('Minor Revision')
+                ->options(array_combine(range(0, 9), range(0, 9)))
+                ->default(0)
+                ->required()
+                ->createOptionForm([
+                    TextInput::make('version_minor')
+                        ->label('Minor revision number')
+                        ->numeric()
+                        ->minValue(0)
+                        ->required(),
+                ])
+                ->createOptionUsing(fn (array $data): int => (int) $data['version_minor']),
+
             TextInput::make('revision_note')
                 ->label('Revision Note (optional)')
                 ->placeholder('Brief note about this version')
@@ -162,13 +242,16 @@ class CreateLessonPlanFamily extends CreateRecord
             abort_unless($user->isSubjectAdminFor($subjectGrade), 403);
         }
 
+        $versionString = $data['version_number'].'.'.$data['version_major'].'.'.$data['version_minor'];
+
         try {
             $version = app(VersionService::class)->createFamilyWithFirstVersion(
                 (int) $data['subject_grade_id'],
-                $data['day'],
+                (string) $data['day'],
                 $data['content'],
                 $data['revision_note'] ?? null,
-                $user
+                $user,
+                $versionString
             );
 
             // Store the family id so getRedirectUrl() can build the view URL

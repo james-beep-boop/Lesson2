@@ -40,6 +40,7 @@ class AppPanelProvider extends PanelProvider
             ->profile(Profile::class, isSimple: false)
             ->topNavigation()
             ->brandName('ARES Lesson Repository')
+            ->viteTheme('resources/css/app.css')
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => new HtmlString('
