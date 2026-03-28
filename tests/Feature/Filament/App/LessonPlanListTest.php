@@ -66,7 +66,7 @@ test('latest tab shows only the most recent version per family', function () {
 test('favorites tab shows only versions the user has favorited', function () {
     $sg = makeSubjectGrade();
     [, $favored] = makeFamilyWithVersion($sg);
-    [, $unfavored] = makeFamilyWithVersion($sg);
+    [, $unfavored] = makeFamilyWithVersion(makeSubjectGrade());
 
     $user = makeTeacher();
     (new FavoriteService)->upsert($user, $favored);
@@ -86,19 +86,19 @@ test('teacher does not see create button', function () {
         ->assertActionDoesNotExist('create');
 });
 
-test('subject admin sees create button', function () {
+test('subject admin does not see create button on list page', function () {
     $sg = makeSubjectGrade();
     $admin = makeSubjectAdmin($sg);
 
     $this->actingAs($admin);
 
     Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionExists('create');
+        ->assertActionDoesNotExist('create');
 });
 
-test('site admin sees create button', function () {
+test('site admin does not see create button on list page', function () {
     $this->actingAs(makeSiteAdmin());
 
     Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionExists('create');
+        ->assertActionDoesNotExist('create');
 });

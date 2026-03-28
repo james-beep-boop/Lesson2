@@ -154,12 +154,6 @@ class LessonPlanFamilyResource extends Resource
 
     public static function canCreate(): bool
     {
-        $user = auth()->user();
-        if (! $user) {
-            return false;
-        }
-
-        return $user->isSiteAdmin()
-            || SubjectGrade::where('subject_admin_user_id', $user->id)->exists();
+        return auth()->user()?->isSiteAdmin() ?? false;
     }
 }

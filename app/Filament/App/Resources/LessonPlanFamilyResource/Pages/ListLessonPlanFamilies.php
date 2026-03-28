@@ -4,8 +4,6 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanVersion;
-use App\Models\SubjectGrade;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,15 +15,6 @@ class ListLessonPlanFamilies extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        $user = auth()->user();
-        if (! $user) {
-            return [];
-        }
-
-        if ($user->isSiteAdmin() || SubjectGrade::where('subject_admin_user_id', $user->id)->exists()) {
-            return [CreateAction::make()->label('Add Lesson Plan')];
-        }
-
         return [];
     }
 
