@@ -195,6 +195,11 @@ class CreateLessonPlanFamily extends CreateRecord
                                 ->send();
 
                         } catch (\Throwable $e) {
+                            // Discard any partial output buffered before the exception.
+                            if (ob_get_level()) {
+                                ob_end_clean();
+                            }
+
                             Notification::make()
                                 ->title('Conversion failed')
                                 ->body('The Word document could not be converted: '.$e->getMessage())
@@ -224,12 +229,14 @@ class CreateLessonPlanFamily extends CreateRecord
     {
         $d = $this->data ?? [];
 
+        // filled() returns false for 0 — use explicit null checks so that
+        // version_major=0 and version_minor=0 are treated as valid values.
         return filled($d['subject_id'] ?? null)
             && filled($d['grade'] ?? null)
             && filled($d['day'] ?? null)
             && filled($d['version_number'] ?? null)
-            && filled($d['version_major'] ?? null)
-            && filled($d['version_minor'] ?? null);
+            && isset($d['version_major']) && $d['version_major'] !== null && $d['version_major'] !== ''
+            && isset($d['version_minor']) && $d['version_minor'] !== null && $d['version_minor'] !== '';
     }
 
     /** Shared createOptionForm schema for any integer-value Select. */
@@ -287,8 +294,6 @@ class CreateLessonPlanFamily extends CreateRecord
                 $versionString
             );
 
-            $this->createdFamilyId = $version->lesson_plan_family_id;
-
             return LessonPlanFamily::findOrFail($version->lesson_plan_family_id);
 
         } catch (UniqueConstraintViolationException) {
@@ -317,6 +322,9 @@ class CreateLessonPlanFamily extends CreateRecord
                     ->persistent()
                     ->send();
 
+                // halt() aborts the Filament create flow without calling getRedirectUrl(),
+                // avoiding a null $this->record fatal error. The redirect fires from halt().
+                $this->halt();
                 $this->redirect(LessonPlanFamilyResource::getUrl('view', ['record' => $existing->id]));
             }
 
