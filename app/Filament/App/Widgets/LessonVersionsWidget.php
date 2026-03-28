@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Widgets;
 
+use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Services\VersionService;
 use Filament\Actions\Action;
@@ -29,6 +30,20 @@ class LessonVersionsWidget extends TableWidget
     protected string $view = 'filament.app.widgets.lesson-versions-widget';
 
     // -------------------------------------------------------------------------
+    // Authorization
+    // -------------------------------------------------------------------------
+
+    /**
+     * Enforce site-admin access at mount time.
+     * Widgets are standalone Livewire components; their methods are reachable
+     * via HTTP independently of the parent page's abort_unless guard.
+     */
+    public function mount(): void
+    {
+        abort_unless(auth()->user()?->isSiteAdmin(), 403);
+    }
+
+    // -------------------------------------------------------------------------
     // Heading
     // -------------------------------------------------------------------------
 
@@ -46,6 +61,7 @@ class LessonVersionsWidget extends TableWidget
     {
         return $table
             ->query(fn (): Builder => $this->buildQuery())
+            ->queryStringIdentifier('versions')
             ->columns([
                 TextColumn::make('family.subjectGrade.subject.name')
                     ->label('Subject')
@@ -61,14 +77,6 @@ class LessonVersionsWidget extends TableWidget
                 TextColumn::make('version')
                     ->label('Version')
                     ->sortable(),
-                TextColumn::make('official_indicator')
-                    ->label('Official')
-                    ->state(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
-                        ? '✓' : ''
-                    )
-                    ->color(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
-                        ? 'success' : 'gray'
-                    ),
                 TextColumn::make('contributor.name')
                     ->label('By')
                     ->sortable(),
@@ -87,10 +95,19 @@ class LessonVersionsWidget extends TableWidget
                         ? 'success'
                         : 'gray'
                     )
+                    ->tooltip(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
+                        ? 'Remove official status from this version'
+                        : 'Mark this version as the official one for this plan'
+                    )
                     ->button()
                     ->size('xs')
                     ->action(function (LessonPlanVersion $record): void {
-                        $family = $record->family;
+                        abort_unless(auth()->user()?->isSiteAdmin(), 403);
+
+                        // Reload family fresh to avoid acting on a stale official_version_id.
+                        $family = $record->lesson_plan_family_id
+                            ? LessonPlanFamily::find($record->lesson_plan_family_id)
+                            : null;
 
                         if (! $family) {
                             return;
@@ -174,12 +191,15 @@ class LessonVersionsWidget extends TableWidget
 
     private function deleteVersions(Collection $records): void
     {
-        // Ensure family is available on each record.
-        $records->loadMissing('family');
+        abort_unless(auth()->user()?->isSiteAdmin(), 403);
 
         DB::transaction(function () use ($records): void {
             foreach ($records as $version) {
-                $family = $version->family;
+                // Load a fresh family instance to avoid acting on a stale
+                // official_version_id that may have changed since the table was rendered.
+                $family = $version->lesson_plan_family_id
+                    ? LessonPlanFamily::find($version->lesson_plan_family_id)
+                    : null;
 
                 // Clear official pointer before deleting to avoid FK issues.
                 if ($family && (int) $family->official_version_id === $version->id) {
