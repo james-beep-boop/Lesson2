@@ -1,6 +1,8 @@
 <?php
 
 use App\Filament\App\Pages\AdminDashboard;
+use App\Filament\App\Widgets\LessonVersionsWidget;
+use App\Filament\App\Widgets\UsersWidget;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\User;
@@ -13,7 +15,7 @@ beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('app'));
 });
 
-// ── Access control ────────────────────────────────────────────────────────────
+// ── AdminDashboard access control ─────────────────────────────────────────────
 
 test('non-admin is denied access to admin dashboard', function () {
     $this->actingAs(makeTeacher())
@@ -37,49 +39,38 @@ test('admin nav item is visible to site admins', function () {
     expect(AdminDashboard::shouldRegisterNavigation())->toBeTrue();
 });
 
-// ── setOfficial ───────────────────────────────────────────────────────────────
+// ── LessonVersionsWidget – toggleOfficial ─────────────────────────────────────
 
-test('setOfficial marks a version as official', function () {
+test('toggleOfficial marks a version as official', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeSiteAdmin());
 
-    Livewire::test(AdminDashboard::class)
-        ->call('setOfficial', $family->id, $version->id)
+    Livewire::test(LessonVersionsWidget::class)
+        ->callTableAction('toggleOfficial', $version)
         ->assertNotified();
 
     expect($family->fresh()->official_version_id)->toBe($version->id);
 });
 
-test('setOfficial toggles off when the version is already official', function () {
+test('toggleOfficial toggles off when the version is already official', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
     $family->update(['official_version_id' => $version->id]);
 
     $this->actingAs(makeSiteAdmin());
 
-    Livewire::test(AdminDashboard::class)
-        ->call('setOfficial', $family->id, $version->id)
+    Livewire::test(LessonVersionsWidget::class)
+        ->callTableAction('toggleOfficial', $version)
         ->assertNotified();
 
     expect($family->fresh()->official_version_id)->toBeNull();
 });
 
-test('setOfficial rejects a version that does not belong to the family', function () {
-    [$family1] = makeFamilyWithVersion(makeSubjectGrade());
-    [, $alienVersion] = makeFamilyWithVersion(makeSubjectGrade());
+// ── LessonVersionsWidget – bulk delete ───────────────────────────────────────
 
-    $this->actingAs(makeSiteAdmin());
-
-    Livewire::test(AdminDashboard::class)
-        ->call('setOfficial', $family1->id, $alienVersion->id)
-        ->assertStatus(422);
-});
-
-// ── deleteSelectedVersions ────────────────────────────────────────────────────
-
-test('deleteSelectedVersions removes the selected version but keeps the family when others remain', function () {
+test('bulk delete removes a version but keeps the family when others remain', function () {
     $sg = makeSubjectGrade();
     [$family, $v1] = makeFamilyWithVersion($sg);
     LessonPlanVersion::factory()->create([
@@ -89,111 +80,103 @@ test('deleteSelectedVersions removes the selected version but keeps the family w
 
     $this->actingAs(makeSiteAdmin());
 
-    Livewire::test(AdminDashboard::class)
-        ->set('selectedVersionIds', [$v1->id])
-        ->call('deleteSelectedVersions')
+    Livewire::test(LessonVersionsWidget::class)
+        ->callTableBulkAction('delete', [$v1])
         ->assertNotified();
 
     expect(LessonPlanVersion::find($v1->id))->toBeNull();
     expect(LessonPlanFamily::find($family->id))->not->toBeNull();
 });
 
-test('deleteSelectedVersions deletes the family when its last version is removed', function () {
+test('bulk delete removes the family when its last version is deleted', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeSiteAdmin());
 
-    Livewire::test(AdminDashboard::class)
-        ->set('selectedVersionIds', [$version->id])
-        ->call('deleteSelectedVersions')
+    Livewire::test(LessonVersionsWidget::class)
+        ->callTableBulkAction('delete', [$version])
         ->assertNotified();
 
     expect(LessonPlanVersion::find($version->id))->toBeNull();
     expect(LessonPlanFamily::find($family->id))->toBeNull();
 });
 
-test('deleteSelectedVersions clears official_version_id before deleting', function () {
+test('bulk delete clears official_version_id before deleting the official version', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
     $family->update(['official_version_id' => $version->id]);
 
     $this->actingAs(makeSiteAdmin());
 
-    // If official_version_id were not cleared first the FK constraint would fail.
-    Livewire::test(AdminDashboard::class)
-        ->set('selectedVersionIds', [$version->id])
-        ->call('deleteSelectedVersions')
+    // Would fail with FK constraint if official_version_id were not cleared first.
+    Livewire::test(LessonVersionsWidget::class)
+        ->callTableBulkAction('delete', [$version])
         ->assertNotified();
 
     expect(LessonPlanFamily::find($family->id))->toBeNull();
 });
 
-// ── deleteSelectedUsers ───────────────────────────────────────────────────────
+// ── UsersWidget – bulk delete ─────────────────────────────────────────────────
 
-test('deleteSelectedUsers soft-deletes the target user', function () {
+test('bulk delete removes the target user', function () {
     $target = makeTeacher();
 
     $this->actingAs(makeSiteAdmin());
 
-    Livewire::test(AdminDashboard::class)
-        ->set('selectedUserIds', [$target->id])
-        ->call('deleteSelectedUsers')
+    Livewire::test(UsersWidget::class)
+        ->callTableBulkAction('delete', [$target])
         ->assertNotified();
 
     expect(User::find($target->id))->toBeNull();
 });
 
-test('deleteSelectedUsers refuses to delete own account', function () {
+test('bulk delete refuses to delete own account', function () {
     $admin = makeSiteAdmin();
 
     $this->actingAs($admin);
 
-    Livewire::test(AdminDashboard::class)
-        ->set('selectedUserIds', [$admin->id])
-        ->call('deleteSelectedUsers')
+    Livewire::test(UsersWidget::class)
+        ->callTableBulkAction('delete', [$admin])
         ->assertNotified();
 
     expect(User::find($admin->id))->not->toBeNull();
 });
 
-// ── confirmStatusChanges ──────────────────────────────────────────────────────
+// ── UsersWidget – SelectColumn role change ────────────────────────────────────
 
-test('confirmStatusChanges promotes a user to site administrator', function () {
+test('status column promotes a user to site administrator', function () {
     $target = makeTeacher();
 
     $this->actingAs(makeSiteAdmin());
 
-    Livewire::test(AdminDashboard::class)
-        ->set("userStatusChanges.{$target->id}", 'administrator')
-        ->call('confirmStatusChanges')
+    Livewire::test(UsersWidget::class)
+        ->call('updateTableColumnState', 'site_role', (string) $target->id, 'administrator')
         ->assertNotified();
 
     expect($target->fresh()->isSiteAdmin())->toBeTrue();
 });
 
-test('confirmStatusChanges demotes a site administrator when another admin exists', function () {
+test('status column demotes an admin when another admin remains', function () {
     $admin1 = makeSiteAdmin();
     $admin2 = makeSiteAdmin();
 
     $this->actingAs($admin1);
 
-    Livewire::test(AdminDashboard::class)
-        ->set("userStatusChanges.{$admin2->id}", 'user')
-        ->call('confirmStatusChanges')
+    Livewire::test(UsersWidget::class)
+        ->call('updateTableColumnState', 'site_role', (string) $admin2->id, 'user')
         ->assertNotified();
 
     expect($admin2->fresh()->isSiteAdmin())->toBeFalse();
 });
 
-test('confirmStatusChanges refuses to remove the last site administrator', function () {
+test('status column refuses to remove the last site administrator', function () {
     $admin = makeSiteAdmin();
 
     $this->actingAs($admin);
 
-    Livewire::test(AdminDashboard::class)
-        ->set("userStatusChanges.{$admin->id}", 'user')
-        ->call('confirmStatusChanges');
+    Livewire::test(UsersWidget::class)
+        ->call('updateTableColumnState', 'site_role', (string) $admin->id, 'user');
 
     expect($admin->fresh()->isSiteAdmin())->toBeTrue();
 });
