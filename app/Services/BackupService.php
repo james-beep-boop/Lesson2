@@ -130,9 +130,13 @@ class BackupService
 
         try {
             DB::transaction(function () use ($payload) {
+                // Use delete() not truncate(). TRUNCATE TABLE on MariaDB/InnoDB
+                // issues an implicit commit even inside an explicit transaction,
+                // causing PDO::commit() to throw "There is no active transaction".
+                // DELETE FROM is fully transactional and avoids this.
                 foreach (array_reverse(self::TABLES) as $table) {
                     if (Schema::hasTable($table)) {
-                        DB::table($table)->truncate();
+                        DB::table($table)->delete();
                     }
                 }
 
