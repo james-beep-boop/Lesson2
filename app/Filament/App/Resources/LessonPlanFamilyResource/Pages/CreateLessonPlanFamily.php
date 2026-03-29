@@ -133,9 +133,7 @@ class CreateLessonPlanFamily extends CreateRecord
                     'text/plain',
                     'text/markdown',
                     'text/x-markdown',
-                    '.md',
-                    '.txt',
-                    '.docx',
+                    'application/octet-stream',
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 ])
                 ->maxSize(32768)
@@ -262,6 +260,19 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->numeric()
                 ->minValue($minValue)
                 ->required(),
+        ];
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return $this->getFormActions();
+    }
+
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction(),
+            $this->getCancelFormAction(),
         ];
     }
 
