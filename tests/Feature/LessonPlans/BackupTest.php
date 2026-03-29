@@ -187,7 +187,11 @@ test('restoreBackup action sends a danger notification when restore throws', fun
 test('deleteBackup action removes the selected file', function () {
     $this->actingAs(makeSiteAdmin());
 
-    ['filename' => $filename] = app(BackupService::class)->create();
+    // Two distinct backups must exist so the guard allows deleting one.
+    // Use Storage::put() directly to avoid same-second filename collision.
+    Storage::disk('local')->put('backups/backup_2026-01-01_100000.json', '{}');
+    $filename = 'backup_2026-01-01_120000.json';
+    Storage::disk('local')->put('backups/'.$filename, '{}');
 
     Storage::disk('local')->assertExists('backups/'.$filename);
 
@@ -197,6 +201,20 @@ test('deleteBackup action removes the selected file', function () {
         ->assertNotified();
 
     Storage::disk('local')->assertMissing('backups/'.$filename);
+});
+
+test('deleteBackup action refuses to delete the last remaining backup', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    ['filename' => $filename] = app(BackupService::class)->create();
+
+    Livewire::test(AdminDashboard::class)
+        ->set('restoreFilename', $filename)
+        ->call('deleteBackup')
+        ->assertNotified();
+
+    // File must still exist
+    Storage::disk('local')->assertExists('backups/'.$filename);
 });
 
 test('deleteBackup action sends a warning when no filename is selected', function () {

@@ -154,6 +154,7 @@ class LessonVersionsWidget extends TableWidget
                     ->deselectRecordsAfterCompletion()
                     ->extraAttributes(['x-show' => '1']),
             ])
+            ->checkIfRecordIsSelectableUsing(fn (LessonPlanVersion $record): bool => ! $record->isOfficial())
             ->defaultSort('created_at', 'desc');
     }
 

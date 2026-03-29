@@ -18,6 +18,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -214,12 +215,21 @@ class CreateLessonPlanFamily extends CreateRecord
                     }
                 }),
 
-            Textarea::make('content')
-                ->label('Lesson Plan Content (Markdown)')
-                ->rows(20)
-                ->required()
-                ->columnSpanFull()
-                ->placeholder('Write or paste your lesson plan in Markdown, or upload a file above...'),
+            // ── Editor + Preview side by side ─────────────────────────────────
+            Grid::make(['default' => 1, 'lg' => 2])
+                ->schema([
+                    Textarea::make('content')
+                        ->label('Lesson Plan Content (Markdown)')
+                        ->rows(20)
+                        ->required()
+                        ->placeholder('Write or paste your lesson plan in Markdown, or upload a file above...')
+                        ->extraAttributes([
+                            'x-on:input.debounce.300ms' => '$dispatch("markdown-input", {value: $event.target.value})',
+                        ]),
+
+                    View::make('filament.forms.components.markdown-preview'),
+                ])
+                ->columnSpanFull(),
 
             TextInput::make('revision_note')
                 ->label('Revision Note (optional)')

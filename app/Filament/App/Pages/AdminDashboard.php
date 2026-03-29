@@ -130,6 +130,16 @@ class AdminDashboard extends Page
             return;
         }
 
+        if (count(app(BackupService::class)->list()) <= 1) {
+            Notification::make()
+                ->title('Cannot delete the last backup')
+                ->body('At least one backup must be kept.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
         $filename = basename($this->restoreFilename);
 
         try {
