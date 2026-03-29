@@ -1,7 +1,7 @@
-{{-- Load marked.js before Alpine initialises this component so $wire.get() in init() finds it ready. --}}
+{{-- Inject marked.js before Alpine initialises this component. --}}
 <script>
     (function () {
-        if (!window.marked && !document.querySelector('script[src*="marked@"]')) {
+        if (!window.marked && !document.querySelector('script[src*="marked@17"]')) {
             var s = document.createElement('script');
             s.src = 'https://cdn.jsdelivr.net/npm/marked@17.0.5/marked.min.js';
             s.integrity = 'sha384-tkjnnf9Tzhv5ZFrDroGvUExw9C3EVFo0RFRkzKR8ZX4b5Psoec4yb1PlD8Jh4j4H';
@@ -18,17 +18,6 @@
             this.preview = window.marked ? marked.parse(val || '') : (val || '');
         },
         init() {
-            const initial = $wire.get('data.content') ?? '';
-            if (window.marked) {
-                this.renderMarkdown(initial);
-            } else {
-                const script = document.querySelector('script[src*=\"marked@\"]');
-                if (script) {
-                    script.addEventListener('load', () => this.renderMarkdown(initial), { once: true });
-                }
-            }
-
-            // Watch for Livewire-driven updates (e.g. file upload populates content)
             $wire.watch('data.content', (val) => this.renderMarkdown(val ?? ''));
         }
     }"
@@ -39,7 +28,7 @@
     </label>
 
     <div
-        x-html="preview || '<p style=\'color:#9ca3af\'>Start typing to see a preview…</p>'"
+        x-html="preview || '<p style=\'color:#9ca3af\'>Start typing to see a preview\u2026</p>'"
         class="prose prose-sm max-w-none overflow-y-auto rounded-lg border border-gray-300 bg-white px-4 py-3 dark:border-white/20 dark:bg-gray-900 dark:prose-invert"
         style="min-height: 30rem;"
     ></div>
