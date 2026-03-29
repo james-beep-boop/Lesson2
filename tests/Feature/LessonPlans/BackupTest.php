@@ -184,6 +184,30 @@ test('restoreBackup action sends a danger notification when restore throws', fun
         ->assertNotified();
 });
 
+test('deleteBackup action removes the selected file', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    ['filename' => $filename] = app(BackupService::class)->create();
+
+    Storage::disk('local')->assertExists('backups/'.$filename);
+
+    Livewire::test(AdminDashboard::class)
+        ->set('restoreFilename', $filename)
+        ->call('deleteBackup')
+        ->assertNotified();
+
+    Storage::disk('local')->assertMissing('backups/'.$filename);
+});
+
+test('deleteBackup action sends a warning when no filename is selected', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(AdminDashboard::class)
+        ->set('restoreFilename', '')
+        ->call('deleteBackup')
+        ->assertNotified();
+});
+
 test('restoreBackup action rejects path traversal filenames gracefully', function () {
     $this->actingAs(makeSiteAdmin());
 

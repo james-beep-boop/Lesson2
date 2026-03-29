@@ -10,6 +10,7 @@ use App\Services\BackupService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AdminDashboard extends Page
 {
@@ -112,6 +113,38 @@ class AdminDashboard extends Page
         } catch (\Throwable $e) {
             Notification::make()
                 ->title('Restore failed')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function deleteBackup(): void
+    {
+        if (blank($this->restoreFilename)) {
+            Notification::make()
+                ->title('No backup selected')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $filename = basename($this->restoreFilename);
+
+        try {
+            Storage::disk('local')->delete('backups/'.$filename);
+
+            $this->restoreFilename = null;
+
+            Notification::make()
+                ->title('Backup deleted')
+                ->body($filename)
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Delete failed')
                 ->body($e->getMessage())
                 ->danger()
                 ->send();

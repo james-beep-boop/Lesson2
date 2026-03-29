@@ -49,11 +49,10 @@
         $backups = $this->getAvailableBackups();
     @endphp
 
-    <div class="mt-10 rounded-lg border border-gray-200 bg-white p-6 dark:border-white/10 dark:bg-white/5">
+    <x-filament::section heading="Backup &amp; Restore">
 
-        {{-- ── Header row: heading + Backup Now + restore controls ──────────── --}}
+        {{-- ── Controls row ───────────────────────────────────────────────────── --}}
         <div class="flex flex-wrap items-center gap-3">
-            <h2 class="fi-header-heading mr-auto">Backup &amp; Restore</h2>
 
             <x-filament::button wire:click="backupNow" wire:loading.attr="disabled" color="primary">
                 <span wire:loading.remove wire:target="backupNow">Backup Now</span>
@@ -61,8 +60,18 @@
             </x-filament::button>
 
             @if (! empty($backups))
+                <x-filament::button
+                    wire:click="restoreBackup"
+                    wire:loading.attr="disabled"
+                    wire:confirm="This will REPLACE ALL DATA with the selected backup and log you out. Are you sure?"
+                    color="warning"
+                >
+                    <span wire:loading.remove wire:target="restoreBackup">Restore From Backup</span>
+                    <span wire:loading wire:target="restoreBackup">Restoring…</span>
+                </x-filament::button>
+
                 <select
-                    id="restore-select"
+                    id="backup-select"
                     wire:model="restoreFilename"
                     class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-white/20 dark:bg-white/5 dark:text-white"
                 >
@@ -75,24 +84,25 @@
                 </select>
 
                 <x-filament::button
-                    wire:click="restoreBackup"
+                    wire:click="deleteBackup"
                     wire:loading.attr="disabled"
-                    wire:confirm="This will REPLACE ALL DATA with the selected backup and log you out. Are you sure?"
+                    wire:confirm="Delete this backup file? This cannot be undone."
                     color="danger"
                 >
-                    <span wire:loading.remove wire:target="restoreBackup">Restore From Backup</span>
-                    <span wire:loading wire:target="restoreBackup">Restoring…</span>
+                    <span wire:loading.remove wire:target="deleteBackup">Delete Backup</span>
+                    <span wire:loading wire:target="deleteBackup">Deleting…</span>
                 </x-filament::button>
             @endif
+
         </div>
 
-        {{-- ── Warning note (only shown when there are backups to restore) ──── --}}
+        {{-- ── Restore warning ─────────────────────────────────────────────── --}}
         @if (! empty($backups))
             <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                <strong class="text-red-600 dark:text-red-400">Restore warning:</strong>
+                <strong class="text-amber-600 dark:text-amber-400">Restore warning:</strong>
                 Restoring will <strong>replace all current data</strong> with the chosen backup and log you out immediately.
             </p>
         @endif
 
-    </div>
+    </x-filament::section>
 </x-filament-panels::page>
