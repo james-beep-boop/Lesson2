@@ -146,3 +146,47 @@ test('getAvailableBackups returns entries after a backup is created', function (
 
     expect($component->instance()->getAvailableBackups())->toHaveCount(1);
 });
+
+test('restoreBackup action redirects to login after successful restore', function () {
+    // Mock BackupService so the actual DB restore doesn't run — session()
+    // invalidation during a real restore corrupts the Livewire test harness.
+    // BackupService::restore() correctness is proven by the unit tests above.
+    $filename = 'backup_2026-01-01_120000.json';
+
+    $mock = $this->mock(BackupService::class);
+    $mock->shouldReceive('restore')->once()->with($filename);
+    $mock->shouldReceive('list')->andReturn([]);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(AdminDashboard::class)
+        ->set('restoreFilename', $filename)
+        ->call('restoreBackup')
+        ->assertRedirect(route('filament.app.auth.login'));
+});
+
+test('restoreBackup action sends a danger notification when restore throws', function () {
+    $mock = $this->mock(BackupService::class);
+    $mock->shouldReceive('restore')->andThrow(new RuntimeException('Restore failed.'));
+    $mock->shouldReceive('list')->andReturn([]);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(AdminDashboard::class)
+        ->set('restoreFilename', 'backup_2026-01-01_120000.json')
+        ->call('restoreBackup')
+        ->assertNotified();
+});
+
+test('restoreBackup action rejects path traversal filenames gracefully', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    // basename() in BackupService::restore() strips the path component, turning
+    // "../../../nonexistent.json" into "nonexistent.json". Storage::get() returns
+    // null for a non-existent file, which throws RuntimeException — caught as
+    // a danger notification, not an unhandled crash.
+    Livewire::test(AdminDashboard::class)
+        ->set('restoreFilename', '../../../nonexistent.json')
+        ->call('restoreBackup')
+        ->assertNotified();
+});

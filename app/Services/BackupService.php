@@ -44,6 +44,10 @@ class BackupService
 
     /**
      * Create a backup JSON file and return its filename.
+     *
+     * Note: set_time_limit() may be a no-op on DreamHost shared hosting if
+     * disable_functions restricts it. The .htaccess php_value max_execution_time
+     * directive is the primary safeguard there.
      */
     public function create(): string
     {
@@ -77,11 +81,20 @@ class BackupService
      * Restore from a named backup file.
      * All app tables are truncated and repopulated. FK checks are disabled
      * to handle the lesson_plan_families ↔ lesson_plan_versions circular FK.
+     *
+     * Warning: this assumes the current schema matches the backup schema. Restoring
+     * a backup from a different migration state (e.g. before a column was added) may
+     * cause silent data corruption or insert failures.
+     *
+     * Note: set_time_limit() may be a no-op on DreamHost shared hosting if
+     * disable_functions restricts it.
      */
     public function restore(string $filename): void
     {
         set_time_limit(120);
 
+        // Strip any directory components to prevent path traversal
+        $filename = basename($filename);
         $path = self::BACKUP_DIR.'/'.$filename;
 
         $json = Storage::disk(self::BACKUP_DISK)->get($path)
@@ -89,33 +102,44 @@ class BackupService
 
         $payload = json_decode($json, true);
 
+        if (! is_array($payload)) {
+            throw new RuntimeException('Invalid backup file: JSON could not be decoded.');
+        }
+
         if (! isset($payload['tables'])) {
             throw new RuntimeException('Invalid backup file: missing tables key.');
         }
 
         $driver = DB::getDriverName();
 
-        DB::transaction(function () use ($payload, $driver) {
-            $this->setForeignKeys($driver, false);
+        // setForeignKeys() must be called outside the transaction on SQLite.
+        // SQLite silently ignores PRAGMA foreign_keys changes issued inside a
+        // BEGIN … COMMIT block. MariaDB's SET FOREIGN_KEY_CHECKS works either way,
+        // but keeping both calls outside is consistent and safe for both drivers.
+        $this->setForeignKeys($driver, false);
 
-            foreach (array_reverse(self::TABLES) as $table) {
-                if (Schema::hasTable($table)) {
-                    DB::table($table)->truncate();
+        try {
+            DB::transaction(function () use ($payload) {
+                foreach (array_reverse(self::TABLES) as $table) {
+                    if (Schema::hasTable($table)) {
+                        DB::table($table)->truncate();
+                    }
                 }
-            }
 
-            foreach (self::TABLES as $table) {
-                if (empty($payload['tables'][$table] ?? [])) {
-                    continue;
+                foreach (self::TABLES as $table) {
+                    if (empty($payload['tables'][$table] ?? [])) {
+                        continue;
+                    }
+
+                    foreach (array_chunk($payload['tables'][$table], 200) as $chunk) {
+                        DB::table($table)->insert($chunk);
+                    }
                 }
-
-                foreach (array_chunk($payload['tables'][$table], 200) as $chunk) {
-                    DB::table($table)->insert($chunk);
-                }
-            }
-
+            });
+        } finally {
+            // Always re-enable FK checks — even if the transaction throws
             $this->setForeignKeys($driver, true);
-        });
+        }
     }
 
     /**
@@ -125,6 +149,8 @@ class BackupService
      */
     public function list(): array
     {
+        // Storage::files() returns paths prefixed with the directory, so basename()
+        // is used to get the bare filename for display and filtering.
         $files = Storage::disk(self::BACKUP_DISK)->files(self::BACKUP_DIR);
 
         $backups = [];

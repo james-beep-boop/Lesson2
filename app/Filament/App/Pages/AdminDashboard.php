@@ -88,12 +88,16 @@ class AdminDashboard extends Page
         try {
             app(BackupService::class)->restore($this->restoreFilename);
 
-            // Log the current user out — their session data was just wiped
+            // Enqueue the redirect before invalidating the session.
+            // Livewire delivers redirects as a browser-side JS instruction; the
+            // session operations below must not prevent it from being set.
+            $this->redirect(route('filament.app.auth.login'));
+
+            // Invalidate the server-side session so the user is fully logged out
+            // even on file-based sessions (which survive the DB restore).
             auth()->logout();
             request()->session()->invalidate();
             request()->session()->regenerateToken();
-
-            $this->redirect(route('filament.app.auth.login'));
         } catch (\Throwable $e) {
             Notification::make()
                 ->title('Restore failed')
@@ -108,6 +112,6 @@ class AdminDashboard extends Page
      */
     public function getAvailableBackups(): array
     {
-        return once(fn () => app(BackupService::class)->list());
+        return app(BackupService::class)->list();
     }
 }
