@@ -59,7 +59,7 @@ class DemoSeeder extends Seeder
 
         // --- Demo lesson plan: Maths Grade 10, Day 1 ---
         $family = LessonPlanFamily::firstOrCreate(
-            ['subject_grade_id' => $mathG10->id, 'day' => '1', 'language' => 'en'],
+            ['subject_grade_id' => $mathG10->id, 'day' => '1'],
             ['official_version_id' => null]
         );
 
@@ -99,7 +99,7 @@ class DemoSeeder extends Seeder
 
         // --- Demo lesson plan: Science Grade 10, Day 1 — no official version ---
         $sciFamily = LessonPlanFamily::firstOrCreate(
-            ['subject_grade_id' => $sciG10->id, 'day' => '1', 'language' => 'en'],
+            ['subject_grade_id' => $sciG10->id, 'day' => '1'],
             ['official_version_id' => null]
         );
 
