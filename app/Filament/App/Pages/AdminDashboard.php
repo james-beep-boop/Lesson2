@@ -6,6 +6,8 @@ use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\SubjectGrade;
 use App\Models\User;
+use App\Services\BackupService;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +20,9 @@ class AdminDashboard extends Page
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
     protected static ?int $navigationSort = 10;
+
+    /** The filename selected for restore; bound to the restore select in the view. */
+    public ?string $restoreFilename = null;
 
     public static function canAccess(): bool
     {
@@ -48,5 +53,61 @@ class AdminDashboard extends Page
 
             return compact('siteAdmins', 'subjectAdmins', 'editors', 'totalUsers', 'families', 'versions');
         });
+    }
+
+    public function backupNow(): void
+    {
+        try {
+            $filename = app(BackupService::class)->create();
+
+            Notification::make()
+                ->title('Backup created')
+                ->body("Saved as {$filename}")
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Backup failed')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function restoreBackup(): void
+    {
+        if (blank($this->restoreFilename)) {
+            Notification::make()
+                ->title('No backup selected')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        try {
+            app(BackupService::class)->restore($this->restoreFilename);
+
+            // Log the current user out — their session data was just wiped
+            auth()->logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            $this->redirect(route('filament.app.auth.login'));
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Restore failed')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    /**
+     * @return array<int, array{filename: string, created_at: int, size: int}>
+     */
+    public function getAvailableBackups(): array
+    {
+        return once(fn () => app(BackupService::class)->list());
     }
 }
