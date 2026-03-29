@@ -49,7 +49,9 @@
         $backups = $this->getAvailableBackups();
     @endphp
 
-    <x-filament::section heading="Backup &amp; Restore">
+    <h2 class="fi-header-heading mb-3 mt-8">Backup and Restore</h2>
+
+    <x-filament::section>
 
         {{-- ── Controls row ───────────────────────────────────────────────────── --}}
         <div class="flex flex-wrap items-center gap-3">
