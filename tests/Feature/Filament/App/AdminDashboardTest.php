@@ -122,19 +122,20 @@ test('bulk delete removes the family when its last version is deleted', function
     expect(LessonPlanFamily::find($family->id))->toBeNull();
 });
 
-test('bulk delete clears official_version_id before deleting the official version', function () {
+test('bulk delete skips official versions and sends a warning', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
     $family->update(['official_version_id' => $version->id]);
 
     $this->actingAs(makeSiteAdmin());
 
-    // Would fail with FK constraint if official_version_id were not cleared first.
     Livewire::test(LessonVersionsWidget::class)
         ->callTableBulkAction('delete', [$version])
         ->assertNotified();
 
-    expect(LessonPlanFamily::find($family->id))->toBeNull();
+    // Official version must be preserved
+    expect(LessonPlanVersion::find($version->id))->not->toBeNull();
+    expect(LessonPlanFamily::find($family->id))->not->toBeNull();
 });
 
 // ── UsersWidget – bulk delete ─────────────────────────────────────────────────

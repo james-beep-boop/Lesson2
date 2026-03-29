@@ -48,21 +48,28 @@ trait HasVersionTable
     {
         abort_unless(auth()->user()?->isSiteAdmin(), 403);
 
-        DB::transaction(function () use ($records): void {
+        $deleted = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($records, &$deleted, &$skipped): void {
             foreach ($records as $version) {
                 // Fresh DB load — avoid acting on a stale official_version_id.
                 $family = $version->lesson_plan_family_id
                     ? LessonPlanFamily::find($version->lesson_plan_family_id)
                     : null;
 
-                // Clear official pointer before deletion to avoid FK constraint.
+                // Official versions are protected; skip silently and tally.
+                // The UI already hides the checkbox, but enforce server-side too
+                // in case the request was crafted directly.
                 if ($family && (int) $family->official_version_id === $version->id) {
-                    $family->official_version_id = null;
-                    $family->save();
+                    $skipped++;
+
+                    continue;
                 }
 
                 // Favorites cascade via FK; deletion_requests nullOnDelete.
                 $version->delete();
+                $deleted++;
 
                 // Remove orphaned family when its last version was just deleted.
                 if ($family && $family->versions()->doesntExist()) {
@@ -71,11 +78,19 @@ trait HasVersionTable
             }
         });
 
-        $count = $records->count();
+        if ($skipped > 0) {
+            Notification::make($notificationId.'-skipped')
+                ->title($skipped.' official '.str('version')->plural($skipped).' skipped')
+                ->body('Official versions cannot be deleted. Remove official status first.')
+                ->warning()
+                ->send();
+        }
 
-        Notification::make($notificationId)
-            ->title('Deleted '.$count.' '.str('version')->plural($count).'.')
-            ->success()
-            ->send();
+        if ($deleted > 0) {
+            Notification::make($notificationId)
+                ->title('Deleted '.$deleted.' '.str('version')->plural($deleted).'.')
+                ->success()
+                ->send();
+        }
     }
 }
