@@ -54,7 +54,7 @@
     <x-filament::section>
 
         {{-- ── Controls row ───────────────────────────────────────────────────── --}}
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-6">
 
             <x-filament::button wire:click="backupNow" wire:loading.attr="disabled" color="primary">
                 <span wire:loading.remove wire:target="backupNow">Backup Now</span>
@@ -100,7 +100,7 @@
 
         {{-- ── Restore warning ─────────────────────────────────────────────── --}}
         @if (! empty($backups))
-            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <p class="mt-6 text-xs text-gray-500 dark:text-gray-400">
                 <strong class="text-amber-600 dark:text-amber-400">Restore warning:</strong>
                 Restoring will <strong>replace all current data</strong> with the chosen backup and log you out immediately.
             </p>
