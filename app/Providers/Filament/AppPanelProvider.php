@@ -6,6 +6,7 @@ use App\Filament\App\Pages\Profile;
 use App\Filament\App\Pages\Register;
 use App\Filament\App\Pages\RequestPasswordReset;
 use App\Filament\App\Resources\MessageResource;
+use App\Http\Middleware\AbsoluteSessionTimeout;
 use App\Models\Message;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
@@ -117,6 +118,7 @@ class AppPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
                 EnsureEmailIsVerified::class,
+                AbsoluteSessionTimeout::class,
             ]);
     }
 }

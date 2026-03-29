@@ -79,25 +79,12 @@ test('favorites tab shows only versions the user has favorited', function () {
         ->assertCanNotSeeTableRecords([$unfavored]);
 });
 
-test('teacher does not see create button', function () {
-    $this->actingAs(makeTeacher());
+test('no role sees a create button on the list page', function () {
+    // The Create button was moved to the Admin dashboard (site admin only).
+    foreach ([makeTeacher(), makeSubjectAdmin(makeSubjectGrade()), makeSiteAdmin()] as $user) {
+        $this->actingAs($user);
 
-    Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionHidden('create');
-});
-
-test('subject admin sees create button on list page', function () {
-    $sg = makeSubjectGrade();
-
-    $this->actingAs(makeSubjectAdmin($sg));
-
-    Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionExists('create');
-});
-
-test('site admin sees create button on list page', function () {
-    $this->actingAs(makeSiteAdmin());
-
-    Livewire::test(ListLessonPlanFamilies::class)
-        ->assertActionExists('create');
+        Livewire::test(ListLessonPlanFamilies::class)
+            ->assertActionDoesNotExist('create');
+    }
 });

@@ -5,7 +5,6 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 use App\Filament\App\Concerns\HasLessonPlanVersionTabs;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanVersion;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -17,9 +16,7 @@ class ListLessonPlanFamilies extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        return [];
     }
 
     /**
