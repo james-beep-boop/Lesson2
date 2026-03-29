@@ -58,11 +58,22 @@ class AdminDashboard extends Page
     public function backupNow(): void
     {
         try {
-            $filename = app(BackupService::class)->create();
+            ['filename' => $filename, 'counts' => $counts] = app(BackupService::class)->create();
+
+            $summary = collect([
+                'users' => 'user',
+                'lesson_plan_versions' => 'lesson plan',
+                'subjects' => 'subject',
+                'messages' => 'message',
+            ])
+                ->filter(fn ($_, $table) => ($counts[$table] ?? 0) > 0)
+                ->map(fn ($label, $table) => $counts[$table].' '.str($label)->plural($counts[$table]))
+                ->values()
+                ->implode(' · ');
 
             Notification::make()
                 ->title('Backup created')
-                ->body("Saved as {$filename}")
+                ->body($filename.($summary ? "\n".$summary : ''))
                 ->success()
                 ->send();
         } catch (\Throwable $e) {

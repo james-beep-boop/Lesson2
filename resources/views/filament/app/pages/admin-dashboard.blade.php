@@ -50,62 +50,49 @@
     @endphp
 
     <div class="mt-10 rounded-lg border border-gray-200 bg-white p-6 dark:border-white/10 dark:bg-white/5">
-        <h2 class="fi-header-heading mb-4">Backup &amp; Restore</h2>
 
-        {{-- Backup Now --}}
-        <div class="mb-6">
-            <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                Creates a full JSON backup of all application data (users, lesson plans, messages, roles, and permissions)
-                and saves it to the server storage folder.
-            </p>
+        {{-- ── Header row: heading + Backup Now + restore controls ──────────── --}}
+        <div class="flex flex-wrap items-center gap-3">
+            <h2 class="fi-header-heading mr-auto">Backup &amp; Restore</h2>
+
             <x-filament::button wire:click="backupNow" wire:loading.attr="disabled" color="primary">
                 <span wire:loading.remove wire:target="backupNow">Backup Now</span>
                 <span wire:loading wire:target="backupNow">Creating backup…</span>
             </x-filament::button>
-        </div>
 
-        {{-- Restore --}}
-        <div class="border-t border-gray-200 pt-5 dark:border-white/10">
-            <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                <strong class="text-red-600 dark:text-red-400">Warning:</strong>
-                Restoring will <strong>replace all current data</strong> with the contents of the chosen backup.
-                You will be logged out immediately after the restore completes.
-            </p>
+            @if (! empty($backups))
+                <select
+                    id="restore-select"
+                    wire:model="restoreFilename"
+                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-white/20 dark:bg-white/5 dark:text-white"
+                >
+                    <option value="">— choose a backup —</option>
+                    @foreach ($backups as $backup)
+                        <option value="{{ $backup['filename'] }}">
+                            {{ $backup['filename'] }} ({{ number_format($backup['size'] / 1024, 1) }} KB)
+                        </option>
+                    @endforeach
+                </select>
 
-            @if (empty($backups))
-                <p class="text-sm text-gray-500 dark:text-gray-400">No backups found.</p>
-            @else
-                <div class="flex flex-wrap items-end gap-3">
-                    <div class="min-w-64 flex-1">
-                        <label for="restore-select" class="mb-1 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                            Select backup to restore
-                        </label>
-                        <select
-                            id="restore-select"
-                            wire:model="restoreFilename"
-                            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-white/20 dark:bg-white/5 dark:text-white"
-                        >
-                            <option value="">— choose a backup —</option>
-                            @foreach ($backups as $backup)
-                                <option value="{{ $backup['filename'] }}">
-                                    {{ $backup['filename'] }}
-                                    ({{ number_format($backup['size'] / 1024, 1) }} KB)
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <x-filament::button
-                        wire:click="restoreBackup"
-                        wire:loading.attr="disabled"
-                        wire:confirm="This will REPLACE ALL DATA with the selected backup and log you out. Are you sure?"
-                        color="danger"
-                    >
-                        <span wire:loading.remove wire:target="restoreBackup">Restore From Backup</span>
-                        <span wire:loading wire:target="restoreBackup">Restoring…</span>
-                    </x-filament::button>
-                </div>
+                <x-filament::button
+                    wire:click="restoreBackup"
+                    wire:loading.attr="disabled"
+                    wire:confirm="This will REPLACE ALL DATA with the selected backup and log you out. Are you sure?"
+                    color="danger"
+                >
+                    <span wire:loading.remove wire:target="restoreBackup">Restore From Backup</span>
+                    <span wire:loading wire:target="restoreBackup">Restoring…</span>
+                </x-filament::button>
             @endif
         </div>
+
+        {{-- ── Warning note (only shown when there are backups to restore) ──── --}}
+        @if (! empty($backups))
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                <strong class="text-red-600 dark:text-red-400">Restore warning:</strong>
+                Restoring will <strong>replace all current data</strong> with the chosen backup and log you out immediately.
+            </p>
+        @endif
+
     </div>
 </x-filament-panels::page>

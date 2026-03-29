@@ -43,13 +43,18 @@ class BackupService
     private const BACKUP_DIR = 'backups';
 
     /**
-     * Create a backup JSON file and return its filename.
+     * Create a backup JSON file.
+     *
+     * Returns the filename and a per-table row count so callers can confirm
+     * what was captured without having to re-read the file.
      *
      * Note: set_time_limit() may be a no-op on DreamHost shared hosting if
      * disable_functions restricts it. The .htaccess php_value max_execution_time
      * directive is the primary safeguard there.
+     *
+     * @return array{filename: string, counts: array<string, int>}
      */
-    public function create(): string
+    public function create(): array
     {
         set_time_limit(120);
 
@@ -61,12 +66,17 @@ class BackupService
             'tables' => [],
         ];
 
+        /** @var array<string, int> $counts */
+        $counts = [];
+
         foreach (self::TABLES as $table) {
             if (! Schema::hasTable($table)) {
                 continue;
             }
 
-            $payload['tables'][$table] = DB::table($table)->get()->map(fn ($row) => (array) $row)->all();
+            $rows = DB::table($table)->get()->map(fn ($row) => (array) $row)->all();
+            $payload['tables'][$table] = $rows;
+            $counts[$table] = count($rows);
         }
 
         $filename = 'backup_'.$now->format('Y-m-d_His').'.json';
@@ -74,7 +84,7 @@ class BackupService
 
         Storage::disk(self::BACKUP_DISK)->put($path, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-        return $filename;
+        return ['filename' => $filename, 'counts' => $counts];
     }
 
     /**

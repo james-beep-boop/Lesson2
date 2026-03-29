@@ -18,14 +18,23 @@ beforeEach(function () {
 // ── BackupService::create() ────────────────────────────────────────────────────
 
 test('create() writes a JSON backup file to storage', function () {
-    $filename = app(BackupService::class)->create();
+    ['filename' => $filename] = app(BackupService::class)->create();
 
     expect($filename)->toStartWith('backup_')->toEndWith('.json');
     Storage::disk('local')->assertExists('backups/'.$filename);
 });
 
+test('create() returns per-table row counts', function () {
+    User::factory()->create();
+
+    ['counts' => $counts] = app(BackupService::class)->create();
+
+    expect($counts)->toBeArray()->toHaveKey('users');
+    expect($counts['users'])->toBeGreaterThan(0);
+});
+
 test('create() backup contains expected top-level keys', function () {
-    $filename = app(BackupService::class)->create();
+    ['filename' => $filename] = app(BackupService::class)->create();
 
     $json = json_decode(Storage::disk('local')->get('backups/'.$filename), true);
 
@@ -35,9 +44,9 @@ test('create() backup contains expected top-level keys', function () {
 });
 
 test('create() captures existing records in backup', function () {
-    $user = User::factory()->create(['name' => 'Backup Test User']);
+    User::factory()->create(['name' => 'Backup Test User']);
 
-    $filename = app(BackupService::class)->create();
+    ['filename' => $filename] = app(BackupService::class)->create();
 
     $json = json_decode(Storage::disk('local')->get('backups/'.$filename), true);
 
@@ -61,7 +70,6 @@ test('list() returns backup entries with filename and size keys', function () {
 });
 
 test('list() only returns files matching the backup_ prefix', function () {
-    // Place a non-backup file in the directory
     Storage::disk('local')->put('backups/other_file.json', '{}');
     app(BackupService::class)->create();
 
@@ -76,9 +84,8 @@ test('list() only returns files matching the backup_ prefix', function () {
 test('restore() repopulates users from backup', function () {
     $original = User::factory()->create(['name' => 'Restore Me']);
 
-    $filename = app(BackupService::class)->create();
+    ['filename' => $filename] = app(BackupService::class)->create();
 
-    // Delete the user after backup
     User::where('id', $original->id)->delete();
     expect(User::find($original->id))->toBeNull();
 
@@ -89,11 +96,11 @@ test('restore() repopulates users from backup', function () {
 });
 
 test('restore() repopulates subjects from backup', function () {
-    $subject = Subject::factory()->create(['name' => 'Geography']);
+    Subject::factory()->create(['name' => 'Geography']);
 
-    $filename = app(BackupService::class)->create();
+    ['filename' => $filename] = app(BackupService::class)->create();
 
-    Subject::where('id', $subject->id)->delete();
+    Subject::where('name', 'Geography')->delete();
 
     app(BackupService::class)->restore($filename);
 
@@ -125,7 +132,6 @@ test('restoreBackup action sends a warning when no filename is selected', functi
         ->call('restoreBackup')
         ->assertNotified();
 
-    // No restore occurred — storage should still be empty
     expect(app(BackupService::class)->list())->toBeEmpty();
 });
 
