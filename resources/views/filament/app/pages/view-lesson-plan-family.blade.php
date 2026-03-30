@@ -31,12 +31,12 @@
         @php $previews = $this->versionPreviews(); @endphp
 
         {{-- Action bar: Save / version bump / Discard --}}
-        <div class="mb-4 flex flex-wrap items-center gap-4">
+        <div class="mb-4 flex flex-wrap items-center" style="gap: 1.25rem;">
             <x-filament::button wire:click="saveNewVersion">Save New Version</x-filament::button>
 
-            <div class="flex flex-wrap gap-4">
+            <div class="flex flex-wrap" style="gap: 1rem;">
                 @foreach(['major', 'minor', 'patch'] as $bump)
-                    <label wire:key="bump-{{ $bump }}" class="flex cursor-pointer items-center gap-1.5 text-sm">
+                    <label wire:key="bump-{{ $bump }}" class="flex cursor-pointer items-center" style="gap: 0.375rem; font-size: 0.875rem;">
                         <input type="radio" name="versionBump" wire:model.live="versionBump" value="{{ $bump }}">
                         {{ ucfirst($bump) }} ({{ $previews[$bump] }})
                     </label>
@@ -68,7 +68,7 @@
 
         {{-- Side-by-side: Edit Window | View Window (stacked on mobile) --}}
         <div
-            class="grid grid-cols-1 gap-4 lg:grid-cols-2"
+            style="display: flex; flex-wrap: wrap; gap: 1rem;"
             x-data="{
                 preview: '',
                 renderMarkdown(val) {
@@ -83,7 +83,7 @@
             x-on:edit-input.window="renderMarkdown($event.detail.value)"
         >
             {{-- Left: Edit Window --}}
-            <div>
+            <div style="flex: 1; min-width: 18rem;">
                 <h3 class="mb-2 text-center text-sm font-semibold">Edit Window</h3>
                 <textarea
                     wire:model="editContent"
@@ -94,7 +94,7 @@
             </div>
 
             {{-- Right: View Window --}}
-            <div>
+            <div style="flex: 1; min-width: 18rem;">
                 <h3 class="mb-2 text-center text-sm font-semibold">View Window</h3>
                 <div
                     x-html="preview || '<p style=\'color:#9ca3af\'>Start editing to see a preview\u2026</p>'"
