@@ -59,6 +59,11 @@ class ViewLessonPlanFamily extends Page
 
     public string $translationBump = 'patch';
 
+    public function getTitle(): string
+    {
+        return 'View / Edit Lesson Plan';
+    }
+
     public function mount(LessonPlanFamily $record): void
     {
         $this->record = $record->load(['versions', 'officialVersion', 'latestVersion', 'subjectGrade.subject']);

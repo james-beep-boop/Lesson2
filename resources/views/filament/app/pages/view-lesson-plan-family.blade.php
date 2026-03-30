@@ -28,66 +28,89 @@
     </div>
 
     @if($editMode)
-        {{-- Edit mode: full-width --}}
         @php $previews = $this->versionPreviews(); @endphp
-        <x-filament::section heading="Edit This Plan — new version">
-            <div x-data="{ tab: 'edit' }">
-                <div class="mb-3 flex gap-1 border-b border-gray-200">
-                    <button
-                        @click="tab = 'edit'"
-                        :class="tab === 'edit' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
-                        class="px-4 py-1.5 text-sm -mb-px"
-                    >Edit</button>
-                    <button
-                        @click="tab = 'preview'; $wire.$refresh()"
-                        :class="tab === 'preview' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
-                        class="px-4 py-1.5 text-sm -mb-px"
-                    >Preview</button>
-                </div>
-                <div x-show="tab === 'edit'">
-                    <textarea
-                        wire:model="editContent"
-                        rows="28"
-                        class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm"
-                    ></textarea>
-                </div>
-                <div x-show="tab === 'preview'" class="prose max-w-none min-h-[7rem] rounded-lg border border-gray-200 p-4">
-                    @markdown($editContent)
-                </div>
+
+        {{-- Action bar: Save / version bump / Discard --}}
+        <div class="mb-4 flex flex-wrap items-center gap-4">
+            <x-filament::button wire:click="saveNewVersion">Save New Version</x-filament::button>
+
+            <div class="flex flex-wrap gap-4">
+                @foreach(['major', 'minor', 'patch'] as $bump)
+                    <label wire:key="bump-{{ $bump }}" class="flex cursor-pointer items-center gap-1.5 text-sm">
+                        <input type="radio" name="versionBump" wire:model.live="versionBump" value="{{ $bump }}">
+                        {{ ucfirst($bump) }} ({{ $previews[$bump] }})
+                    </label>
+                @endforeach
             </div>
 
-            <div class="mt-4 flex flex-wrap items-center gap-6">
-                <div>
-                    <label class="text-sm font-medium">Version bump</label>
-                    <div class="mt-1 flex gap-4">
-                        @foreach(['major', 'minor', 'patch'] as $bump)
-                            <label wire:key="bump-{{ $bump }}" class="flex items-center gap-1 text-sm cursor-pointer">
-                                <input type="radio" name="versionBump" wire:model.live="versionBump" value="{{ $bump }}">
-                                {{ ucfirst($bump) }} ({{ $previews[$bump] }})
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-                <div class="flex-1 min-w-48">
-                    <x-filament::input.wrapper label="Revision note (optional)">
-                        <x-filament::input wire:model="revisionNote" type="text" />
-                    </x-filament::input.wrapper>
-                </div>
+            <x-filament::button wire:click="$set('editMode', false)" color="gray">Discard Edits</x-filament::button>
+        </div>
+
+        {{-- Revision note --}}
+        <div class="mb-4 max-w-md">
+            <x-filament::input.wrapper label="Revision note (optional)">
+                <x-filament::input wire:model="revisionNote" type="text" />
+            </x-filament::input.wrapper>
+        </div>
+
+        {{-- Load marked.js for client-side preview (same CDN + SRI as Create page) --}}
+        <script>
+            (function () {
+                if (!window.marked && !document.querySelector('script[src*="marked@17"]')) {
+                    var s = document.createElement('script');
+                    s.src = 'https://cdn.jsdelivr.net/npm/marked@17.0.5/marked.min.js';
+                    s.integrity = 'sha384-tkjnnf9Tzhv5ZFrDroGvUExw9C3EVFo0RFRkzKR8ZX4b5Psoec4yb1PlD8Jh4j4H';
+                    s.crossOrigin = 'anonymous';
+                    document.head.appendChild(s);
+                }
+            })();
+        </script>
+
+        {{-- Side-by-side: Edit Window | View Window (stacked on mobile) --}}
+        <div
+            class="grid grid-cols-1 gap-4 lg:grid-cols-2"
+            x-data="{
+                preview: '',
+                renderMarkdown(val) {
+                    this.preview = window.marked ? marked.parse(val || '') : (val || '');
+                },
+                init() {
+                    const initial = this.$wire.get('editContent') ?? '';
+                    this.renderMarkdown(initial);
+                    this.$wire.watch('editContent', (val) => this.renderMarkdown(val ?? ''));
+                }
+            }"
+            x-on:edit-input.window="renderMarkdown($event.detail.value)"
+        >
+            {{-- Left: Edit Window --}}
+            <div>
+                <h3 class="mb-2 text-center text-sm font-semibold">Edit Window</h3>
+                <textarea
+                    wire:model="editContent"
+                    x-on:input.debounce.300ms="$dispatch('edit-input', {value: $event.target.value})"
+                    rows="28"
+                    class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                ></textarea>
             </div>
 
-            @if($canAskAi)
-                <div class="mt-4">
-                    <x-filament::button wire:click="$set('aiPanelOpen', true)" color="gray" icon="heroicon-o-sparkles">
-                        Ask AI
-                    </x-filament::button>
-                </div>
-            @endif
-
-            <div class="mt-4 flex gap-3">
-                <x-filament::button wire:click="saveNewVersion">Save New Version</x-filament::button>
-                <x-filament::button wire:click="$set('editMode', false)" color="gray">Discard Edits</x-filament::button>
+            {{-- Right: View Window --}}
+            <div>
+                <h3 class="mb-2 text-center text-sm font-semibold">View Window</h3>
+                <div
+                    x-html="preview || '<p style=\'color:#9ca3af\'>Start editing to see a preview\u2026</p>'"
+                    class="prose max-w-none overflow-y-auto rounded-lg border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-800"
+                    style="min-height: 40rem;"
+                ></div>
             </div>
-        </x-filament::section>
+        </div>
+
+        @if($canAskAi)
+            <div class="mt-4">
+                <x-filament::button wire:click="$set('aiPanelOpen', true)" color="gray" icon="heroicon-o-sparkles">
+                    Ask AI
+                </x-filament::button>
+            </div>
+        @endif
 
         {{-- AI panel --}}
         @include('filament.app.partials.ai-panel')
