@@ -265,21 +265,24 @@ class CreateLessonPlanFamily extends CreateRecord
 
     protected function getHeaderActions(): array
     {
-        return $this->getFormActions();
-    }
-
-    protected function getFormActions(): array
-    {
         return [
             $this->getCreateFormAction(),
             $this->getCancelFormAction(),
         ];
     }
 
+    protected function getFormActions(): array
+    {
+        return [];
+    }
+
     protected function getCreateFormAction(): Action
     {
+        // Use ->action() not ->submit() so the button works outside the <form> element.
         return parent::getCreateFormAction()
             ->label('Upload Lesson Plan')
+            ->submit(null)
+            ->action('create')
             ->disabled(fn (): bool => ! $this->allMetadataFilled());
     }
 
