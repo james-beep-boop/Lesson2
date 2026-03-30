@@ -25,6 +25,16 @@ REMOTE_APP_DIR="${REMOTE_APP_DIR:-~/Lesson2}"
 REMOTE_SCRIPT="${REMOTE_SCRIPT:-UPDATE_SITE.sh}"
 ALLOW_DIRTY="${ALLOW_DIRTY:-0}"
 
+if [ -z "${RSYNC_BIN:-}" ]; then
+    for candidate in /opt/homebrew/bin/rsync /usr/local/bin/rsync rsync; do
+        if command -v "$candidate" >/dev/null 2>&1; then
+            RSYNC_BIN="$candidate"
+            break
+        fi
+    done
+fi
+RSYNC_BIN="${RSYNC_BIN:-rsync}"
+
 require_cmd() {
     if ! command -v "$1" >/dev/null 2>&1; then
         echo "ERROR: Required command not found: $1"
@@ -32,7 +42,7 @@ require_cmd() {
     fi
 }
 
-require_cmd rsync
+require_cmd "$RSYNC_BIN"
 require_cmd ssh
 
 if [ "$ALLOW_DIRTY" != "1" ] && [ -n "$(git status --porcelain)" ]; then
@@ -58,10 +68,11 @@ echo "==> Deploying Lesson2 to DreamHost via rsync"
 echo "    Host:    $REMOTE_HOST"
 echo "    App dir: $REMOTE_APP_DIR"
 echo "    Release: $RELEASE_COMMIT"
+echo "    rsync:   $("$RSYNC_BIN" --version | head -n 1)"
 echo ""
 
 echo "  [1/2] Uploading prepared app files..."
-rsync -az --delete \
+"$RSYNC_BIN" -az --delete --delete-delay --force \
     --exclude '.git/' \
     --exclude '.DS_Store' \
     --exclude '.env' \
