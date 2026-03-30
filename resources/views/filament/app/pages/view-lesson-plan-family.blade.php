@@ -31,7 +31,7 @@
 
         {{-- Action bar: Save / version bump / Discard --}}
         <div class="mb-4 flex flex-wrap items-center" style="gap: 1.25rem;">
-            <x-filament::button wire:click="saveNewVersion">Save New Version</x-filament::button>
+            <x-filament::button wire:click="saveNewVersion">Save Edits</x-filament::button>
 
             <div class="flex flex-wrap" style="gap: 1rem;">
                 @foreach(['major', 'minor', 'patch'] as $bump)
@@ -52,23 +52,33 @@
             </x-filament::input.wrapper>
         </div>
 
-        {{-- Side-by-side: Edit Window | View Window (stacked on mobile) --}}
-        <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
-            {{-- Left: Edit Window --}}
-            <div style="flex: 1; min-width: 18rem;">
-                <h3 class="mb-2 text-center text-sm font-semibold">Edit Window</h3>
+        {{-- Tabbed editor --}}
+        @php $tabBtnStyle = 'padding: 0.375rem 1rem; font-size: 0.875rem; margin-bottom: -1px; background: none; border-left: none; border-right: none; border-top: none; cursor: pointer;'; @endphp
+        <div x-data="{ tab: 'preview' }">
+            <div style="display: flex; gap: 0.25rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 0.75rem;">
+                <button
+                    @click="tab = 'preview'"
+                    :class="tab === 'preview' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
+                    style="{{ $tabBtnStyle }}"
+                >View Lesson</button>
+                <button
+                    @click="tab = 'source'"
+                    :class="tab === 'source' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
+                    style="{{ $tabBtnStyle }}"
+                >Edit Source</button>
+            </div>
+
+            <div x-show="tab === 'preview'">
+                @include('filament.forms.components.markdown-preview', ['wireProp' => 'editContent'])
+            </div>
+
+            <div x-show="tab === 'source'">
                 <textarea
                     wire:model="editContent"
                     x-on:input.debounce.300ms="$dispatch('markdown-input', {value: $event.target.value})"
                     rows="28"
                     class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                 ></textarea>
-            </div>
-
-            {{-- Right: View Window --}}
-            <div style="flex: 1; min-width: 18rem;">
-                <h3 class="mb-2 text-center text-sm font-semibold">View Window</h3>
-                @include('filament.forms.components.markdown-preview', ['wireProp' => 'editContent'])
             </div>
         </div>
 
