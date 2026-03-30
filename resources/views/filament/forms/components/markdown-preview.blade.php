@@ -11,6 +11,9 @@
     })();
 </script>
 
+{{-- $wireProp: the Livewire property path to watch (default: 'data.content' for Create page) --}}
+@php $prop = $wireProp ?? 'data.content'; @endphp
+
 <div
     x-data="{
         preview: '',
@@ -18,7 +21,16 @@
             this.preview = window.marked ? marked.parse(val || '') : (val || '');
         },
         init() {
-            $wire.watch('data.content', (val) => this.renderMarkdown(val ?? ''));
+            const initial = $wire.get('{{ $prop }}') ?? '';
+            if (window.marked) {
+                this.renderMarkdown(initial);
+            } else {
+                const script = document.querySelector('script[src*=\'marked@17\']');
+                if (script) {
+                    script.addEventListener('load', () => this.renderMarkdown(initial), { once: true });
+                }
+            }
+            $wire.watch('{{ $prop }}', (val) => this.renderMarkdown(val ?? ''));
         }
     }"
     x-on:markdown-input.window="renderMarkdown($event.detail.value)"

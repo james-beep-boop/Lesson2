@@ -156,6 +156,13 @@ class BackupService
         }
     }
 
+    /** Delete a single backup file by bare filename. */
+    public function delete(string $filename): void
+    {
+        $filename = basename($filename);
+        Storage::disk(self::BACKUP_DISK)->delete(self::BACKUP_DIR.'/'.$filename);
+    }
+
     /**
      * List available backups, newest first.
      *

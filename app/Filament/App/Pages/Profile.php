@@ -12,8 +12,11 @@ class Profile extends EditProfile
     public bool $editing = false;
 
     private ?string $cachedRoleLabel = null;
+
     public string $editName = '';
+
     public string $editPassword = '';
+
     public string $editPasswordConfirmation = '';
 
     protected string $view = 'filament.app.pages.profile';
@@ -88,7 +91,7 @@ class Profile extends EditProfile
 
         $user = $this->getUser();
 
-        if ($user->hasRole('site_administrator')) {
+        if ($user->isSiteAdmin()) {
             return $this->cachedRoleLabel = 'Site Administrator';
         }
 
@@ -98,7 +101,7 @@ class Profile extends EditProfile
 
         if ($asSubjectAdmin->isNotEmpty()) {
             return $this->cachedRoleLabel = $asSubjectAdmin
-                ->map(fn ($sg) => 'Subject Administrator — ' . $sg->subject->name . ' Grade ' . $sg->grade)
+                ->map(fn ($sg) => 'Subject Admin — '.$sg->subject->name.' Grade '.$sg->grade)
                 ->join(', ');
         }
 
@@ -106,7 +109,7 @@ class Profile extends EditProfile
 
         if ($asEditor->isNotEmpty()) {
             return $this->cachedRoleLabel = $asEditor
-                ->map(fn ($sg) => 'Editor — ' . $sg->subject->name . ' Grade ' . $sg->grade)
+                ->map(fn ($sg) => 'Editor — '.$sg->subject->name.' Grade '.$sg->grade)
                 ->join(', ');
         }
 

@@ -10,7 +10,6 @@ use App\Services\BackupService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class AdminDashboard extends Page
 {
@@ -143,7 +142,7 @@ class AdminDashboard extends Page
         $filename = basename($this->restoreFilename);
 
         try {
-            Storage::disk('local')->delete('backups/'.$filename);
+            app(BackupService::class)->delete($filename);
 
             $this->restoreFilename = null;
 

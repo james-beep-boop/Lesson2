@@ -3,7 +3,6 @@
 namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
 use App\Ai\Agents\LessonPlanAdvisor;
-use App\Ai\Agents\LessonPlanTranslator;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\Favorite;
 use App\Models\LessonPlanFamily;
@@ -52,13 +51,6 @@ class ViewLessonPlanFamily extends Page
 
     public string $aiResponse = '';
 
-    // Translation state: idle | streaming | review | conflict
-    public string $translationState = 'idle';
-
-    public string $translateContent = '';
-
-    public string $translationBump = 'patch';
-
     public function getTitle(): string
     {
         return 'View / Edit Lesson Plan';
@@ -66,7 +58,7 @@ class ViewLessonPlanFamily extends Page
 
     public function mount(LessonPlanFamily $record): void
     {
-        $this->record = $record->load(['versions', 'officialVersion', 'latestVersion', 'subjectGrade.subject']);
+        $this->record = $record->load(['versions.contributor', 'officialVersion', 'latestVersion', 'subjectGrade.subject']);
         $this->selectedVersion = $record->officialVersion ?? $record->latestVersion;
         $this->syncDerivedState();
     }
@@ -78,6 +70,7 @@ class ViewLessonPlanFamily extends Page
         $this->userFavorite = $user
             ? Favorite::where('user_id', $user->id)
                 ->where('lesson_plan_family_id', $this->record->id)
+                ->with('version')
                 ->first()
             : null;
 
@@ -251,92 +244,5 @@ class ViewLessonPlanFamily extends Page
 
         // Persist the full text so it survives subsequent Livewire re-renders.
         $this->aiResponse = $accumulated;
-    }
-
-    // -------------------------------------------------------------------------
-    // Translate to Swahili
-    // -------------------------------------------------------------------------
-
-    /**
-     * Begin the translation flow: stream the Swahili translation into the
-     * review panel. On completion, transitions to the 'review' state where
-     * the user can edit before saving.
-     */
-    public function startTranslation(): void
-    {
-        $this->authorize('translate', $this->record);
-
-        if (! $this->selectedVersion) {
-            return;
-        }
-
-        $this->translateContent = '';
-        $this->translationState = 'streaming';
-        $accumulated = '';
-
-        set_time_limit(120);
-
-        $stream = LessonPlanTranslator::make()->stream($this->selectedVersion->content);
-
-        foreach ($stream as $event) {
-            if ($event instanceof TextDelta) {
-                $accumulated .= $event->delta;
-                $this->stream($event->delta, false, 'translatePreview');
-            }
-        }
-
-        $this->translateContent = $accumulated;
-        $this->translationState = 'review';
-    }
-
-    /**
-     * Confirm and save the translation. If a version-number conflict exists
-     * and no bump has been chosen yet, transitions to the 'conflict' state
-     * so the user can pick a bump type before confirming again.
-     */
-    public function saveTranslation(VersionService $versionService): void
-    {
-        $this->authorize('translate', $this->record);
-
-        $user = auth()->user();
-
-        // First save attempt: detect version conflict and ask user to choose a bump.
-        if ($this->translationState !== 'conflict') {
-            $conflict = $versionService->translationHasVersionConflict(
-                $this->record,
-                $this->selectedVersion->version
-            );
-
-            if ($conflict) {
-                $this->translationState = 'conflict';
-
-                return;
-            }
-        }
-
-        $version = $versionService->createTranslatedVersion(
-            $this->record,
-            $this->selectedVersion,
-            $this->translateContent,
-            $user,
-            $this->translationBump,
-        );
-
-        Notification::make('translation-saved')
-            ->title('Swahili translation saved.')
-            ->success()
-            ->send();
-
-        $this->redirect(
-            LessonPlanFamilyResource::getUrl('view', ['record' => $version->lesson_plan_family_id])
-        );
-    }
-
-    /** Reset all translation state and return to the idle button. */
-    public function cancelTranslation(): void
-    {
-        $this->translationState = 'idle';
-        $this->translateContent = '';
-        $this->translationBump = 'patch';
     }
 }
