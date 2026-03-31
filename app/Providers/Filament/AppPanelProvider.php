@@ -47,7 +47,7 @@ class AppPanelProvider extends PanelProvider
                 fn (): HtmlString => new HtmlString('
 <style>
 /* Brand name — matches fi-header-heading (text-3xl = 1.875rem) */
-.fi-logo { font-size: 1.875rem !important; font-weight: 700 !important; letter-spacing: -0.01em; }
+.fi-logo { font-size: 1.875rem !important; font-weight: 700 !important; letter-spacing: -0.01em; flex-direction: column !important; }
 
 /* Push nav items (Dashboard, Lessons) to the right, just left of the user avatar */
 .fi-topbar { display: flex; align-items: center; gap: 0; }
