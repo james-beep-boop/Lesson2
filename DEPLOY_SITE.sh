@@ -127,7 +127,7 @@ echo "  [1/4] Uploading app code..."
     --exclude 'node_modules/' \
     --exclude 'storage/' \
     --exclude 'tests/' \
-    --exclude 'vendor/' \
+    --exclude '/vendor/' \
     --exclude 'public/build/' \
     --exclude 'public/js/filament/' \
     --exclude 'public/css/filament/' \
