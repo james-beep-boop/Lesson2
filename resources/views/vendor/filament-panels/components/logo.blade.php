@@ -29,10 +29,8 @@
         </span>
     </div>
 @else
-    <div class="fi-logo" style="line-height: 1.2;">
-        {{ $brandName }}
-        <span style="display: block; font-size: 0.65rem; font-weight: 400; letter-spacing: 0; opacity: 0.7;">
-            By <a href="https://areseducation.org" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">ARES Education</a>
-        </span>
+    <div class="fi-logo" style="display: block; line-height: 1.1;">
+        <span style="display: block;">{{ $brandName }}</span>
+        <span style="display: block; font-size: 0.65rem; font-weight: 400; letter-spacing: 0; opacity: 0.7; margin-top: 0.1rem;">By <a href="https://areseducation.org" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">ARES Education</a></span>
     </div>
 @endif
