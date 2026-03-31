@@ -11,30 +11,42 @@
 
     {{-- ── Stats grid (2 rows × 3 boxes) ───────────────────────────────────── --}}
     <div class="mb-6" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['siteAdmins'] }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Site {{ str('Administrator')->plural($stats['siteAdmins']) }}</div>
-        </div>
-        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['subjectAdmins'] }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Subject {{ str('Admin')->plural($stats['subjectAdmins']) }}</div>
-        </div>
-        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['editors'] }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">{{ str('Editor')->plural($stats['editors']) }}</div>
-        </div>
-        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['totalUsers'] }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">{{ str('User')->plural($stats['totalUsers']) }}</div>
-        </div>
-        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['families'] }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Lesson {{ str('Family')->plural($stats['families']) }}</div>
-        </div>
-        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
-            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['versions'] }}</div>
-            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Lesson {{ str('Version')->plural($stats['versions']) }}</div>
-        </div>
+        <x-filament::section>
+            <div style="text-align: center;">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['siteAdmins'] }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Site {{ str('Administrator')->plural($stats['siteAdmins']) }}</div>
+            </div>
+        </x-filament::section>
+        <x-filament::section>
+            <div style="text-align: center;">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['subjectAdmins'] }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Subject {{ str('Admin')->plural($stats['subjectAdmins']) }}</div>
+            </div>
+        </x-filament::section>
+        <x-filament::section>
+            <div style="text-align: center;">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['editors'] }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">{{ str('Editor')->plural($stats['editors']) }}</div>
+            </div>
+        </x-filament::section>
+        <x-filament::section>
+            <div style="text-align: center;">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['totalUsers'] }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">{{ str('User')->plural($stats['totalUsers']) }}</div>
+            </div>
+        </x-filament::section>
+        <x-filament::section>
+            <div style="text-align: center;">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['families'] }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Lesson {{ str('Family')->plural($stats['families']) }}</div>
+            </div>
+        </x-filament::section>
+        <x-filament::section>
+            <div style="text-align: center;">
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['versions'] }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Lesson {{ str('Version')->plural($stats['versions']) }}</div>
+            </div>
+        </x-filament::section>
     </div>
 
     {{-- ── Lesson Plans Admin section ──────────────────────────────────────────── --}}
