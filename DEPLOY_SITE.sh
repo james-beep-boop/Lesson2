@@ -57,6 +57,7 @@ require_cmd() {
 require_cmd "$PHP_BIN"
 require_cmd "$RSYNC_BIN"
 require_cmd ssh
+require_cmd composer
 
 if [ "$ALLOW_DIRTY" != "1" ] && [ -n "$(git status --porcelain)" ]; then
     echo "ERROR: Working tree has uncommitted changes."
@@ -80,6 +81,12 @@ echo "  [preflight] Verifying local Composer autoload..."
 echo "  [preflight] Verifying local Laravel bootstrap..."
 "$PHP_BIN" artisan about >/dev/null
 
+echo "  [preflight] Building production vendor bundle (--no-dev)..."
+_BUNDLE=$(mktemp -d)
+trap 'rm -rf "$_BUNDLE"' EXIT
+cp composer.json composer.lock "$_BUNDLE/"
+composer install --no-dev --optimize-autoloader --no-interaction --quiet --working-dir="$_BUNDLE"
+
 RELEASE_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
 
 echo ""
@@ -87,11 +94,16 @@ echo "==> Deploying Lesson2 to DreamHost via rsync"
 echo "    Host:    $REMOTE_HOST"
 echo "    App dir: $REMOTE_APP_DIR"
 echo "    Release: $RELEASE_COMMIT"
-echo "    PHP:     $($PHP_BIN -r 'echo PHP_VERSION;')"
+echo "    PHP:     $($PHP_BIN -r 'echo PHP_VERSION;') (local) / 8.4 (DreamHost) — preflight is not a perfect proxy"
 echo "    rsync:   $($RSYNC_BIN --version | head -n 1)"
 echo "    ssh:     $SSH_OPTS"
 echo ""
 
+# KNOWN RISK: maintenance mode is not enabled until UPDATE_SITE.sh runs (after all rsync
+# phases complete). A request arriving between Phase 1 (app code) and Phase 2 (vendor)
+# can encounter new app code against old vendor — a fatal error window of seconds.
+# This is acceptable at current traffic levels. A future atomic symlink-based deploy
+# would eliminate this window, but is not worth the complexity on DreamHost shared hosting.
 echo "  [1/4] Uploading app code..."
 "$RSYNC_BIN" -az -e "ssh $SSH_OPTS" --delete --delete-delay --force \
     --exclude '.git/' \
@@ -119,9 +131,9 @@ echo "  [1/4] Uploading app code..."
     --exclude 'troubleshooting.md' \
     ./ "$REMOTE_HOST:$REMOTE_APP_DIR/"
 
-echo "  [2/4] Uploading Composer dependencies..."
+echo "  [2/4] Uploading Composer dependencies (production only, no dev packages)..."
 "$RSYNC_BIN" -az -e "ssh $SSH_OPTS" --delete --delete-delay --force \
-    vendor/ "$REMOTE_HOST:$REMOTE_APP_DIR/vendor/"
+    "$_BUNDLE/vendor/" "$REMOTE_HOST:$REMOTE_APP_DIR/vendor/"
 
 echo "  [3/4] Uploading built frontend assets..."
 "$RSYNC_BIN" -az -e "ssh $SSH_OPTS" --delete --delete-delay --force \

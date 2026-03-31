@@ -70,7 +70,12 @@ maintenance_up() {
     "$PHP_BIN" artisan up --quiet 2>/dev/null || true
 }
 
-trap 'maintenance_up' EXIT
+_OPCACHE_RESET_FILE=""
+cleanup() {
+    maintenance_up
+    [ -n "$_OPCACHE_RESET_FILE" ] && rm -f "$_OPCACHE_RESET_FILE"
+}
+trap 'cleanup' EXIT
 
 require_cmd "$PHP_BIN"
 php_min_version "8.3"
@@ -142,12 +147,13 @@ maintenance_up
 
 echo "  [+] Resetting PHP OPcache via web request..."
 _RESET_TOKEN=$(openssl rand -hex 16 2>/dev/null || echo "$$$(date +%s)")
-_RESET_FILE="$APP_DIR/public/opcache-reset-${_RESET_TOKEN}.php"
-echo '<?php if (function_exists("opcache_reset")) { opcache_reset(); } echo "ok";' > "$_RESET_FILE"
+_OPCACHE_RESET_FILE="$APP_DIR/public/opcache-reset-${_RESET_TOKEN}.php"
+echo '<?php if (function_exists("opcache_reset")) { opcache_reset(); } echo "ok";' > "$_OPCACHE_RESET_FILE"
 curl -sf --max-time 10 "${SITE_URL}/opcache-reset-${_RESET_TOKEN}.php" > /dev/null 2>&1 \
     && echo "       OPcache reset successful." \
     || echo "       OPcache reset skipped (curl unavailable or timed out — harmless)."
-rm -f "$_RESET_FILE"
+rm -f "$_OPCACHE_RESET_FILE"
+_OPCACHE_RESET_FILE=""
 
 echo ""
 echo "=================================================="
