@@ -111,22 +111,29 @@ if [ ! -f public/build/manifest.json ]; then
     exit 1
 fi
 
-echo "  [1/7] Enabling maintenance mode..."
+echo "  [1/8] Clearing stale bootstrap cache..."
+rm -f bootstrap/cache/packages.php \
+      bootstrap/cache/services.php \
+      bootstrap/cache/config.php \
+      bootstrap/cache/routes-v7.php \
+      bootstrap/cache/events.php
+
+echo "  [2/8] Enabling maintenance mode..."
 maintenance_down
 
-echo "  [2/7] Running database migrations..."
+echo "  [3/8] Running database migrations..."
 "$PHP_BIN" artisan migrate --force
 
-echo "  [3/7] Checking storage symlink..."
+echo "  [4/8] Checking storage symlink..."
 if [ -d storage/app/public ] && [ ! -L public/storage ]; then
     echo "         Creating storage symlink..."
     "$PHP_BIN" artisan storage:link
 fi
 
-echo "  [4/7] Publishing Filament assets..."
+echo "  [5/8] Publishing Filament assets..."
 "$PHP_BIN" artisan filament:assets --quiet
 
-echo "  [5/7] Rebuilding caches..."
+echo "  [6/8] Rebuilding caches..."
 "$PHP_BIN" artisan optimize:clear --quiet
 "$PHP_BIN" artisan config:cache --quiet
 "$PHP_BIN" artisan route:cache --quiet
@@ -134,11 +141,11 @@ echo "  [5/7] Rebuilding caches..."
 "$PHP_BIN" artisan icons:cache --quiet
 "$PHP_BIN" artisan permission:cache-reset --quiet
 
-echo "  [6/7] Writing version info..."
+echo "  [7/8] Writing version info..."
 mkdir -p storage/app
 printf '%s\n' "$RELEASE_COMMIT" > storage/app/version.txt
 
-echo "  [7/7] Lifting maintenance mode..."
+echo "  [8/8] Lifting maintenance mode..."
 maintenance_up
 
 # PHP CLI and PHP-FPM (web) have separate OPcache pools. 'php artisan' clears
