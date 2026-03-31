@@ -8,10 +8,7 @@
 <header class="fi-simple-header">
     @if ($logo)
         <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem 1.5rem; text-align: center; margin-bottom: 0.75rem;">
-            <div class="fi-logo" style="font-size: 1.875rem; font-weight: 700; letter-spacing: -0.01em;">{{ filament()->getBrandName() }}</div>
-            <p class="text-gray-500 dark:text-gray-400" style="font-size: 0.75rem; margin: 0.375rem 0 0;">
-                By <a href="https://areseducation.org" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">ARES Education</a>
-            </p>
+            <x-filament-panels::logo />
         </div>
     @endif
 

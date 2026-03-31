@@ -14,37 +14,37 @@
         <x-filament::section>
             <div style="text-align: center;">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['siteAdmins'] }}</div>
-                <div class="text-base font-semibold text-gray-600 dark:text-gray-300" style="margin-top: 0.25rem;">Site {{ str('Administrator')->plural($stats['siteAdmins']) }}</div>
+                <div style="margin-top: 0.25rem; font-size: 1rem; font-weight: 600;">Site {{ str('Administrator')->plural($stats['siteAdmins']) }}</div>
             </div>
         </x-filament::section>
         <x-filament::section>
             <div style="text-align: center;">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['subjectAdmins'] }}</div>
-                <div class="text-base font-semibold text-gray-600 dark:text-gray-300" style="margin-top: 0.25rem;">Subject {{ str('Admin')->plural($stats['subjectAdmins']) }}</div>
+                <div style="margin-top: 0.25rem; font-size: 1rem; font-weight: 600;">Subject {{ str('Admin')->plural($stats['subjectAdmins']) }}</div>
             </div>
         </x-filament::section>
         <x-filament::section>
             <div style="text-align: center;">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['editors'] }}</div>
-                <div class="text-base font-semibold text-gray-600 dark:text-gray-300" style="margin-top: 0.25rem;">{{ str('Editor')->plural($stats['editors']) }}</div>
+                <div style="margin-top: 0.25rem; font-size: 1rem; font-weight: 600;">{{ str('Editor')->plural($stats['editors']) }}</div>
             </div>
         </x-filament::section>
         <x-filament::section>
             <div style="text-align: center;">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['totalUsers'] }}</div>
-                <div class="text-base font-semibold text-gray-600 dark:text-gray-300" style="margin-top: 0.25rem;">{{ str('User')->plural($stats['totalUsers']) }}</div>
+                <div style="margin-top: 0.25rem; font-size: 1rem; font-weight: 600;">{{ str('User')->plural($stats['totalUsers']) }}</div>
             </div>
         </x-filament::section>
         <x-filament::section>
             <div style="text-align: center;">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['families'] }}</div>
-                <div class="text-base font-semibold text-gray-600 dark:text-gray-300" style="margin-top: 0.25rem;">Lesson {{ str('Family')->plural($stats['families']) }}</div>
+                <div style="margin-top: 0.25rem; font-size: 1rem; font-weight: 600;">Lesson {{ str('Family')->plural($stats['families']) }}</div>
             </div>
         </x-filament::section>
         <x-filament::section>
             <div style="text-align: center;">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['versions'] }}</div>
-                <div class="text-base font-semibold text-gray-600 dark:text-gray-300" style="margin-top: 0.25rem;">Lesson {{ str('Version')->plural($stats['versions']) }}</div>
+                <div style="margin-top: 0.25rem; font-size: 1rem; font-weight: 600;">Lesson {{ str('Version')->plural($stats['versions']) }}</div>
             </div>
         </x-filament::section>
     </div>
