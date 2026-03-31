@@ -46,8 +46,8 @@ class AppPanelProvider extends PanelProvider
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => new HtmlString('
 <style>
-/* Brand name — ~35% bigger than default body text (1rem → 1.5rem) */
-.fi-logo { font-size: 1.5rem !important; font-weight: 700 !important; letter-spacing: -0.01em; }
+/* Brand name — matches fi-header-heading (text-3xl = 1.875rem) */
+.fi-logo { font-size: 1.875rem !important; font-weight: 700 !important; letter-spacing: -0.01em; }
 
 /* Push nav items (Dashboard, Lessons) to the right, just left of the user avatar */
 .fi-topbar { display: flex; align-items: center; gap: 0; }

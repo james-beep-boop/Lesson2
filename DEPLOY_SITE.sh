@@ -70,6 +70,16 @@ if [ ! -f vendor/autoload.php ]; then
     exit 1
 fi
 
+# Guard against a local vendor poisoned by a previous --no-dev run.
+# Dev packages must be present; their absence means production code would be
+# deployed from a corrupted working tree.
+if [ ! -d vendor/phpunit/phpunit ] || [ ! -d vendor/pestphp/pest ]; then
+    echo "ERROR: Dev packages are missing from local vendor/ (phpunit and/or pest not found)."
+    echo "Your working-tree vendor may have been poisoned by a previous 'composer install --no-dev'."
+    echo "Fix: rm -rf vendor && composer install"
+    exit 1
+fi
+
 if [ ! -f public/build/manifest.json ]; then
     echo "ERROR: public/build/manifest.json is missing. Run npm run build locally first."
     exit 1

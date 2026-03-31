@@ -9,21 +9,32 @@
         thead .fi-ta-page-checkbox { display: none; }
     </style>
 
-    {{-- ── Stats bar ─────────────────────────────────────────────────────────── --}}
-    <div class="mb-6 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg border border-gray-200 bg-white px-5 py-3 text-sm dark:border-white/10 dark:bg-white/5">
-        <span><span class="font-semibold text-gray-900 dark:text-white">{{ $stats['siteAdmins'] }}</span> <span class="text-gray-500 dark:text-gray-400">Site {{ str('Administrator')->plural($stats['siteAdmins']) }}</span></span>
-        <span class="text-gray-300 dark:text-gray-600">·</span>
-        <span><span class="font-semibold text-gray-900 dark:text-white">{{ $stats['subjectAdmins'] }}</span> <span class="text-gray-500 dark:text-gray-400">Subject {{ str('Admin')->plural($stats['subjectAdmins']) }}</span></span>
-        <span class="text-gray-300 dark:text-gray-600">·</span>
-        <span><span class="font-semibold text-gray-900 dark:text-white">{{ $stats['editors'] }}</span> <span class="text-gray-500 dark:text-gray-400">{{ str('Editor')->plural($stats['editors']) }}</span></span>
-        <span class="text-gray-300 dark:text-gray-600">·</span>
-        <span><span class="font-semibold text-gray-900 dark:text-white">{{ $stats['totalUsers'] }}</span> <span class="text-gray-500 dark:text-gray-400">{{ str('User')->plural($stats['totalUsers']) }}</span></span>
-
-        <span class="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-600"></span>
-
-        <span><span class="font-semibold text-gray-900 dark:text-white">{{ $stats['families'] }}</span> <span class="text-gray-500 dark:text-gray-400">{{ str('Family')->plural($stats['families']) }}</span></span>
-        <span class="text-gray-300 dark:text-gray-600">·</span>
-        <span><span class="font-semibold text-gray-900 dark:text-white">{{ $stats['versions'] }}</span> <span class="text-gray-500 dark:text-gray-400">{{ str('Version')->plural($stats['versions']) }}</span></span>
+    {{-- ── Stats grid (2 rows × 3 boxes) ───────────────────────────────────── --}}
+    <div class="mb-6" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['siteAdmins'] }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Site {{ str('Administrator')->plural($stats['siteAdmins']) }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['subjectAdmins'] }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Subject {{ str('Admin')->plural($stats['subjectAdmins']) }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['editors'] }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">{{ str('Editor')->plural($stats['editors']) }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['totalUsers'] }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">{{ str('User')->plural($stats['totalUsers']) }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['families'] }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Lesson {{ str('Family')->plural($stats['families']) }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5" style="padding: 1rem; text-align: center;">
+            <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['versions'] }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400" style="margin-top: 0.25rem;">Lesson {{ str('Version')->plural($stats['versions']) }}</div>
+        </div>
     </div>
 
     {{-- ── Lesson Plans Admin section ──────────────────────────────────────────── --}}
