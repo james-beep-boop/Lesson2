@@ -85,7 +85,7 @@ echo "  [preflight] Building production vendor bundle (--no-dev)..."
 _BUNDLE=$(mktemp -d)
 trap 'rm -rf "$_BUNDLE"' EXIT
 cp composer.json composer.lock "$_BUNDLE/"
-composer install --no-dev --optimize-autoloader --no-interaction --quiet --working-dir="$_BUNDLE"
+composer install --no-dev --optimize-autoloader --no-interaction --quiet --no-scripts --working-dir="$_BUNDLE"
 
 RELEASE_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
 
