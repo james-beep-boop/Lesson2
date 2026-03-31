@@ -41,7 +41,7 @@ class AppPanelProvider extends PanelProvider
             ->emailVerification()
             ->profile(Profile::class, isSimple: false)
             ->topNavigation()
-            ->brandName('ARES Lesson Repository')
+            ->brandName('Kenya Lesson Plans')
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => new HtmlString('
