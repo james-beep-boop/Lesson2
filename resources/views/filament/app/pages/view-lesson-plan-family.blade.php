@@ -153,7 +153,7 @@
                 const ok    = $event.detail.confident;
                 if (!ok) { ambiguous = true; return; }
                 $nextTick(() => {
-                    // Global querySelector needed: textarea lives in the @if($editMode) branch,
+                    // Global querySelector needed: textarea lives in the edit-mode branch,
                     // which is a sibling DOM tree — $el-scoped query would find nothing.
                     const ta = document.querySelector('textarea[data-source-textarea]');
                     if (!ta) return;
