@@ -69,7 +69,11 @@
             </div>
 
             <div x-show="tab === 'preview'">
-                @include('filament.forms.components.markdown-preview', ['wireProp' => 'editContent', 'initialContent' => $editContent ?? ''])
+                @include('filament.forms.components.markdown-preview', [
+                    'wireProp' => 'editContent',
+                    'initialContent' => $editContent ?? '',
+                    'initialHtml' => \Illuminate\Support\Str::markdown($editContent ?? '', ['html_input' => 'strip']),
+                ])
             </div>
 
             <div x-show="tab === 'source'">

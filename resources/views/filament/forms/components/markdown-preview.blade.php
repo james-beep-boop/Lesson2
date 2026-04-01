@@ -17,18 +17,20 @@
 
 <div
     x-data="{
-        preview: '',
+        preview: {{ Js::from($initialHtml ?? '') }},
         renderMarkdown(val) {
             this.preview = window.marked ? marked.parse(val || '') : (val || '');
         },
         init() {
             const initial = {{ Js::from($initialContent ?? null) }} ?? $wire.get('{{ $prop }}') ?? '';
-            const render = () => this.renderMarkdown(initial);
-            if (window.marked) {
-                render();
-            } else {
-                const wait = () => window.marked ? render() : setTimeout(wait, 30);
-                wait();
+            if (!this.preview) {
+                const render = () => this.renderMarkdown(initial);
+                if (window.marked) {
+                    render();
+                } else {
+                    const wait = () => window.marked ? render() : setTimeout(wait, 30);
+                    wait();
+                }
             }
             $wire.watch('{{ $prop }}', (val) => this.renderMarkdown(val ?? ''));
         }
