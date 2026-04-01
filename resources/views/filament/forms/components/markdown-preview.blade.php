@@ -23,13 +23,12 @@
         },
         init() {
             const initial = {{ Js::from($initialContent ?? null) }} ?? $wire.get('{{ $prop }}') ?? '';
+            const render = () => this.renderMarkdown(initial);
             if (window.marked) {
-                this.renderMarkdown(initial);
+                render();
             } else {
-                const script = document.querySelector('script[src*=\'marked@17\']');
-                if (script) {
-                    script.addEventListener('load', () => this.renderMarkdown(initial), { once: true });
-                }
+                const wait = () => window.marked ? render() : setTimeout(wait, 30);
+                wait();
             }
             $wire.watch('{{ $prop }}', (val) => this.renderMarkdown(val ?? ''));
         }

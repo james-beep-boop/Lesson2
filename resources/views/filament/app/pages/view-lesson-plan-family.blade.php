@@ -190,7 +190,7 @@
                                     @endif
                                 </div>
 
-                                <div class="flex flex-wrap gap-4">
+                                <div class="flex flex-wrap" style="gap: 1rem;">
                                     {{-- Favorite --}}
                                     <x-filament::button wire:click="favorite" color="gray" size="sm" icon="heroicon-o-star">
                                         {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Mark as Favorite' }}
