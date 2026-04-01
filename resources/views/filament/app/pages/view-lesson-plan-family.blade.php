@@ -53,38 +53,33 @@
         </div>
 
         {{-- Tabbed editor --}}
-        @php $tabBtnStyle = 'padding: 0.375rem 1rem; font-size: 0.875rem; margin-bottom: -1px; background: none; border-left: none; border-right: none; border-top: none; cursor: pointer;'; @endphp
-        <div x-data="{ tab: 'preview' }">
-            <div style="display: flex; gap: 0.25rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 0.75rem;">
-                <button
-                    @click="tab = 'preview'"
-                    :class="tab === 'preview' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
-                    style="{{ $tabBtnStyle }}"
-                >View Lesson</button>
-                <button
-                    @click="tab = 'source'"
-                    :class="tab === 'source' ? 'border-b-2 border-primary-600 font-semibold text-primary-600' : 'text-gray-500 hover:text-gray-700'"
-                    style="{{ $tabBtnStyle }}"
-                >Edit Source</button>
-            </div>
+        <x-filament::section>
+            <div x-data="{ tab: 'preview' }">
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                    <x-filament::button @click="tab = 'preview'" x-show="tab === 'preview'">View Lesson</x-filament::button>
+                    <x-filament::button @click="tab = 'preview'" x-show="tab !== 'preview'" color="gray">View Lesson</x-filament::button>
+                    <x-filament::button @click="tab = 'source'" x-show="tab === 'source'">Edit Lesson</x-filament::button>
+                    <x-filament::button @click="tab = 'source'" x-show="tab !== 'source'" color="gray">Edit Lesson</x-filament::button>
+                </div>
 
-            <div x-show="tab === 'preview'">
-                @include('filament.forms.components.markdown-preview', [
-                    'wireProp' => 'editContent',
-                    'initialContent' => $editContent ?? '',
-                    'initialHtml' => \Illuminate\Support\Str::markdown($editContent ?? '', ['html_input' => 'strip']),
-                ])
-            </div>
+                <div x-show="tab === 'preview'">
+                    @include('filament.forms.components.markdown-preview', [
+                        'wireProp' => 'editContent',
+                        'initialContent' => $editContent ?? '',
+                        'initialHtml' => \Illuminate\Support\Str::markdown($editContent ?? '', ['html_input' => 'strip']),
+                    ])
+                </div>
 
-            <div x-show="tab === 'source'">
-                <textarea
-                    wire:model="editContent"
-                    x-on:input.debounce.300ms="$dispatch('markdown-input', {value: $event.target.value})"
-                    rows="28"
-                    class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                ></textarea>
+                <div x-show="tab === 'source'">
+                    <textarea
+                        wire:model="editContent"
+                        x-on:input.debounce.300ms="$dispatch('markdown-input', {value: $event.target.value})"
+                        rows="28"
+                        class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                    ></textarea>
+                </div>
             </div>
-        </div>
+        </x-filament::section>
 
         @if($canAskAi)
             <div class="mt-4">
