@@ -9,6 +9,7 @@ use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Services\DeletionRequestService;
 use App\Services\FavoriteService;
+use App\Services\MarkdownSelectionMatcher;
 use App\Services\VersionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
@@ -98,9 +99,15 @@ class ViewLessonPlanFamily extends Page
     public function enterEditMode(): void
     {
         $this->authorize('create', [LessonPlanVersion::class, $this->record]);
+        $this->enterEditModeIfNeeded();
+    }
 
-        $this->editContent = $this->selectedVersion?->content ?? '';
-        $this->editMode = true;
+    private function enterEditModeIfNeeded(): void
+    {
+        if (! $this->editMode) {
+            $this->editContent = $this->selectedVersion?->content ?? '';
+            $this->editMode = true;
+        }
     }
 
     public function saveNewVersion(VersionService $versionService): void
@@ -202,6 +209,31 @@ class ViewLessonPlanFamily extends Page
 
         $this->compareVersion = $other;
         $this->compareMode = true;
+    }
+
+    /**
+     * Called from Alpine when the user clicks "Edit Selected Text".
+     * Resolves the rendered selection back to its byte offsets in the Markdown
+     * source, enters edit mode, then dispatches a browser event so Alpine can
+     * scroll and highlight the corresponding range in the source textarea.
+     */
+    public function mapSelectionToSource(
+        string $text,
+        string $before,
+        string $after,
+        MarkdownSelectionMatcher $matcher,
+    ): void {
+        $this->authorize('create', [LessonPlanVersion::class, $this->record]);
+        $this->enterEditModeIfNeeded();
+
+        $result = $matcher->find($this->editContent, $text, $before, $after);
+
+        $this->dispatch(
+            'highlight-source-range',
+            start: $result->start,
+            end: $result->end,
+            confident: $result->confident,
+        );
     }
 
     // -------------------------------------------------------------------------

@@ -80,6 +80,7 @@
                         rows="28"
                         class="rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                         style="width: 100%; box-sizing: border-box;"
+                        data-source-textarea
                     ></textarea>
                 </div>
             </div>
@@ -98,7 +99,73 @@
 
     @else
         {{-- Normal view: sidebar + content --}}
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        <div
+            x-data="{
+                selText: '',
+                selBefore: '',
+                selAfter: '',
+                btnVisible: false,
+                btnX: 0,
+                btnY: 0,
+                ambiguous: false,
+                captureSelection() {
+                    const sel = window.getSelection();
+                    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+                        this.btnVisible = false;
+                        return;
+                    }
+                    const range = sel.getRangeAt(0);
+                    const container = $el.querySelector('[data-prose-target]');
+                    if (!container || !container.contains(range.commonAncestorContainer)) {
+                        this.btnVisible = false;
+                        return;
+                    }
+                    this.selText = sel.toString();
+                    // Use Range API for exact position — indexOf() would find the first
+                    // occurrence, giving wrong context when the phrase appears earlier.
+                    const beforeRange = document.createRange();
+                    beforeRange.setStart(container, 0);
+                    beforeRange.setEnd(range.startContainer, range.startOffset);
+                    const textBefore = beforeRange.toString();
+                    const afterRange = document.createRange();
+                    afterRange.setStart(range.endContainer, range.endOffset);
+                    afterRange.setEnd(container, container.childNodes.length);
+                    const textAfter = afterRange.toString();
+                    this.selBefore = textBefore.slice(-120);
+                    this.selAfter  = textAfter.slice(0, 120);
+                    const rect = range.getBoundingClientRect();
+                    const scrollY = window.scrollY || document.documentElement.scrollTop;
+                    this.btnX = rect.left + rect.width / 2;
+                    this.btnY = rect.top + scrollY - 44;
+                    this.btnVisible = true;
+                    this.ambiguous = false;
+                },
+                editSelected() {
+                    this.btnVisible = false;
+                    $wire.mapSelectionToSource(this.selText, this.selBefore, this.selAfter);
+                },
+            }"
+            @mouseup.window="captureSelection()"
+            @keyup.window.debounce.150ms="if (!window.getSelection()?.toString().trim()) { btnVisible = false; }"
+            @highlight-source-range.window="
+                const start = $event.detail.start;
+                const end   = $event.detail.end;
+                const ok    = $event.detail.confident;
+                if (!ok) { ambiguous = true; return; }
+                $nextTick(() => {
+                    // Global querySelector needed: textarea lives in the @if($editMode) branch,
+                    // which is a sibling DOM tree — $el-scoped query would find nothing.
+                    const ta = document.querySelector('textarea[data-source-textarea]');
+                    if (!ta) return;
+                    ta.focus();
+                    ta.setSelectionRange(start, end);
+                    const linesBefore = ta.value.slice(0, start).split('\n').length;
+                    const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
+                    ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
+                });
+            "
+            class="grid grid-cols-1 gap-6 lg:grid-cols-4"
+        >
             {{-- Version list sidebar --}}
             <div class="lg:col-span-1">
                 <x-filament::section heading="Versions">
@@ -255,10 +322,23 @@
                             @endif
 
                             {{-- Content viewer --}}
-                            <div class="prose max-w-none">
+                            <div class="prose max-w-none" data-prose-target>
                                 @markdown($selectedVersion->content)
                             </div>
                         </x-filament::section>
+                    @endif
+
+                    @if($canEdit)
+                        {{-- Ambiguous-match banner --}}
+                        <div
+                            x-show="ambiguous"
+                            x-transition
+                            class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                            style="display:none;"
+                        >
+                            The selected text appears more than once in the source — please locate it manually in the editor.
+                            <button @click="ambiguous = false" style="margin-left:0.75rem;text-decoration:underline;cursor:pointer;">Dismiss</button>
+                        </div>
                     @endif
 
                     {{-- AI panel --}}
@@ -267,6 +347,21 @@
                     <p class="text-gray-500">No versions yet.</p>
                 @endif
             </div>
+
+            @if($canEdit)
+                {{-- Floating "Edit Selected Text" button — appears on text selection --}}
+                <div
+                    x-show="btnVisible"
+                    x-transition.opacity
+                    :style="`position:fixed; top:${btnY}px; left:${btnX}px; transform:translateX(-50%); z-index:9999;`"
+                    style="display:none;"
+                >
+                    <button
+                        @mousedown.prevent="editSelected()"
+                        style="background:#1d4ed8;color:#fff;border:none;border-radius:0.375rem;padding:0.375rem 0.875rem;font-size:0.8125rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.18);white-space:nowrap;"
+                    >Edit Selected Text</button>
+                </div>
+            @endif
         </div>
     @endif
 </x-filament-panels::page>
