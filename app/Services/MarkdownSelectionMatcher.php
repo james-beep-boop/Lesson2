@@ -30,29 +30,33 @@ class MarkdownSelectionMatcher
             return SelectionMatchResult::ambiguous();
         }
 
+        // Use mb_strlen so the returned offsets are Unicode character positions,
+        // matching JavaScript's setSelectionRange() which counts characters not bytes.
+        $needleLen = mb_strlen($needle);
+
         if (count($occurrences) === 1) {
             $start = $occurrences[0];
 
-            return SelectionMatchResult::confident($start, $start + strlen($needle));
+            return SelectionMatchResult::confident($start, $start + $needleLen);
         }
 
         // Multiple occurrences — score by context similarity.
-        $best = $this->scoredBest($markdown, $occurrences, strlen($needle), $contextBefore, $contextAfter);
+        $best = $this->scoredBest($markdown, $occurrences, $needleLen, $contextBefore, $contextAfter);
 
         if ($best === null) {
             return SelectionMatchResult::ambiguous();
         }
 
-        return SelectionMatchResult::confident($best, $best + strlen($needle));
+        return SelectionMatchResult::confident($best, $best + $needleLen);
     }
 
-    /** @return int[] Byte offsets of every non-overlapping occurrence of $needle in $haystack. */
+    /** @return int[] Unicode character offsets of every non-overlapping occurrence of $needle in $haystack. */
     private function findAll(string $haystack, string $needle): array
     {
         $positions = [];
         $offset = 0;
-        $step = strlen($needle);
-        while (($pos = strpos($haystack, $needle, $offset)) !== false) {
+        $step = mb_strlen($needle);
+        while (($pos = mb_strpos($haystack, $needle, $offset)) !== false) {
             $positions[] = $pos;
             $offset = $pos + $step;
         }
@@ -61,7 +65,7 @@ class MarkdownSelectionMatcher
     }
 
     /**
-     * Single-pass context scorer. Returns the best-matching offset, or null
+     * Single-pass context scorer. Returns the best-matching character offset, or null
      * when the result is still ambiguous after scoring.
      *
      * Scoring: +1 if contextBefore appears in the preceding window, +1 if
@@ -69,7 +73,7 @@ class MarkdownSelectionMatcher
      * if two or more positions share the highest score, or if both contexts
      * are empty.
      *
-     * @param  int[]  $positions
+     * @param  int[]  $positions  Unicode character offsets
      */
     private function scoredBest(
         string $markdown,
@@ -85,19 +89,19 @@ class MarkdownSelectionMatcher
             return null;
         }
 
-        $len = strlen($markdown);
+        $len = mb_strlen($markdown);
 
-        // Track best result in a single pass to avoid arsort on large arrays.
+        // Track best result in a single pass to avoid sorting large arrays.
         $best = null;
         $bestScore = -1;
         $bestCount = 0; // number of positions that share the current best score
 
         foreach ($positions as $pos) {
             $precedingStart = max(0, $pos - self::CONTEXT_WINDOW);
-            $preceding = substr($markdown, $precedingStart, $pos - $precedingStart);
+            $preceding = mb_substr($markdown, $precedingStart, $pos - $precedingStart);
 
             $followingEnd = min($len, $pos + $needleLen + self::CONTEXT_WINDOW);
-            $following = substr($markdown, $pos + $needleLen, $followingEnd - ($pos + $needleLen));
+            $following = mb_substr($markdown, $pos + $needleLen, $followingEnd - ($pos + $needleLen));
 
             $score = 0;
             if ($beforeNeedle !== '' && str_contains($preceding, $beforeNeedle)) {
