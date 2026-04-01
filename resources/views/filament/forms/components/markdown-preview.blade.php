@@ -28,7 +28,7 @@
                 if (window.marked) {
                     render();
                 } else {
-                    const wait = () => window.marked ? render() : setTimeout(wait, 30);
+                    const wait = (n = 0) => n < 100 && (window.marked ? render() : setTimeout(() => wait(n + 1), 30));
                     wait();
                 }
             }

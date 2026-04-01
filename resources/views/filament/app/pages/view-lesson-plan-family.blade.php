@@ -27,7 +27,10 @@
     </div>
 
     @if($editMode)
-        @php $previews = $this->versionPreviews(); @endphp
+        @php
+            $previews = $this->versionPreviews();
+            $editContentHtml = \Illuminate\Support\Str::markdown($editContent ?? '', ['html_input' => 'strip']);
+        @endphp
 
         {{-- Action bar: Save / version bump / Discard --}}
         <div class="mb-4 flex flex-wrap items-center" style="gap: 1.25rem;">
@@ -66,7 +69,7 @@
                     @include('filament.forms.components.markdown-preview', [
                         'wireProp' => 'editContent',
                         'initialContent' => $editContent ?? '',
-                        'initialHtml' => \Illuminate\Support\Str::markdown($editContent ?? '', ['html_input' => 'strip']),
+                        'initialHtml' => $editContentHtml,
                     ])
                 </div>
 
@@ -75,7 +78,8 @@
                         wire:model="editContent"
                         x-on:input.debounce.300ms="$dispatch('markdown-input', {value: $event.target.value})"
                         rows="28"
-                        class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                        class="rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                        style="width: 100%; box-sizing: border-box;"
                     ></textarea>
                 </div>
             </div>
