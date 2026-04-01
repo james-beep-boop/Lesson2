@@ -1,11 +1,10 @@
 <?php
 
-use App\Models\LessonPlanFamily;
-use App\Models\LessonPlanVersion;
 use App\Policies\LessonPlanVersionPolicy;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
-    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
+    Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
 });
 
 test('teacher cannot add a new version', function () {
@@ -112,14 +111,14 @@ test('translate hidden from teachers', function () {
     expect($policy->translate(makeTeacher(), $version))->toBeFalse();
 });
 
-test('translate hidden from editors even when flag is on', function () {
+test('translate visible to editors when flag is on', function () {
     config(['features.ai_suggestions' => true]);
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
     $editor = makeEditor($sg);
     $policy = new LessonPlanVersionPolicy;
 
-    expect($policy->translate($editor, $version))->toBeFalse();
+    expect($policy->translate($editor, $version))->toBeTrue();
 });
 
 test('translate visible to subject admin when flag is on', function () {

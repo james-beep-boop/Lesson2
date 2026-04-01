@@ -10,6 +10,7 @@ use App\Models\LessonPlanVersion;
 use App\Services\DeletionRequestService;
 use App\Services\FavoriteService;
 use App\Services\MarkdownSelectionMatcher;
+use App\Services\TranslationService;
 use App\Services\VersionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
@@ -51,6 +52,11 @@ class ViewLessonPlanFamily extends Page
     public string $aiPrompt = '';
 
     public string $aiResponse = '';
+
+    // Translation preview state
+    public bool $translationPanelOpen = false;
+
+    public string $translatedContent = '';
 
     public function getTitle(): string
     {
@@ -239,6 +245,59 @@ class ViewLessonPlanFamily extends Page
     // -------------------------------------------------------------------------
     // Ask AI
     // -------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------
+    // Swahili translation preview
+    // -------------------------------------------------------------------------
+
+    /**
+     * Open the translation preview panel and reset any previous result.
+     * Authorisation is checked here so the subsequent streaming call is fast.
+     */
+    public function openTranslationPanel(): void
+    {
+        $this->authorize('translate', $this->selectedVersion);
+
+        $this->translatedContent = '';
+        $this->translationPanelOpen = true;
+    }
+
+    /**
+     * Stream a Swahili translation into the preview panel.
+     * Called automatically by Alpine's x-init once the panel is in the DOM.
+     * Preview only — nothing is written to the database.
+     */
+    public function translatePreview(TranslationService $translationService): void
+    {
+        if (! $this->selectedVersion) {
+            return;
+        }
+
+        $this->authorize('translate', $this->selectedVersion);
+
+        set_time_limit(120);
+
+        try {
+            $accumulated = '';
+
+            foreach ($translationService->streamTranslation($this->selectedVersion->content) as $event) {
+                if ($event instanceof TextDelta) {
+                    $accumulated .= $event->delta;
+                    $this->stream($event->delta, false, 'translatedContent');
+                }
+            }
+
+            $this->translatedContent = $accumulated;
+        } catch (\Throwable) {
+            $this->translationPanelOpen = false;
+
+            Notification::make('translation-failed')
+                ->title('Translation unavailable')
+                ->body('The translation service could not complete the request. Please ensure AI suggestions are configured.')
+                ->danger()
+                ->send();
+        }
+    }
 
     /**
      * Stream an AI suggestion into the AI panel response area.

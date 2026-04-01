@@ -3,6 +3,7 @@
         $user = auth()->user();
         $sg = $record->subjectGrade;
         $canEdit = $user && $user->can('create', [App\Models\LessonPlanVersion::class, $record]);
+        $canTranslate = $user && $selectedVersion && $user->can('translate', $selectedVersion);
         $canMarkOfficial = $user && $selectedVersion && $user->can('markOfficial', $selectedVersion);
         $canRequestDeletion = $user && $selectedVersion
             && $user->can('requestDeletion', $selectedVersion)
@@ -296,6 +297,20 @@
                                         </x-filament::button>
                                     @endif
 
+                                    {{-- Translate to Swahili --}}
+                                    @if($canTranslate)
+                                        <x-filament::button
+                                            wire:click="openTranslationPanel"
+                                            wire:loading.attr="disabled"
+                                            wire:target="openTranslationPanel,translatePreview"
+                                            color="gray"
+                                            size="sm"
+                                            icon="heroicon-o-language"
+                                        >
+                                            Translate to Swahili
+                                        </x-filament::button>
+                                    @endif
+
                                     {{-- Edit --}}
                                     @if($canEdit)
                                         <x-filament::button wire:click="enterEditMode" size="sm">
@@ -359,5 +374,8 @@
             </div>
 
         </div>
+
+        {{-- Translation preview — full width, below the version grid --}}
+        @include('filament.app.partials.translation-preview-panel')
     @endif
 </x-filament-panels::page>

@@ -1,8 +1,10 @@
 <?php
 
+use App\Ai\Agents\LessonPlanTranslator;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFamily;
 use App\Models\DeletionRequest;
 use App\Models\Favorite;
+use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
@@ -159,4 +161,143 @@ test('select version switches the displayed version', function () {
         ->call('selectVersion', $v2->id);
 
     expect($component->get('selectedVersion')->id)->toBe($v2->id);
+});
+
+// ---------------------------------------------------------------------------
+// Swahili translation preview
+// ---------------------------------------------------------------------------
+
+test('translate button visible to editor when AI flag enabled', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertSee('Translate to Swahili');
+});
+
+test('translate button visible to subject admin when AI flag enabled', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertSee('Translate to Swahili');
+});
+
+test('translate button hidden when AI flag disabled', function () {
+    config(['features.ai_suggestions' => false]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertDontSee('Translate to Swahili');
+});
+
+test('translate button hidden from plain teacher', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertDontSee('Translate to Swahili');
+});
+
+test('openTranslationPanel opens panel and clears previous content', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translatedContent', 'stale content')
+        ->call('openTranslationPanel')
+        ->assertSet('translationPanelOpen', true)
+        ->assertSet('translatedContent', '');
+});
+
+test('openTranslationPanel is forbidden for plain teacher', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('openTranslationPanel')
+        ->assertForbidden();
+});
+
+test('translatePreview sets translatedContent and keeps panel open', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanTranslator::fake(['Mpango wa Somo']);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->call('translatePreview')
+        ->assertSet('translationPanelOpen', true)
+        ->assertSet('translatedContent', 'Mpango wa Somo');
+});
+
+test('translatePreview is forbidden for plain teacher', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('translatePreview')
+        ->assertForbidden();
+});
+
+test('translatePreview writes nothing to the database', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanTranslator::fake(['Mpango wa Somo']);
+
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $originalContent = $version->content;
+    $versionCountBefore = LessonPlanVersion::count();
+    $familyCountBefore = LessonPlanFamily::count();
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->call('translatePreview');
+
+    expect(LessonPlanVersion::count())->toBe($versionCountBefore);
+    expect(LessonPlanFamily::count())->toBe($familyCountBefore);
+    expect($version->fresh()->content)->toBe($originalContent);
+});
+
+test('translatePreview shows danger notification and closes panel when translation fails', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanTranslator::fake(fn () => throw new RuntimeException('API unavailable'));
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->call('translatePreview')
+        ->assertNotified('Translation unavailable')
+        ->assertSet('translationPanelOpen', false);
 });

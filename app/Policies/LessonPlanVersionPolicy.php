@@ -81,7 +81,7 @@ class LessonPlanVersionPolicy
             || $user->canEditSubjectGrade($subjectGrade);
     }
 
-    /** Translate to Swahili: Subject Admin (own) or Site Admin + AI flag. */
+    /** Translate to Swahili preview: Editor, Subject Admin (own), or Site Admin + AI flag. */
     public function translate(User $user, LessonPlanVersion $version): bool
     {
         if (! config('features.ai_suggestions')) {
@@ -95,6 +95,6 @@ class LessonPlanVersionPolicy
         }
 
         return $user->isSiteAdmin()
-            || $user->isSubjectAdminFor($subjectGrade);
+            || $user->canEditSubjectGrade($subjectGrade);
     }
 }
