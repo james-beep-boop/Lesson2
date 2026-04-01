@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "Laravel Dev Server",
-      "runtimeExecutable": "php",
+      "runtimeExecutable": "/opt/homebrew/bin/php",
       "runtimeArgs": ["artisan", "serve"],
       "port": 8000
     },
@@ -15,13 +15,13 @@
     },
     {
       "name": "Queue Worker",
-      "runtimeExecutable": "php",
+      "runtimeExecutable": "/opt/homebrew/bin/php",
       "runtimeArgs": ["artisan", "queue:listen", "--tries=1", "--timeout=0"],
       "port": 0
     },
     {
       "name": "Log Viewer (Pail)",
-      "runtimeExecutable": "php",
+      "runtimeExecutable": "/opt/homebrew/bin/php",
       "runtimeArgs": ["artisan", "pail", "--timeout=0"],
       "port": 0
     }
