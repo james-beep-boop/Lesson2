@@ -69,7 +69,7 @@
             </div>
 
             <div x-show="tab === 'preview'">
-                @include('filament.forms.components.markdown-preview', ['wireProp' => 'editContent'])
+                @include('filament.forms.components.markdown-preview', ['wireProp' => 'editContent', 'initialContent' => $editContent ?? ''])
             </div>
 
             <div x-show="tab === 'source'">
@@ -190,16 +190,16 @@
                                     @endif
                                 </div>
 
-                                <div class="flex flex-wrap gap-2">
+                                <div class="flex flex-wrap gap-4">
                                     {{-- Favorite --}}
                                     <x-filament::button wire:click="favorite" color="gray" size="sm" icon="heroicon-o-star">
-                                        {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : '☆ Favorite' }}
+                                        {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Mark as Favorite' }}
                                     </x-filament::button>
 
                                     {{-- Mark Official --}}
                                     @if($canMarkOfficial && !$isOfficialSelected)
                                         <x-filament::button wire:click="markOfficial" color="gray" size="sm">
-                                            Mark Official
+                                            Mark as Official
                                         </x-filament::button>
                                     @endif
 

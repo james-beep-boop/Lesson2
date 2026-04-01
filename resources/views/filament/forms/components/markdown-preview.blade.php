@@ -12,6 +12,7 @@
 </script>
 
 {{-- $wireProp: the Livewire property path to watch (default: 'data.content' for Create page) --}}
+{{-- $initialContent: optional server-rendered initial value to avoid $wire.get() timing issues --}}
 @php $prop = $wireProp ?? 'data.content'; @endphp
 
 <div
@@ -21,7 +22,7 @@
             this.preview = window.marked ? marked.parse(val || '') : (val || '');
         },
         init() {
-            const initial = $wire.get('{{ $prop }}') ?? '';
+            const initial = {{ Js::from($initialContent ?? null) }} ?? $wire.get('{{ $prop }}') ?? '';
             if (window.marked) {
                 this.renderMarkdown(initial);
             } else {
