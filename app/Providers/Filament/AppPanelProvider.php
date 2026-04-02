@@ -43,22 +43,6 @@ class AppPanelProvider extends PanelProvider
             ->topNavigation()
             ->brandName('Kenya Lesson Plans')
             ->renderHook(
-                PanelsRenderHook::SCRIPTS_AFTER,
-                fn (): HtmlString => auth()->check()
-                    ? new HtmlString('<script>
-if (!window._logoutListenerAttached) {
-    window._logoutListenerAttached = true;
-    window.addEventListener("pagehide", function (e) {
-        if (e.persisted) return;
-        var token = document.querySelector("meta[name=\'csrf-token\']");
-        if (!token) return;
-        navigator.sendBeacon("'.route('auth.close').'", new URLSearchParams({ _token: token.content }));
-    });
-}
-</script>')
-                    : new HtmlString('')
-            )
-            ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => new HtmlString('
 <style>
