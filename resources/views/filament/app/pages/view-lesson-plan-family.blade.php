@@ -96,7 +96,7 @@
                         const rect = range.getBoundingClientRect();
                         const scrollY = window.scrollY || document.documentElement.scrollTop;
                         this.btnX = rect.left + rect.width / 2;
-                        this.btnY = rect.top + scrollY - 44;
+                        this.btnY = rect.top - 44;
                         this.btnVisible = true;
                         this.ambiguous = false;
                     },
