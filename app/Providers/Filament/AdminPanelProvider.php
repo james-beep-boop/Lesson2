@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\AbsoluteSessionTimeout;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -10,12 +11,14 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -37,6 +40,34 @@ class AdminPanelProvider extends PanelProvider
             ->plugins([
                 FilamentShieldPlugin::make(),
             ])
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                function (): HtmlString {
+                    $logoutUrl = route('tab-guard-logout');
+
+                    if (auth()->check()) {
+                        return new HtmlString(<<<HTML
+<script>
+(function(){
+    var K='ares_tab_active';
+    if(!sessionStorage.getItem(K)){
+        document.documentElement.style.visibility='hidden';
+        window.location.replace('{$logoutUrl}');
+    } else {
+        sessionStorage.setItem(K,'1');
+    }
+})();
+</script>
+HTML);
+                    }
+
+                    return new HtmlString(<<<'HTML'
+<script>
+(function(){sessionStorage.setItem('ares_tab_active','1');})();
+</script>
+HTML);
+                }
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -51,6 +82,7 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
                 EnsureEmailIsVerified::class,
+                AbsoluteSessionTimeout::class,
             ]);
     }
 }

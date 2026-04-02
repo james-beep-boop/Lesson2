@@ -83,6 +83,39 @@ class AppPanelProvider extends PanelProvider
                     ->sort(-2),
             ])
             ->renderHook(
+                PanelsRenderHook::BODY_START,
+                function (): HtmlString {
+                    $logoutUrl = route('tab-guard-logout');
+
+                    if (auth()->check()) {
+                        // Authenticated page: verify the tab guard marker is present.
+                        // If it is missing the tab/browser was closed and reopened —
+                        // force logout before any panel UI is shown.
+                        return new HtmlString(<<<HTML
+<script>
+(function(){
+    var K='ares_tab_active';
+    if(!sessionStorage.getItem(K)){
+        document.documentElement.style.visibility='hidden';
+        window.location.replace('{$logoutUrl}');
+    } else {
+        sessionStorage.setItem(K,'1');
+    }
+})();
+</script>
+HTML);
+                    }
+
+                    // Unauthenticated page (login, register, etc.): stamp the marker
+                    // so that the first authenticated page load passes the guard.
+                    return new HtmlString(<<<'HTML'
+<script>
+(function(){sessionStorage.setItem('ares_tab_active','1');})();
+</script>
+HTML);
+                }
+            )
+            ->renderHook(
                 PanelsRenderHook::USER_MENU_PROFILE_BEFORE,
                 fn (): HtmlString => auth()->check()
                     ? new HtmlString(
