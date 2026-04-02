@@ -100,29 +100,24 @@
                         this.btnVisible = true;
                         this.ambiguous = false;
                     },
-                    editSelected() {
+                    async editSelected() {
                         this.btnVisible = false;
-                        $wire.mapSelectionToSource(this.selText, this.selBefore, this.selAfter);
+                        const result = await $wire.mapSelectionToSource(this.selText, this.selBefore, this.selAfter);
+                        this.tab = 'source';
+                        if (!result.confident) { this.ambiguous = true; return; }
+                        $nextTick(() => {
+                            const ta = $el.querySelector('textarea[data-source-textarea]');
+                            if (!ta) return;
+                            ta.focus();
+                            ta.setSelectionRange(result.start, result.end);
+                            const linesBefore = ta.value.slice(0, result.start).split('\n').length;
+                            const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
+                            ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
+                        });
                     },
                 }"
                 @mouseup.window="captureSelection()"
                 @keyup.window.debounce.150ms="if (!window.getSelection()?.toString().trim()) { btnVisible = false; }"
-                @highlight-source-range.window="
-                    const start = $event.detail.start;
-                    const end   = $event.detail.end;
-                    const ok    = $event.detail.confident;
-                    tab = 'source';
-                    if (!ok) { ambiguous = true; return; }
-                    $nextTick(() => {
-                        const ta = $el.querySelector('textarea[data-source-textarea]');
-                        if (!ta) return;
-                        ta.focus();
-                        ta.setSelectionRange(start, end);
-                        const linesBefore = ta.value.slice(0, start).split('\n').length;
-                        const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
-                        ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
-                    });
-                "
             >
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                     <x-filament::button @click="tab = 'preview'" x-show="tab === 'preview'">View Lesson</x-filament::button>

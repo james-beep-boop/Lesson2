@@ -219,27 +219,28 @@ class ViewLessonPlanFamily extends Page
 
     /**
      * Called from Alpine when the user clicks "Edit Selected Text".
-     * Resolves the rendered selection back to its byte offsets in the Markdown
-     * source, enters edit mode, then dispatches a browser event so Alpine can
-     * scroll and highlight the corresponding range in the source textarea.
+     * Resolves the rendered selection back to its character offsets in the
+     * Markdown source and returns them directly to the JS caller via the
+     * $wire promise — no browser event needed.
+     *
+     * @return array{start: int, end: int, confident: bool}
      */
     public function mapSelectionToSource(
         string $text,
         string $before,
         string $after,
         MarkdownSelectionMatcher $matcher,
-    ): void {
+    ): array {
         $this->authorize('create', [LessonPlanVersion::class, $this->record]);
         $this->enterEditModeIfNeeded();
 
         $result = $matcher->find($this->editContent, $text, $before, $after);
 
-        $this->dispatch(
-            'highlight-source-range',
-            start: $result->start,
-            end: $result->end,
-            confident: $result->confident,
-        );
+        return [
+            'start' => $result->start,
+            'end' => $result->end,
+            'confident' => $result->confident,
+        ];
     }
 
     // -------------------------------------------------------------------------
