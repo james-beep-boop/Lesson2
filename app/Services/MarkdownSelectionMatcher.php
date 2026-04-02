@@ -3,9 +3,14 @@
 namespace App\Services;
 
 /**
- * Maps a selected rendered-text snippet back to its byte offsets in the
+ * Maps a selected rendered-text snippet back to its character offsets in the
  * original Markdown source, using surrounding context to disambiguate when
  * the same text appears more than once.
+ *
+ * Searching is performed against a normalized projection of the Markdown
+ * (via MarkdownProjector) so that selections of bold, italic, link, heading,
+ * and list-item text are correctly resolved even though their rendered form
+ * differs from the raw Markdown source.
  */
 class MarkdownSelectionMatcher
 {
@@ -24,30 +29,47 @@ class MarkdownSelectionMatcher
             return SelectionMatchResult::ambiguous();
         }
 
-        $occurrences = $this->findAll($markdown, $needle);
+        [$normalizedText, $offsetMap] = MarkdownProjector::project($markdown);
+
+        $occurrences = $this->findAll($normalizedText, $needle);
 
         if (count($occurrences) === 0) {
             return SelectionMatchResult::ambiguous();
         }
 
-        // Use mb_strlen so the returned offsets are Unicode character positions,
-        // matching JavaScript's setSelectionRange() which counts characters not bytes.
         $needleLen = mb_strlen($needle);
 
         if (count($occurrences) === 1) {
-            $start = $occurrences[0];
+            [$srcStart, $srcEnd] = $this->mapToSource($occurrences[0], $needleLen, $offsetMap);
 
-            return SelectionMatchResult::confident($start, $start + $needleLen);
+            return SelectionMatchResult::confident($srcStart, $srcEnd);
         }
 
-        // Multiple occurrences — score by context similarity.
-        $best = $this->scoredBest($markdown, $occurrences, $needleLen, $contextBefore, $contextAfter);
+        // Multiple occurrences — score by context similarity using normalized text.
+        $bestNormPos = $this->scoredBest($normalizedText, $occurrences, $needleLen, $contextBefore, $contextAfter);
 
-        if ($best === null) {
+        if ($bestNormPos === null) {
             return SelectionMatchResult::ambiguous();
         }
 
-        return SelectionMatchResult::confident($best, $best + $needleLen);
+        [$srcStart, $srcEnd] = $this->mapToSource($bestNormPos, $needleLen, $offsetMap);
+
+        return SelectionMatchResult::confident($srcStart, $srcEnd);
+    }
+
+    /**
+     * Translate a normalized-text match position back to source offsets.
+     *
+     * @return array{0: int, 1: int} [$srcStart, $srcEnd]
+     */
+    private function mapToSource(int $normStart, int $needleLen, array $offsetMap): array
+    {
+        $normEnd = $normStart + $needleLen - 1;
+
+        $srcStart = $offsetMap[$normStart] ?? 0;
+        $srcEnd = isset($offsetMap[$normEnd]) ? $offsetMap[$normEnd] + 1 : $srcStart + $needleLen;
+
+        return [$srcStart, $srcEnd];
     }
 
     /** @return int[] Unicode character offsets of every non-overlapping occurrence of $needle in $haystack. */
@@ -65,18 +87,24 @@ class MarkdownSelectionMatcher
     }
 
     /**
-     * Single-pass context scorer. Returns the best-matching character offset, or null
-     * when the result is still ambiguous after scoring.
+     * Single-pass context scorer operating on the normalized text.
+     *
+     * The contextBefore/contextAfter strings come from the browser's rendered
+     * text, which corresponds to the normalized form, so comparing them against
+     * normalized windows is correct.
+     *
+     * Returns the best-matching normalized character offset, or null when the
+     * result is still ambiguous after scoring.
      *
      * Scoring: +1 if contextBefore appears in the preceding window, +1 if
      * contextAfter appears in the following window (max score: 2). Ambiguous
      * if two or more positions share the highest score, or if both contexts
      * are empty.
      *
-     * @param  int[]  $positions  Unicode character offsets
+     * @param  int[]  $positions  Unicode character offsets into $normalizedText
      */
     private function scoredBest(
-        string $markdown,
+        string $normalizedText,
         array $positions,
         int $needleLen,
         string $contextBefore,
@@ -89,19 +117,18 @@ class MarkdownSelectionMatcher
             return null;
         }
 
-        $len = mb_strlen($markdown);
+        $len = mb_strlen($normalizedText);
 
-        // Track best result in a single pass to avoid sorting large arrays.
         $best = null;
         $bestScore = -1;
-        $bestCount = 0; // number of positions that share the current best score
+        $bestCount = 0;
 
         foreach ($positions as $pos) {
             $precedingStart = max(0, $pos - self::CONTEXT_WINDOW);
-            $preceding = mb_substr($markdown, $precedingStart, $pos - $precedingStart);
+            $preceding = mb_substr($normalizedText, $precedingStart, $pos - $precedingStart);
 
             $followingEnd = min($len, $pos + $needleLen + self::CONTEXT_WINDOW);
-            $following = mb_substr($markdown, $pos + $needleLen, $followingEnd - ($pos + $needleLen));
+            $following = mb_substr($normalizedText, $pos + $needleLen, $followingEnd - ($pos + $needleLen));
 
             $score = 0;
             if ($beforeNeedle !== '' && str_contains($preceding, $beforeNeedle)) {
