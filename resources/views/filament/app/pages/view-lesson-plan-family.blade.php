@@ -100,17 +100,46 @@
                         this.btnVisible = true;
                         this.ambiguous = false;
                     },
-                    async editSelected() {
+                    editSelected() {
                         this.btnVisible = false;
-                        const result = await $wire.mapSelectionToSource(this.selText, this.selBefore, this.selAfter);
+                        this.ambiguous = false;
                         this.tab = 'source';
-                        if (!result.confident) { this.ambiguous = true; return; }
                         $nextTick(() => {
                             const ta = $el.querySelector('textarea[data-source-textarea]');
                             if (!ta) return;
+                            const src    = ta.value;
+                            const needle = this.selText.trim();
+                            if (!needle) return;
+
+                            // Collect every occurrence of the selection in the raw markdown.
+                            const hits = [];
+                            let i = 0;
+                            while ((i = src.indexOf(needle, i)) !== -1) { hits.push(i); i += needle.length; }
+
+                            if (hits.length === 0) { this.ambiguous = true; return; }
+
+                            let start = hits[0];
+
+                            if (hits.length > 1) {
+                                // Use the surrounding rendered context to pick the right occurrence.
+                                const ctxB = this.selBefore.trim();
+                                const ctxA = this.selAfter.trim();
+                                if (!ctxB && !ctxA) { this.ambiguous = true; return; }
+                                let best = -1, bestScore = -1, bestCount = 0;
+                                for (const h of hits) {
+                                    let score = 0;
+                                    if (ctxB && src.slice(Math.max(0, h - 120), h).includes(ctxB)) score++;
+                                    if (ctxA && src.slice(h + needle.length, h + needle.length + 120).includes(ctxA)) score++;
+                                    if (score > bestScore) { bestScore = score; best = h; bestCount = 1; }
+                                    else if (score === bestScore) { bestCount++; }
+                                }
+                                if (bestCount !== 1) { this.ambiguous = true; return; }
+                                start = best;
+                            }
+
                             ta.focus();
-                            ta.setSelectionRange(result.start, result.end);
-                            const linesBefore = ta.value.slice(0, result.start).split('\n').length;
+                            ta.setSelectionRange(start, start + needle.length);
+                            const linesBefore = src.slice(0, start).split('\n').length;
                             const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
                             ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
                         });
