@@ -102,7 +102,6 @@
                     },
                     editSelected() {
                         this.btnVisible = false;
-                        this.tab = 'source';
                         $wire.mapSelectionToSource(this.selText, this.selBefore, this.selAfter);
                     },
                 }"
@@ -112,6 +111,7 @@
                     const start = $event.detail.start;
                     const end   = $event.detail.end;
                     const ok    = $event.detail.confident;
+                    tab = 'source';
                     if (!ok) { ambiguous = true; return; }
                     $nextTick(() => {
                         const ta = $el.querySelector('textarea[data-source-textarea]');
