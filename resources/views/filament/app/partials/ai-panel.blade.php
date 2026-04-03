@@ -1,4 +1,5 @@
 @if($aiPanelOpen && $canAskAi)
+    <div id="ai-panel-anchor" x-on:scroll-to-ai-panel.window="requestAnimationFrame(() => requestAnimationFrame(() => $el.scrollIntoView({behavior:'smooth', block:'start'})))">
     <x-filament::section heading="Ask AI" class="mt-4">
         <p class="mb-2 text-sm text-gray-500">AI suggestions are read-only. Copy anything useful into your editor manually.</p>
         <div class="flex gap-2 mb-3">
@@ -18,4 +19,5 @@
             <x-filament::button wire:click="$set('aiPanelOpen', false)" color="gray" size="sm">Close</x-filament::button>
         </div>
     </x-filament::section>
+    </div>
 @endif

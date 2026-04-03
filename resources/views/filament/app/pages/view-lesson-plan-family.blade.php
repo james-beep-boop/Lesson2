@@ -104,9 +104,8 @@
                         this.btnVisible = false;
                         this.ambiguous = false;
 
-                        // Query the textarea while it is still hidden — x-show uses
-                        // display:none but keeps the element in the DOM, so we can
-                        // read .value and call setSelectionRange() right now.
+                        // x-show keeps the textarea in the DOM (display:none on its parent);
+                        // ta.value is readable regardless of visibility.
                         const ta = $el.querySelector('textarea[data-source-textarea]');
                         if (!ta) { this.tab = 'source'; return; }
 
@@ -114,17 +113,15 @@
                         const needle = this.selText.trim();
                         if (!needle) { this.tab = 'source'; return; }
 
-                        // Collect every occurrence of the selection in the raw markdown.
+                        // ── plain-text search ────────────────────────────────────
+                        let start = -1, matchEnd = -1;
                         const hits = [];
                         let i = 0;
                         while ((i = src.indexOf(needle, i)) !== -1) { hits.push(i); i += needle.length; }
 
-                        if (hits.length === 0) { this.tab = 'source'; this.ambiguous = true; return; }
-
-                        let start = hits[0];
-
-                        if (hits.length > 1) {
-                            // Use the surrounding rendered context to pick the right occurrence.
+                        if (hits.length === 1) {
+                            start = hits[0];
+                        } else if (hits.length > 1) {
                             const ctxB = this.selBefore.trim();
                             const ctxA = this.selAfter.trim();
                             if (!ctxB && !ctxA) { this.tab = 'source'; this.ambiguous = true; return; }
@@ -134,27 +131,81 @@
                                 if (ctxB && src.slice(Math.max(0, h - 120), h).includes(ctxB)) score++;
                                 if (ctxA && src.slice(h + needle.length, h + needle.length + 120).includes(ctxA)) score++;
                                 if (score > bestScore) { bestScore = score; best = h; bestCount = 1; }
-                                else if (score === bestScore) { bestCount++; }
+                                else if (score === bestScore) bestCount++;
                             }
-                            if (bestCount !== 1) { this.tab = 'source'; this.ambiguous = true; return; }
-                            start = best;
+                            if (bestCount === 1) { start = best; }
+                            else { this.tab = 'source'; this.ambiguous = true; return; }
                         }
 
-                        // Apply selection and scroll on the hidden textarea.
-                        // Both operations are valid on display:none elements — the state
-                        // is stored on the element and survives being made visible.
-                        ta.setSelectionRange(start, start + needle.length);
-                        const linesBefore = src.slice(0, start).split('\n').length;
-                        const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
-                        ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
+                        if (start !== -1) { matchEnd = start + needle.length; }
 
-                        // Reveal the tab — textarea already has selection and scroll set.
+                        // ── markdown-stripped fallback ───────────────────────────
+                        // Used when the selected rendered text doesn't appear verbatim in
+                        // the source (e.g. the source has **bold** but the preview shows
+                        // "bold"). Strips common inline/block markers and builds an offset
+                        // map so we can translate the match position back to source coords.
+                        if (start === -1) {
+                            const stripped = (function(s) {
+                                const text = [], map = [];
+                                let j = 0, n = s.length;
+                                while (j < n) {
+                                    // Block-level prefixes at line start — inspected char-by-char
+                                    // to avoid allocating substrings via slice().match().
+                                    if (j === 0 || s[j-1] === '\n') {
+                                        // Heading: 1–6 # chars followed by a space
+                                        if (s[j] === '#') {
+                                            let k = j; while (k < n && s[k] === '#') k++;
+                                            if (k < n && s[k] === ' ' && k - j <= 6) { j = k + 1; continue; }
+                                        }
+                                        // Unordered list: - * +
+                                        if ((s[j]==='-'||s[j]==='*'||s[j]==='+') && j+1<n && s[j+1]===' ') { j += 2; continue; }
+                                        // Ordered list: digits followed by ". "
+                                        if (s[j]>='0' && s[j]<='9') {
+                                            let k=j; while(k<n && s[k]>='0' && s[k]<='9') k++;
+                                            if (k<n && s[k]==='.' && k+1<n && s[k+1]===' ') { j=k+2; continue; }
+                                        }
+                                        // Blockquote
+                                        if (s[j]==='>' && j+1<n && (s[j+1]===' '||s[j+1]==='\n')) { j+=2; continue; }
+                                    }
+                                    // Bold: **...** or __...__
+                                    if (j+1<n && s[j]==='*' && s[j+1]==='*') { const c=s.indexOf('**',j+2); if(c!==-1){for(let k=j+2;k<c;k++){text.push(s[k]);map.push(k);}j=c+2;continue;} }
+                                    if (j+1<n && s[j]==='_' && s[j+1]==='_') { const c=s.indexOf('__',j+2); if(c!==-1){for(let k=j+2;k<c;k++){text.push(s[k]);map.push(k);}j=c+2;continue;} }
+                                    // Italic: *...* or _..._
+                                    if (s[j]==='*' && (j+1>=n||s[j+1]!=='*')) { const c=s.indexOf('*',j+1); if(c!==-1){for(let k=j+1;k<c;k++){text.push(s[k]);map.push(k);}j=c+1;continue;} }
+                                    if (s[j]==='_' && (j+1>=n||s[j+1]!=='_')) { const c=s.indexOf('_',j+1); if(c!==-1){for(let k=j+1;k<c;k++){text.push(s[k]);map.push(k);}j=c+1;continue;} }
+                                    // Inline code: `...`
+                                    if (s[j]==='`') { const c=s.indexOf('`',j+1); if(c!==-1){for(let k=j+1;k<c;k++){text.push(s[k]);map.push(k);}j=c+1;continue;} }
+                                    text.push(s[j]); map.push(j); j++;
+                                }
+                                return { text: text.join(''), map };
+                            })(src);
+
+                            const pos = stripped.text.indexOf(needle);
+                            if (pos !== -1 && pos + needle.length <= stripped.map.length) {
+                                start    = stripped.map[pos];
+                                matchEnd = stripped.map[pos + needle.length - 1] + 1;
+                            }
+                        }
+
+                        if (start === -1) { this.tab = 'source'; this.ambiguous = true; return; }
+
+                        // Count lines before the match to compute scroll position.
+                        // Newline scan is O(start) and avoids allocating a split array.
+                        let linesBefore = 1;
+                        for (let j = 0; j < start; j++) if (src[j] === '\n') linesBefore++;
+                        // 20px = textarea line-height (Tailwind text-sm on a mono font);
+                        // offset by 3 lines to keep the match a few lines below the top edge.
+                        const scrollTop = Math.max(0, (linesBefore - 3) * 20);
+
+                        // Reveal the tab, then focus + select after the browser has painted.
+                        // focus() resets selectionStart/End in most browsers, so
+                        // setSelectionRange() must be called immediately after focus().
                         this.tab = 'source';
-
-                        // Focus after the browser has painted (rAF fires post-paint,
-                        // guaranteeing the element is visible and focusable). This makes
-                        // the browser actually render the selection highlight.
-                        requestAnimationFrame(() => ta.focus());
+                        requestAnimationFrame(() => {
+                            ta.focus();
+                            ta.setSelectionRange(start, matchEnd);
+                            ta.scrollTop = scrollTop;
+                        });
                     },
                 }"
                 @mouseup.window="captureSelection()"
@@ -211,17 +262,6 @@
                 </div>
             </div>
         </x-filament::section>
-
-        @if($canAskAi)
-            <div class="mt-4">
-                <x-filament::button wire:click="$set('aiPanelOpen', true)" color="gray" icon="heroicon-o-sparkles">
-                    Ask AI
-                </x-filament::button>
-            </div>
-        @endif
-
-        {{-- AI panel --}}
-        @include('filament.app.partials.ai-panel')
 
     @else
         {{-- Normal view: sidebar + content --}}
@@ -347,6 +387,18 @@
                                         </x-filament::button>
                                     @endif
 
+                                    {{-- Ask AI --}}
+                                    @if($canAskAi)
+                                        <x-filament::button
+                                            wire:click="openAiPanel"
+                                            color="gray"
+                                            size="sm"
+                                            icon="heroicon-o-sparkles"
+                                        >
+                                            Ask AI
+                                        </x-filament::button>
+                                    @endif
+
                                     {{-- Edit --}}
                                     @if($canEdit)
                                         <x-filament::button wire:click="enterEditMode" size="sm">
@@ -402,8 +454,6 @@
                         </x-filament::section>
                     @endif
 
-                    {{-- AI panel --}}
-                    @include('filament.app.partials.ai-panel')
                 @else
                     <p class="text-gray-500">No versions yet.</p>
                 @endif
@@ -411,7 +461,10 @@
 
         </div>
 
-        {{-- Translation preview — full width, below the version grid --}}
+        {{-- AI panel — full width, below the version grid --}}
+        @include('filament.app.partials.ai-panel')
+
+        {{-- Translation preview — full width, below the AI panel --}}
         @include('filament.app.partials.translation-preview-panel')
     @endif
 </x-filament-panels::page>

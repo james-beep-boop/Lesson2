@@ -247,6 +247,17 @@ class ViewLessonPlanFamily extends Page
     // Ask AI
     // -------------------------------------------------------------------------
 
+    /**
+     * Open the AI panel and scroll the browser to it.
+     * The dispatch fires a browser event that Alpine picks up after the re-render.
+     */
+    public function openAiPanel(): void
+    {
+        $this->authorize('askAi', $this->selectedVersion);
+        $this->aiPanelOpen = true;
+        $this->dispatch('scroll-to-ai-panel');
+    }
+
     // -------------------------------------------------------------------------
     // Swahili translation preview
     // -------------------------------------------------------------------------
@@ -259,8 +270,18 @@ class ViewLessonPlanFamily extends Page
     {
         $this->authorize('translate', $this->selectedVersion);
 
+        $alreadyOpen = $this->translationPanelOpen;
+
         $this->translatedContent = '';
         $this->translationPanelOpen = true;
+
+        if (! $alreadyOpen) {
+            Notification::make('translation-started')
+                ->title('Translation in progress')
+                ->body('The Swahili translation will appear below the English content — scroll down to see it.')
+                ->info()
+                ->send();
+        }
     }
 
     /**
