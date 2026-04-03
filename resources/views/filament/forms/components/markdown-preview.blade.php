@@ -1,4 +1,4 @@
-{{-- Inject marked.js before Alpine initialises this component. --}}
+{{-- Inject marked.js + DOMPurify before Alpine initialises this component. --}}
 <script>
     (function () {
         if (!window.marked && !document.querySelector('script[src*="marked@17"]')) {
@@ -7,6 +7,13 @@
             s.integrity = 'sha384-tkjnnf9Tzhv5ZFrDroGvUExw9C3EVFo0RFRkzKR8ZX4b5Psoec4yb1PlD8Jh4j4H';
             s.crossOrigin = 'anonymous';
             document.head.appendChild(s);
+        }
+        if (!window.DOMPurify && !document.querySelector('script[src*="dompurify"]')) {
+            var p = document.createElement('script');
+            p.src = 'https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js';
+            p.integrity = 'sha384-JiDGWnNHFgxQfKHIWcNjfxRG2JHQHmCuH0O2MDcPiD+JoMOmFmzfEVMkfvtjTBO';
+            p.crossOrigin = 'anonymous';
+            document.head.appendChild(p);
         }
     })();
 </script>
@@ -19,7 +26,9 @@
     x-data="{
         preview: {{ Js::from($initialHtml ?? '') }},
         renderMarkdown(val) {
-            this.preview = window.marked ? marked.parse(val || '') : (val || '');
+            if (!window.marked) { this.preview = (val || ''); return; }
+            const raw = marked.parse(val || '');
+            this.preview = window.DOMPurify ? DOMPurify.sanitize(raw) : raw;
         },
         init() {
             const initial = {{ Js::from($initialContent ?? null) }} ?? $wire.get('{{ $prop }}') ?? '';

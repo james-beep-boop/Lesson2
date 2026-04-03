@@ -8,17 +8,17 @@ beforeEach(function () {
 });
 
 // ----------------------------------------------------------------
-// GET /tab-guard-logout — unauthenticated
+// POST /tab-guard-logout — unauthenticated
 // ----------------------------------------------------------------
 
 test('tab-guard-logout redirects guest to login', function () {
-    $response = $this->get(route('tab-guard-logout'));
+    $response = $this->post(route('tab-guard-logout'));
 
     $response->assertRedirect(route('filament.app.auth.login'));
 });
 
 // ----------------------------------------------------------------
-// GET /tab-guard-logout — authenticated user
+// POST /tab-guard-logout — authenticated user
 // ----------------------------------------------------------------
 
 test('tab-guard-logout logs out an authenticated user', function () {
@@ -27,7 +27,7 @@ test('tab-guard-logout logs out an authenticated user', function () {
     $this->actingAs($user);
     expect(auth()->check())->toBeTrue();
 
-    $this->get(route('tab-guard-logout'));
+    $this->post(route('tab-guard-logout'));
 
     expect(auth()->check())->toBeFalse();
 });
@@ -35,7 +35,7 @@ test('tab-guard-logout logs out an authenticated user', function () {
 test('tab-guard-logout redirects authenticated user to login', function () {
     $user = makeTeacher();
 
-    $response = $this->actingAs($user)->get(route('tab-guard-logout'));
+    $response = $this->actingAs($user)->post(route('tab-guard-logout'));
 
     $response->assertRedirect(route('filament.app.auth.login'));
 });
@@ -46,7 +46,7 @@ test('tab-guard-logout invalidates session', function () {
     $this->actingAs($user);
     $sessionIdBefore = session()->getId();
 
-    $this->get(route('tab-guard-logout'));
+    $this->post(route('tab-guard-logout'));
 
     // After invalidation the session ID must be different
     expect(session()->getId())->not->toBe($sessionIdBefore);
@@ -62,7 +62,7 @@ test('tab-guard-logout logs out a site admin', function () {
     $this->actingAs($admin);
     expect(auth()->check())->toBeTrue();
 
-    $this->get(route('tab-guard-logout'));
+    $this->post(route('tab-guard-logout'));
 
     expect(auth()->check())->toBeFalse();
 });

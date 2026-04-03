@@ -6,11 +6,11 @@ use Illuminate\Support\Facades\Route;
 // Filament app panel handles the root path.
 
 /**
- * Tab-guard logout — called via JS redirect when sessionStorage marker is absent,
- * indicating the tab/browser was closed and reopened. We invalidate the session
- * server-side so the user must log in again.
+ * Tab-guard logout — triggered by a JS form POST when the sessionStorage marker is
+ * absent, indicating the tab/browser was closed and reopened. Using POST (not GET)
+ * prevents CSRF-based forced logout via embedded images or links.
  */
-Route::get('/tab-guard-logout', function () {
+Route::post('/tab-guard-logout', function () {
     auth()->logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();

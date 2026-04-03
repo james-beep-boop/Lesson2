@@ -72,11 +72,15 @@ class AppPanelProvider extends PanelProvider
                 Action::make('messages')
                     ->label(function (): string {
                         $userId = auth()->id();
-                        $counts = Cache::remember("user.{$userId}.inbox_counts", 30, fn () => Message::where('to_user_id', $userId)
-                            ->selectRaw('COUNT(*) as total, SUM(read_at IS NULL) as unread')
-                            ->first());
+                        $counts = Cache::remember("user.{$userId}.inbox_counts", 30, function () use ($userId): array {
+                            $row = Message::where('to_user_id', $userId)
+                                ->selectRaw('COUNT(*) as total, SUM(read_at IS NULL) as unread')
+                                ->first();
 
-                        return 'Inbox: '.($counts->unread ?? 0).' / '.($counts->total ?? 0);
+                            return ['total' => (int) ($row->total ?? 0), 'unread' => (int) ($row->unread ?? 0)];
+                        });
+
+                        return 'Inbox: '.($counts['unread'] ?? 0).' / '.($counts['total'] ?? 0);
                     })
                     ->icon('heroicon-o-inbox')
                     ->url(fn (): string => MessageResource::getUrl('index'))
@@ -91,13 +95,22 @@ class AppPanelProvider extends PanelProvider
                         // Authenticated page: verify the tab guard marker is present.
                         // If it is missing the tab/browser was closed and reopened —
                         // force logout before any panel UI is shown.
+                        // Use a form POST (not a redirect) to avoid CSRF-based forced logout.
                         return new HtmlString(<<<HTML
 <script>
 (function(){
     var K='ares_tab_active';
     if(!sessionStorage.getItem(K)){
         document.documentElement.style.visibility='hidden';
-        window.location.replace('{$logoutUrl}');
+        var f=document.createElement('form');
+        f.method='POST';
+        f.action='{$logoutUrl}';
+        var t=document.createElement('input');
+        t.type='hidden';t.name='_token';
+        t.value=(document.querySelector('meta[name="csrf-token"]')||{}).content||'';
+        f.appendChild(t);
+        document.body.appendChild(f);
+        f.submit();
     } else {
         sessionStorage.setItem(K,'1');
     }

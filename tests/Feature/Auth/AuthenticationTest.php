@@ -1,11 +1,13 @@
 <?php
 
+use App\Filament\App\Pages\Register;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Http\Responses\LoginResponse;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Illuminate\Http\Request;
+use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -35,6 +37,23 @@ test('verified users can access app panel', function () {
 
     $panel = Panel::make()->id('app')->default();
     expect($user->canAccessPanel($panel))->toBeTrue();
+});
+
+test('registration form creates user with unverified email', function () {
+    Livewire::test(Register::class)
+        ->fillForm([
+            'username' => 'newteacher',
+            'name' => 'New Teacher',
+            'email' => 'newteacher@example.com',
+            'password' => 'password123',
+            'passwordConfirmation' => 'password123',
+        ])
+        ->call('register');
+
+    $user = User::where('email', 'newteacher@example.com')->firstOrFail();
+
+    expect($user->email_verified_at)->toBeNull()
+        ->and($user->hasVerifiedEmail())->toBeFalse();
 });
 
 // ----------------------------------------------------------------

@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Models\User;
+use App\Services\DocxConversionService;
 use App\Services\VersionService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -22,9 +23,7 @@ use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
-use League\HTMLToMarkdown\HtmlConverter;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use PhpOffice\PhpWord\IOFactory;
 
 class CreateLessonPlanFamily extends CreateRecord
 {
@@ -172,19 +171,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         try {
                             set_time_limit(60);
 
-                            $phpWord = IOFactory::load($state->getRealPath());
-                            $writer = IOFactory::createWriter($phpWord, 'HTML');
-
-                            ob_start();
-                            $writer->save('php://output');
-                            $html = ob_get_clean();
-
-                            $converter = new HtmlConverter([
-                                'strip_tags' => true,
-                                'remove_nodes' => 'head style script',
-                            ]);
-
-                            $set('content', $converter->convert($html));
+                            $set('content', app(DocxConversionService::class)->convert($state->getRealPath()));
 
                             Notification::make()
                                 ->title('Word document converted — please review')

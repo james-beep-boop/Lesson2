@@ -103,46 +103,58 @@
                     editSelected() {
                         this.btnVisible = false;
                         this.ambiguous = false;
-                        this.tab = 'source';
-                        $nextTick(() => {
-                            const ta = $el.querySelector('textarea[data-source-textarea]');
-                            if (!ta) return;
-                            const src    = ta.value;
-                            const needle = this.selText.trim();
-                            if (!needle) return;
 
-                            // Collect every occurrence of the selection in the raw markdown.
-                            const hits = [];
-                            let i = 0;
-                            while ((i = src.indexOf(needle, i)) !== -1) { hits.push(i); i += needle.length; }
+                        // Query the textarea while it is still hidden — x-show uses
+                        // display:none but keeps the element in the DOM, so we can
+                        // read .value and call setSelectionRange() right now.
+                        const ta = $el.querySelector('textarea[data-source-textarea]');
+                        if (!ta) { this.tab = 'source'; return; }
 
-                            if (hits.length === 0) { this.ambiguous = true; return; }
+                        const src    = ta.value;
+                        const needle = this.selText.trim();
+                        if (!needle) { this.tab = 'source'; return; }
 
-                            let start = hits[0];
+                        // Collect every occurrence of the selection in the raw markdown.
+                        const hits = [];
+                        let i = 0;
+                        while ((i = src.indexOf(needle, i)) !== -1) { hits.push(i); i += needle.length; }
 
-                            if (hits.length > 1) {
-                                // Use the surrounding rendered context to pick the right occurrence.
-                                const ctxB = this.selBefore.trim();
-                                const ctxA = this.selAfter.trim();
-                                if (!ctxB && !ctxA) { this.ambiguous = true; return; }
-                                let best = -1, bestScore = -1, bestCount = 0;
-                                for (const h of hits) {
-                                    let score = 0;
-                                    if (ctxB && src.slice(Math.max(0, h - 120), h).includes(ctxB)) score++;
-                                    if (ctxA && src.slice(h + needle.length, h + needle.length + 120).includes(ctxA)) score++;
-                                    if (score > bestScore) { bestScore = score; best = h; bestCount = 1; }
-                                    else if (score === bestScore) { bestCount++; }
-                                }
-                                if (bestCount !== 1) { this.ambiguous = true; return; }
-                                start = best;
+                        if (hits.length === 0) { this.tab = 'source'; this.ambiguous = true; return; }
+
+                        let start = hits[0];
+
+                        if (hits.length > 1) {
+                            // Use the surrounding rendered context to pick the right occurrence.
+                            const ctxB = this.selBefore.trim();
+                            const ctxA = this.selAfter.trim();
+                            if (!ctxB && !ctxA) { this.tab = 'source'; this.ambiguous = true; return; }
+                            let best = -1, bestScore = -1, bestCount = 0;
+                            for (const h of hits) {
+                                let score = 0;
+                                if (ctxB && src.slice(Math.max(0, h - 120), h).includes(ctxB)) score++;
+                                if (ctxA && src.slice(h + needle.length, h + needle.length + 120).includes(ctxA)) score++;
+                                if (score > bestScore) { bestScore = score; best = h; bestCount = 1; }
+                                else if (score === bestScore) { bestCount++; }
                             }
+                            if (bestCount !== 1) { this.tab = 'source'; this.ambiguous = true; return; }
+                            start = best;
+                        }
 
-                            ta.focus();
-                            ta.setSelectionRange(start, start + needle.length);
-                            const linesBefore = src.slice(0, start).split('\n').length;
-                            const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
-                            ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
-                        });
+                        // Apply selection and scroll on the hidden textarea.
+                        // Both operations are valid on display:none elements — the state
+                        // is stored on the element and survives being made visible.
+                        ta.setSelectionRange(start, start + needle.length);
+                        const linesBefore = src.slice(0, start).split('\n').length;
+                        const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
+                        ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
+
+                        // Reveal the tab — textarea already has selection and scroll set.
+                        this.tab = 'source';
+
+                        // Focus after the browser has painted (rAF fires post-paint,
+                        // guaranteeing the element is visible and focusable). This makes
+                        // the browser actually render the selection highlight.
+                        requestAnimationFrame(() => ta.focus());
                     },
                 }"
                 @mouseup.window="captureSelection()"
