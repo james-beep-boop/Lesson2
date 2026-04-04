@@ -22,6 +22,28 @@
         @endonce
     @endif
 
+    {{-- Button grid layout --}}
+    @once
+    <style>
+        .lesson-btn-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        @@media (min-width: 640px) {
+            .lesson-btn-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @@media (min-width: 1024px) {
+            .lesson-btn-grid { grid-template-columns: repeat(5, 1fr); }
+        }
+        .lesson-btn-grid > * {
+            display: flex !important;
+            width: 100% !important;
+            justify-content: center !important;
+        }
+    </style>
+    @endonce
+
     {{-- Print CSS --}}
     @once
     <style>
@@ -220,6 +242,197 @@
         </x-filament::section>
 
     @else
+        @if($selectedVersion)
+        {{-- ── Action button panel ──────────────────────────────────────────── --}}
+        <div
+            x-data="{ compareOpen: false, compareVersionId: {{ $record->versions->where('id', '!=', $selectedVersion->id)->sortByDesc('created_at')->first()?->id ?? 'null' }} }"
+            class="mb-4"
+            data-noprint
+        >
+            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+                <div class="lesson-btn-grid">
+                    {{-- 1: Edit This Plan --}}
+                    @if($canEdit)
+                        <x-filament::button wire:click="enterEditMode" class="w-full justify-center">
+                            Edit This Plan
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 2: Translate to Swahili --}}
+                    @if($canTranslate)
+                        <x-filament::button
+                            wire:click="openTranslationPanel"
+                            wire:loading.attr="disabled"
+                            wire:target="openTranslationPanel,translatePreview"
+                            color="gray"
+                            icon="heroicon-o-language"
+                            class="w-full justify-center"
+                        >
+                            Translate to Swahili
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 3: Ask AI --}}
+                    @if($canAskAi)
+                        <x-filament::button
+                            wire:click="openAiPanel"
+                            color="gray"
+                            icon="heroicon-o-sparkles"
+                            class="w-full justify-center"
+                        >
+                            Ask AI
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 4: Compare to Other / Exit Compare --}}
+                    @if($compareMode)
+                        <x-filament::button
+                            wire:click="$set('compareMode', false)"
+                            color="gray"
+                            icon="heroicon-o-x-mark"
+                            class="w-full justify-center"
+                        >
+                            Exit Compare
+                        </x-filament::button>
+                    @elseif($record->versions->count() > 1)
+                        <x-filament::button
+                            @click="compareOpen = !compareOpen"
+                            color="gray"
+                            icon="heroicon-o-arrows-right-left"
+                            class="w-full justify-center"
+                        >
+                            Compare to Other
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 5: Request Deletion --}}
+                    @if($canRequestDeletion)
+                        <x-filament::button
+                            wire:click="$set('showDeletionForm', true)"
+                            color="danger"
+                            icon="heroicon-o-trash"
+                            class="w-full justify-center"
+                        >
+                            Request Deletion
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 6: Favorite --}}
+                    <x-filament::button
+                        wire:click="favorite"
+                        color="gray"
+                        icon="heroicon-o-star"
+                        class="w-full justify-center"
+                    >
+                        {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Favorite' }}
+                    </x-filament::button>
+
+                    {{-- 7: Print --}}
+                    <x-filament::button
+                        color="gray"
+                        icon="heroicon-o-printer"
+                        x-on:click="window.print()"
+                        class="w-full justify-center"
+                    >
+                        Print
+                    </x-filament::button>
+
+                    {{-- 8: Save PDF --}}
+                    <x-filament::button
+                        tag="a"
+                        href="{{ route('lesson-plan.pdf', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
+                        target="_blank"
+                        color="gray"
+                        icon="heroicon-o-arrow-down-tray"
+                        class="w-full justify-center"
+                    >
+                        Save PDF
+                    </x-filament::button>
+
+                    {{-- 9: Email PDF --}}
+                    <x-filament::button
+                        wire:click="openEmailPdfModal"
+                        color="gray"
+                        icon="heroicon-o-envelope"
+                        class="w-full justify-center"
+                    >
+                        Email PDF
+                    </x-filament::button>
+
+                    {{-- 10: Message About This --}}
+                    @if($canMessage)
+                        <x-filament::button
+                            wire:click="openMessageModal('author')"
+                            color="gray"
+                            icon="heroicon-o-chat-bubble-left-right"
+                            class="w-full justify-center"
+                        >
+                            Message About This
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Compare picker — slides open below the button panel --}}
+            <div
+                x-show="compareOpen"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1"
+                class="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
+                style="display: none;"
+            >
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">
+                        Compare version <strong>{{ $selectedVersion->version }}</strong> with version
+                    </span>
+                    <select
+                        x-model="compareVersionId"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                    >
+                        @foreach($record->versions->sortByDesc('created_at') as $v)
+                            @if($v->id !== $selectedVersion->id)
+                                <option value="{{ $v->id }}">
+                                    v{{ $v->version }}
+                                    @if($record->official_version_id === $v->id) (Official) @endif
+                                </option>
+                            @endif
+                        @endforeach
+                    </select>
+                    <x-filament::button
+                        @click="$wire.enterCompareMode(compareVersionId); compareOpen = false"
+                        size="sm"
+                        icon="heroicon-o-arrows-right-left"
+                    >
+                        Compare
+                    </x-filament::button>
+                    <x-filament::button
+                        @click="compareOpen = false"
+                        color="gray"
+                        size="sm"
+                    >
+                        Cancel
+                    </x-filament::button>
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- Normal view: sidebar + content --}}
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
             {{-- Version list sidebar --}}
@@ -246,46 +459,6 @@
                         @endforeach
                     </ul>
                 </x-filament::section>
-
-                {{-- Compare mode selector --}}
-                @if(!$compareMode && $selectedVersion && $record->versions->count() > 1)
-                    <x-filament::section heading="Compare" class="mt-4">
-                        {{-- Quick compare shortcuts --}}
-                        <div class="mb-3 flex flex-col gap-1">
-                            <x-filament::button
-                                wire:click="compareToPreviousVersion"
-                                color="gray"
-                                size="sm"
-                                icon="heroicon-o-arrow-left"
-                            >
-                                Compare to Previous
-                            </x-filament::button>
-
-                            @if($record->official_version_id && $record->official_version_id !== $selectedVersion?->id)
-                                <x-filament::button
-                                    wire:click="compareToOfficialVersion"
-                                    color="gray"
-                                    size="sm"
-                                    icon="heroicon-o-check-badge"
-                                >
-                                    Compare to Official
-                                </x-filament::button>
-                            @endif
-                        </div>
-
-                        <p class="mb-2 text-xs text-gray-500">Compare with any version:</p>
-                        @foreach($record->versions->sortByDesc('created_at') as $v)
-                            @if($v->id !== $selectedVersion->id)
-                                <button
-                                    wire:click="enterCompareMode({{ $v->id }})"
-                                    class="block w-full rounded px-2 py-1 text-left text-sm hover:bg-gray-100"
-                                >
-                                    v{{ $v->version }}
-                                </button>
-                            @endif
-                        @endforeach
-                    </x-filament::section>
-                @endif
             </div>
 
             {{-- Main content area --}}
@@ -305,19 +478,14 @@
                                         ({{ $compareVersion->contributor->username ?? '?' }} → {{ $selectedVersion->contributor->username ?? '?' }})
                                     </span>
                                 </div>
-                                <div class="flex gap-2">
-                                    <x-filament::button
-                                        wire:click="toggleDiffLayout"
-                                        color="gray"
-                                        size="sm"
-                                        icon="heroicon-o-arrows-right-left"
-                                    >
-                                        {{ $diffLayout === 'side-by-side' ? 'Stacked' : 'Side-by-Side' }}
-                                    </x-filament::button>
-                                    <x-filament::button wire:click="$set('compareMode', false)" color="gray" size="sm">
-                                        Exit Compare
-                                    </x-filament::button>
-                                </div>
+                                <x-filament::button
+                                    wire:click="toggleDiffLayout"
+                                    color="gray"
+                                    size="sm"
+                                    icon="heroicon-o-arrows-right-left"
+                                >
+                                    {{ $diffLayout === 'side-by-side' ? 'Stacked' : 'Side-by-Side' }}
+                                </x-filament::button>
                             </div>
 
                             {{-- Version labels --}}
@@ -343,16 +511,12 @@
                                 </div>
                             @else
                                 <div class="grid grid-cols-{{ $diffLayout === 'side-by-side' ? '2' : '1' }} gap-4">
-                                    <div>
-                                        <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                            @markdown($compareVersion->content)
-                                        </div>
+                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
+                                        @markdown($compareVersion->content)
                                     </div>
                                     @if($diffLayout === 'side-by-side')
-                                    <div>
-                                        <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                            @markdown($selectedVersion->content)
-                                        </div>
+                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
+                                        @markdown($selectedVersion->content)
                                     </div>
                                     @endif
                                 </div>
@@ -362,128 +526,28 @@
                     @else
                         {{-- View mode --}}
                         <x-filament::section>
-                            <div class="mb-4 flex flex-wrap items-start justify-between gap-2" data-noprint>
-                                <div>
-                                    <p class="text-sm text-gray-500">
-                                        v{{ $selectedVersion->version }} ·
-                                        by {{ $selectedVersion->contributor->username ?? '?' }} ·
-                                        {{ $selectedVersion->created_at->diffForHumans() }}
-                                        @if($selectedVersion->revision_note)
-                                            · <em>{{ $selectedVersion->revision_note }}</em>
-                                        @endif
-                                    </p>
-                                    @if($isOfficialSelected)
-                                        <span class="text-xs font-semibold text-green-600">✓ Official version</span>
+                            <div class="mb-4" data-noprint>
+                                <p class="text-sm text-gray-500">
+                                    v{{ $selectedVersion->version }} ·
+                                    by {{ $selectedVersion->contributor->username ?? '?' }} ·
+                                    {{ $selectedVersion->created_at->diffForHumans() }}
+                                    @if($selectedVersion->revision_note)
+                                        · <em>{{ $selectedVersion->revision_note }}</em>
                                     @endif
-                                </div>
-
-                                <div class="flex flex-wrap" style="gap: 0.5rem;">
-                                    {{-- Favorite --}}
-                                    <x-filament::button wire:click="favorite" color="gray" size="sm" icon="heroicon-o-star">
-                                        {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Mark as Favorite' }}
+                                </p>
+                                @if($isOfficialSelected)
+                                    <span class="text-xs font-semibold text-green-600">✓ Official version</span>
+                                @endif
+                                @if($canMarkOfficial && !$isOfficialSelected)
+                                    <x-filament::button wire:click="markOfficial" color="gray" size="sm" class="mt-2">
+                                        Mark as Official
                                     </x-filament::button>
-
-                                    {{-- Mark Official --}}
-                                    @if($canMarkOfficial && !$isOfficialSelected)
-                                        <x-filament::button wire:click="markOfficial" color="gray" size="sm">
-                                            Mark as Official
-                                        </x-filament::button>
-                                    @endif
-
-                                    {{-- Print --}}
-                                    <x-filament::button
-                                        color="gray"
-                                        size="sm"
-                                        icon="heroicon-o-printer"
-                                        x-on:click="window.print()"
-                                    >
-                                        Print
-                                    </x-filament::button>
-
-                                    {{-- Download PDF --}}
-                                    @if($selectedVersion)
-                                        <a
-                                            href="{{ route('lesson-plan.pdf', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
-                                            target="_blank"
-                                        >
-                                            <x-filament::button color="gray" size="sm" icon="heroicon-o-arrow-down-tray" tag="span">
-                                                Download PDF
-                                            </x-filament::button>
-                                        </a>
-                                    @endif
-
-                                    {{-- Email PDF --}}
-                                    <x-filament::button
-                                        wire:click="openEmailPdfModal"
-                                        color="gray"
-                                        size="sm"
-                                        icon="heroicon-o-envelope"
-                                    >
-                                        Email PDF
-                                    </x-filament::button>
-
-                                    {{-- Message About This Lesson --}}
-                                    @if($canMessage)
-                                        <x-filament::button
-                                            wire:click="openMessageModal('author')"
-                                            color="gray"
-                                            size="sm"
-                                            icon="heroicon-o-chat-bubble-left-right"
-                                        >
-                                            Message About This Lesson
-                                        </x-filament::button>
-                                    @endif
-
-                                    {{-- Translate to Swahili --}}
-                                    @if($canTranslate)
-                                        <x-filament::button
-                                            wire:click="openTranslationPanel"
-                                            wire:loading.attr="disabled"
-                                            wire:target="openTranslationPanel,translatePreview"
-                                            color="gray"
-                                            size="sm"
-                                            icon="heroicon-o-language"
-                                        >
-                                            Translate to Swahili
-                                        </x-filament::button>
-                                    @endif
-
-                                    {{-- Ask AI --}}
-                                    @if($canAskAi)
-                                        <x-filament::button
-                                            wire:click="openAiPanel"
-                                            color="gray"
-                                            size="sm"
-                                            icon="heroicon-o-sparkles"
-                                        >
-                                            Ask AI
-                                        </x-filament::button>
-                                    @endif
-
-                                    {{-- Edit --}}
-                                    @if($canEdit)
-                                        <x-filament::button wire:click="enterEditMode" size="sm">
-                                            Edit This Plan
-                                        </x-filament::button>
-                                    @endif
-
-                                    {{-- Request Deletion --}}
-                                    @if($canRequestDeletion)
-                                        <x-filament::button
-                                            wire:click="$set('showDeletionForm', true)"
-                                            color="danger"
-                                            size="sm"
-                                            icon="heroicon-o-trash"
-                                        >
-                                            Request Deletion
-                                        </x-filament::button>
-                                    @endif
-                                </div>
+                                @endif
                             </div>
 
                             {{-- Deletion request confirmation --}}
                             @if($showDeletionForm)
-                                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950" data-noprint>
+                                <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950" data-noprint>
                                     <h3 class="mb-2 text-sm font-semibold text-red-800 dark:text-red-300">Request deletion of version {{ $selectedVersion->version }}?</h3>
                                     <p class="mb-3 text-xs text-red-700 dark:text-red-400">
                                         This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
