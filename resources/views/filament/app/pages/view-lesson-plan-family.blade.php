@@ -439,6 +439,34 @@
         @include('filament.app.partials.translation-preview-panel')
         @include('filament.app.partials.message-modal')
 
+        {{-- Request Deletion panel --}}
+        @if($showDeletionForm && $selectedVersion)
+        <div class="mt-4" data-noprint>
+            <x-filament::section heading="Request Deletion of Version {{ $selectedVersion->version }}">
+                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                    This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
+                </p>
+                <div class="mb-4">
+                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reason (optional)</label>
+                    <textarea
+                        wire:model="deletionReason"
+                        rows="3"
+                        class="w-full rounded-lg border border-gray-300 p-3 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                        placeholder="Explain why this version should be deleted…"
+                    ></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <x-filament::button wire:click="requestDeletion" color="danger">
+                        Submit Request
+                    </x-filament::button>
+                    <x-filament::button wire:click="$set('showDeletionForm', false)" color="gray">
+                        Cancel
+                    </x-filament::button>
+                </div>
+            </x-filament::section>
+        </div>
+        @endif
+
         {{-- Versions panel --}}
         @php
             $officialVersion = $record->official_version_id
@@ -573,33 +601,6 @@
                                     </x-filament::button>
                                 @endif
                             </div>
-
-                            {{-- Deletion request confirmation --}}
-                            @if($showDeletionForm)
-                                <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950" data-noprint>
-                                    <h3 class="mb-2 text-sm font-semibold text-red-800 dark:text-red-300">Request deletion of version {{ $selectedVersion->version }}?</h3>
-                                    <p class="mb-3 text-xs text-red-700 dark:text-red-400">
-                                        This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
-                                    </p>
-                                    <div class="mb-3">
-                                        <label class="mb-1 block text-xs font-medium text-red-800 dark:text-red-300">Reason (optional)</label>
-                                        <textarea
-                                            wire:model="deletionReason"
-                                            rows="3"
-                                            class="w-full rounded border border-red-300 p-2 text-sm dark:border-red-700 dark:bg-red-900 dark:text-red-100"
-                                            placeholder="Explain why this version should be deleted…"
-                                        ></textarea>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <x-filament::button wire:click="requestDeletion" color="danger" size="sm">
-                                            Submit Request
-                                        </x-filament::button>
-                                        <x-filament::button wire:click="$set('showDeletionForm', false)" color="gray" size="sm">
-                                            Cancel
-                                        </x-filament::button>
-                                    </div>
-                                </div>
-                            @endif
 
                             {{-- Content viewer --}}
                             <div class="prose max-w-none">
