@@ -76,7 +76,7 @@
                     </x-filament::button>
                 @endif
 
-                <x-filament::button wire:click="$set('translationPanelOpen', false)" color="gray" size="sm">
+                <x-filament::button wire:click="closeTranslationPanel" color="gray" size="sm">
                     Close
                 </x-filament::button>
             </div>

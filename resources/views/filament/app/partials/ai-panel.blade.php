@@ -16,7 +16,7 @@
         </div>
         <div class="mt-3 flex gap-2">
             <x-filament::button wire:click="submitAiPrompt" wire:loading.attr="disabled" wire:target="submitAiPrompt" size="sm">Submit</x-filament::button>
-            <x-filament::button wire:click="$set('aiPanelOpen', false)" color="gray" size="sm">Close</x-filament::button>
+            <x-filament::button wire:click="closeAiPanel" color="gray" size="sm">Close</x-filament::button>
         </div>
     </x-filament::section>
     </div>

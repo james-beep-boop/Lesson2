@@ -392,6 +392,11 @@ class ViewLessonPlanFamily extends Page
         $this->dispatch('scroll-to-ai-panel');
     }
 
+    public function closeAiPanel(): void
+    {
+        $this->aiPanelOpen = false;
+    }
+
     // -------------------------------------------------------------------------
     // Swahili translation preview
     // -------------------------------------------------------------------------
@@ -408,10 +413,17 @@ class ViewLessonPlanFamily extends Page
         if (! $alreadyOpen) {
             Notification::make('translation-started')
                 ->title('Translation in progress')
-                ->body('The Swahili translation will appear below the English content — scroll down to see it.')
+                ->body('The Swahili translation will appear above the lesson content.')
                 ->info()
                 ->send();
         }
+    }
+
+    public function closeTranslationPanel(): void
+    {
+        $this->translationPanelOpen = false;
+        $this->translatedContent = '';
+        $this->showTranslationEmailPanel = false;
     }
 
     public function translatePreview(TranslationService $translationService): void
