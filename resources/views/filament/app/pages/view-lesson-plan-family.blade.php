@@ -9,13 +9,35 @@
             && $user->can('requestDeletion', $selectedVersion)
             && ! $this->hasPendingDeletion;
         $canAskAi = $user && $selectedVersion && $user->can('askAi', $selectedVersion);
+        $canMessage = $user && ! $user->is_system;
         $favorite = $this->userFavorite;
         $isOfficialSelected = $selectedVersion && $record->official_version_id === $selectedVersion->id;
         $differsFromOfficial = $favorite && $record->official_version_id && $favorite->lesson_plan_version_id !== $record->official_version_id;
     @endphp
 
+    {{-- Diff CSS injected once --}}
+    @if($diffCss)
+        @once
+        <style id="diff-css">{!! $diffCss !!}</style>
+        @endonce
+    @endif
+
+    {{-- Print CSS --}}
+    @once
+    <style>
+        @@media print {
+            /* Hide everything except the print area */
+            body > *:not(#print-area-wrapper) { display: none !important; }
+            .fi-topbar, .fi-sidebar, .fi-header, nav, [data-noprint] { display: none !important; }
+            #print-area { display: block !important; }
+            .prose { max-width: none; }
+        }
+        @@page { margin: 2cm; }
+    </style>
+    @endonce
+
     {{-- Header info --}}
-    <div class="mb-4">
+    <div class="mb-4" data-noprint>
         <h1 class="text-xl font-bold">
             {{ $sg->subject->name }} — Grade {{ $sg->grade }} · Day {{ $record->day }}
         </h1>
@@ -34,7 +56,7 @@
         @endphp
 
         {{-- Action bar: Save / version bump / Discard --}}
-        <div class="mb-4 flex flex-wrap items-center" style="gap: 1.25rem;">
+        <div class="mb-4 flex flex-wrap items-center" style="gap: 1.25rem;" data-noprint>
             <x-filament::button wire:click="saveNewVersion">Save Edits</x-filament::button>
 
             <div class="flex flex-wrap" style="gap: 1rem;">
@@ -50,7 +72,7 @@
         </div>
 
         {{-- Revision note --}}
-        <div class="mb-4 max-w-md">
+        <div class="mb-4 max-w-md" data-noprint>
             <x-filament::input.wrapper label="Revision note (optional)">
                 <x-filament::input wire:model="revisionNote" type="text" />
             </x-filament::input.wrapper>
@@ -81,8 +103,6 @@
                             return;
                         }
                         this.selText = sel.toString();
-                        // Use Range API for exact position — indexOf() would find the first
-                        // occurrence, giving wrong context when the phrase appears earlier.
                         const beforeRange = document.createRange();
                         beforeRange.setStart(container, 0);
                         beforeRange.setEnd(range.startContainer, range.startOffset);
@@ -104,8 +124,6 @@
                         this.btnVisible = false;
                         this.ambiguous = false;
 
-                        // x-show keeps the textarea in the DOM (display:none on its parent);
-                        // ta.value is readable regardless of visibility.
                         const ta = $el.querySelector('textarea[data-source-textarea]');
                         if (!ta) { this.tab = 'source'; return; }
 
@@ -113,15 +131,15 @@
                         const needle = this.selText.trim();
                         if (!needle) { this.tab = 'source'; return; }
 
-                        // ── plain-text search ────────────────────────────────────
-                        let start = -1, matchEnd = -1;
                         const hits = [];
                         let i = 0;
                         while ((i = src.indexOf(needle, i)) !== -1) { hits.push(i); i += needle.length; }
 
-                        if (hits.length === 1) {
-                            start = hits[0];
-                        } else if (hits.length > 1) {
+                        if (hits.length === 0) { this.tab = 'source'; this.ambiguous = true; return; }
+
+                        let start = hits[0];
+
+                        if (hits.length > 1) {
                             const ctxB = this.selBefore.trim();
                             const ctxA = this.selAfter.trim();
                             if (!ctxB && !ctxA) { this.tab = 'source'; this.ambiguous = true; return; }
@@ -131,81 +149,19 @@
                                 if (ctxB && src.slice(Math.max(0, h - 120), h).includes(ctxB)) score++;
                                 if (ctxA && src.slice(h + needle.length, h + needle.length + 120).includes(ctxA)) score++;
                                 if (score > bestScore) { bestScore = score; best = h; bestCount = 1; }
-                                else if (score === bestScore) bestCount++;
+                                else if (score === bestScore) { bestCount++; }
                             }
-                            if (bestCount === 1) { start = best; }
-                            else { this.tab = 'source'; this.ambiguous = true; return; }
+                            if (bestCount !== 1) { this.tab = 'source'; this.ambiguous = true; return; }
+                            start = best;
                         }
 
-                        if (start !== -1) { matchEnd = start + needle.length; }
+                        ta.setSelectionRange(start, start + needle.length);
+                        const linesBefore = src.slice(0, start).split('\n').length;
+                        const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
+                        ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
 
-                        // ── markdown-stripped fallback ───────────────────────────
-                        // Used when the selected rendered text doesn't appear verbatim in
-                        // the source (e.g. the source has **bold** but the preview shows
-                        // "bold"). Strips common inline/block markers and builds an offset
-                        // map so we can translate the match position back to source coords.
-                        if (start === -1) {
-                            const stripped = (function(s) {
-                                const text = [], map = [];
-                                let j = 0, n = s.length;
-                                while (j < n) {
-                                    // Block-level prefixes at line start — inspected char-by-char
-                                    // to avoid allocating substrings via slice().match().
-                                    if (j === 0 || s[j-1] === '\n') {
-                                        // Heading: 1–6 # chars followed by a space
-                                        if (s[j] === '#') {
-                                            let k = j; while (k < n && s[k] === '#') k++;
-                                            if (k < n && s[k] === ' ' && k - j <= 6) { j = k + 1; continue; }
-                                        }
-                                        // Unordered list: - * +
-                                        if ((s[j]==='-'||s[j]==='*'||s[j]==='+') && j+1<n && s[j+1]===' ') { j += 2; continue; }
-                                        // Ordered list: digits followed by ". "
-                                        if (s[j]>='0' && s[j]<='9') {
-                                            let k=j; while(k<n && s[k]>='0' && s[k]<='9') k++;
-                                            if (k<n && s[k]==='.' && k+1<n && s[k+1]===' ') { j=k+2; continue; }
-                                        }
-                                        // Blockquote
-                                        if (s[j]==='>' && j+1<n && (s[j+1]===' '||s[j+1]==='\n')) { j+=2; continue; }
-                                    }
-                                    // Bold: **...** or __...__
-                                    if (j+1<n && s[j]==='*' && s[j+1]==='*') { const c=s.indexOf('**',j+2); if(c!==-1){for(let k=j+2;k<c;k++){text.push(s[k]);map.push(k);}j=c+2;continue;} }
-                                    if (j+1<n && s[j]==='_' && s[j+1]==='_') { const c=s.indexOf('__',j+2); if(c!==-1){for(let k=j+2;k<c;k++){text.push(s[k]);map.push(k);}j=c+2;continue;} }
-                                    // Italic: *...* or _..._
-                                    if (s[j]==='*' && (j+1>=n||s[j+1]!=='*')) { const c=s.indexOf('*',j+1); if(c!==-1){for(let k=j+1;k<c;k++){text.push(s[k]);map.push(k);}j=c+1;continue;} }
-                                    if (s[j]==='_' && (j+1>=n||s[j+1]!=='_')) { const c=s.indexOf('_',j+1); if(c!==-1){for(let k=j+1;k<c;k++){text.push(s[k]);map.push(k);}j=c+1;continue;} }
-                                    // Inline code: `...`
-                                    if (s[j]==='`') { const c=s.indexOf('`',j+1); if(c!==-1){for(let k=j+1;k<c;k++){text.push(s[k]);map.push(k);}j=c+1;continue;} }
-                                    text.push(s[j]); map.push(j); j++;
-                                }
-                                return { text: text.join(''), map };
-                            })(src);
-
-                            const pos = stripped.text.indexOf(needle);
-                            if (pos !== -1 && pos + needle.length <= stripped.map.length) {
-                                start    = stripped.map[pos];
-                                matchEnd = stripped.map[pos + needle.length - 1] + 1;
-                            }
-                        }
-
-                        if (start === -1) { this.tab = 'source'; this.ambiguous = true; return; }
-
-                        // Count lines before the match to compute scroll position.
-                        // Newline scan is O(start) and avoids allocating a split array.
-                        let linesBefore = 1;
-                        for (let j = 0; j < start; j++) if (src[j] === '\n') linesBefore++;
-                        // 20px = textarea line-height (Tailwind text-sm on a mono font);
-                        // offset by 3 lines to keep the match a few lines below the top edge.
-                        const scrollTop = Math.max(0, (linesBefore - 3) * 20);
-
-                        // Reveal the tab, then focus + select after the browser has painted.
-                        // focus() resets selectionStart/End in most browsers, so
-                        // setSelectionRange() must be called immediately after focus().
                         this.tab = 'source';
-                        requestAnimationFrame(() => {
-                            ta.focus();
-                            ta.setSelectionRange(start, matchEnd);
-                            ta.scrollTop = scrollTop;
-                        });
+                        requestAnimationFrame(() => ta.focus());
                     },
                 }"
                 @mouseup.window="captureSelection()"
@@ -248,7 +204,7 @@
                     <button @click="ambiguous = false" style="margin-left:0.75rem;text-decoration:underline;cursor:pointer;">Dismiss</button>
                 </div>
 
-                {{-- Floating "Edit Selected Text" button — visible when text is selected in View Lesson tab --}}
+                {{-- Floating "Edit Selected Text" button --}}
                 <div
                     x-show="tab === 'preview' && btnVisible"
                     x-transition.opacity
@@ -267,7 +223,7 @@
         {{-- Normal view: sidebar + content --}}
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
             {{-- Version list sidebar --}}
-            <div class="lg:col-span-1">
+            <div class="lg:col-span-1" data-noprint>
                 <x-filament::section heading="Versions">
                     <ul class="space-y-1">
                         @foreach($record->versions->sortByDesc('created_at') as $v)
@@ -294,7 +250,30 @@
                 {{-- Compare mode selector --}}
                 @if(!$compareMode && $selectedVersion && $record->versions->count() > 1)
                     <x-filament::section heading="Compare" class="mt-4">
-                        <p class="mb-2 text-xs text-gray-500">Compare with:</p>
+                        {{-- Quick compare shortcuts --}}
+                        <div class="mb-3 flex flex-col gap-1">
+                            <x-filament::button
+                                wire:click="compareToPreviousVersion"
+                                color="gray"
+                                size="sm"
+                                icon="heroicon-o-arrow-left"
+                            >
+                                Compare to Previous
+                            </x-filament::button>
+
+                            @if($record->official_version_id && $record->official_version_id !== $selectedVersion?->id)
+                                <x-filament::button
+                                    wire:click="compareToOfficialVersion"
+                                    color="gray"
+                                    size="sm"
+                                    icon="heroicon-o-check-badge"
+                                >
+                                    Compare to Official
+                                </x-filament::button>
+                            @endif
+                        </div>
+
+                        <p class="mb-2 text-xs text-gray-500">Compare with any version:</p>
                         @foreach($record->versions->sortByDesc('created_at') as $v)
                             @if($v->id !== $selectedVersion->id)
                                 <button
@@ -310,42 +289,80 @@
             </div>
 
             {{-- Main content area --}}
-            <div class="lg:col-span-3">
+            <div class="lg:col-span-3" id="print-area">
                 @if($selectedVersion)
                     @if($compareMode && $compareVersion)
-                        {{-- Compare mode: rendered side-by-side --}}
+                        {{-- Compare mode: visual diff --}}
                         <x-filament::section>
-                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                <span class="font-semibold">
-                                    v{{ $selectedVersion->version }}
-                                    <span class="text-gray-400 mx-1">vs</span>
-                                    v{{ $compareVersion->version }}
-                                </span>
-                                <x-filament::button wire:click="$set('compareMode', false)" color="gray" size="sm">
-                                    Exit Compare
-                                </x-filament::button>
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2" data-noprint>
+                                <div>
+                                    <span class="font-semibold">
+                                        v{{ $compareVersion->version }}
+                                        <span class="text-gray-400 mx-1">→</span>
+                                        v{{ $selectedVersion->version }}
+                                    </span>
+                                    <span class="ml-3 text-xs text-gray-500">
+                                        ({{ $compareVersion->contributor->username ?? '?' }} → {{ $selectedVersion->contributor->username ?? '?' }})
+                                    </span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <x-filament::button
+                                        wire:click="toggleDiffLayout"
+                                        color="gray"
+                                        size="sm"
+                                        icon="heroicon-o-arrows-right-left"
+                                    >
+                                        {{ $diffLayout === 'side-by-side' ? 'Stacked' : 'Side-by-Side' }}
+                                    </x-filament::button>
+                                    <x-filament::button wire:click="$set('compareMode', false)" color="gray" size="sm">
+                                        Exit Compare
+                                    </x-filament::button>
+                                </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">v{{ $selectedVersion->version }}</p>
-                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        @markdown($selectedVersion->content)
+                            {{-- Version labels --}}
+                            @if($diffLayout === 'side-by-side')
+                                <div class="mb-2 grid grid-cols-2 gap-4">
+                                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        v{{ $compareVersion->version }} — from
+                                    </div>
+                                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        v{{ $selectedVersion->version }} — to
                                     </div>
                                 </div>
-                                <div>
-                                    <p class="mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">v{{ $compareVersion->version }}</p>
-                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        @markdown($compareVersion->content)
-                                    </div>
+                            @else
+                                <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    v{{ $compareVersion->version }} → v{{ $selectedVersion->version }}
                                 </div>
-                            </div>
+                            @endif
+
+                            {{-- Diff output --}}
+                            @if($diffHtml)
+                                <div class="diff-wrapper overflow-x-auto rounded border border-gray-200 text-sm">
+                                    {!! $diffHtml !!}
+                                </div>
+                            @else
+                                <div class="grid grid-cols-{{ $diffLayout === 'side-by-side' ? '2' : '1' }} gap-4">
+                                    <div>
+                                        <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
+                                            @markdown($compareVersion->content)
+                                        </div>
+                                    </div>
+                                    @if($diffLayout === 'side-by-side')
+                                    <div>
+                                        <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
+                                            @markdown($selectedVersion->content)
+                                        </div>
+                                    </div>
+                                    @endif
+                                </div>
+                            @endif
                         </x-filament::section>
 
                     @else
                         {{-- View mode --}}
                         <x-filament::section>
-                            <div class="mb-4 flex flex-wrap items-start justify-between gap-2">
+                            <div class="mb-4 flex flex-wrap items-start justify-between gap-2" data-noprint>
                                 <div>
                                     <p class="text-sm text-gray-500">
                                         v{{ $selectedVersion->version }} ·
@@ -360,7 +377,7 @@
                                     @endif
                                 </div>
 
-                                <div class="flex flex-wrap" style="gap: 1rem;">
+                                <div class="flex flex-wrap" style="gap: 0.5rem;">
                                     {{-- Favorite --}}
                                     <x-filament::button wire:click="favorite" color="gray" size="sm" icon="heroicon-o-star">
                                         {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Mark as Favorite' }}
@@ -370,6 +387,50 @@
                                     @if($canMarkOfficial && !$isOfficialSelected)
                                         <x-filament::button wire:click="markOfficial" color="gray" size="sm">
                                             Mark as Official
+                                        </x-filament::button>
+                                    @endif
+
+                                    {{-- Print --}}
+                                    <x-filament::button
+                                        color="gray"
+                                        size="sm"
+                                        icon="heroicon-o-printer"
+                                        x-on:click="window.print()"
+                                    >
+                                        Print
+                                    </x-filament::button>
+
+                                    {{-- Download PDF --}}
+                                    @if($selectedVersion)
+                                        <a
+                                            href="{{ route('lesson-plan.pdf', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
+                                            target="_blank"
+                                        >
+                                            <x-filament::button color="gray" size="sm" icon="heroicon-o-arrow-down-tray" tag="span">
+                                                Download PDF
+                                            </x-filament::button>
+                                        </a>
+                                    @endif
+
+                                    {{-- Email PDF --}}
+                                    <x-filament::button
+                                        wire:click="openEmailPdfModal"
+                                        color="gray"
+                                        size="sm"
+                                        icon="heroicon-o-envelope"
+                                    >
+                                        Email PDF
+                                    </x-filament::button>
+
+                                    {{-- Message About This Lesson --}}
+                                    @if($canMessage)
+                                        <x-filament::button
+                                            wire:click="openMessageModal('author')"
+                                            color="gray"
+                                            size="sm"
+                                            icon="heroicon-o-chat-bubble-left-right"
+                                        >
+                                            Message About This Lesson
                                         </x-filament::button>
                                     @endif
 
@@ -420,9 +481,9 @@
                                 </div>
                             </div>
 
-                            {{-- Deletion request confirmation modal --}}
+                            {{-- Deletion request confirmation --}}
                             @if($showDeletionForm)
-                                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
+                                <div class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950" data-noprint>
                                     <h3 class="mb-2 text-sm font-semibold text-red-800 dark:text-red-300">Request deletion of version {{ $selectedVersion->version }}?</h3>
                                     <p class="mb-3 text-xs text-red-700 dark:text-red-400">
                                         This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
@@ -460,6 +521,12 @@
             </div>
 
         </div>
+
+        {{-- Messaging modal --}}
+        @include('filament.app.partials.message-modal')
+
+        {{-- Email PDF modal --}}
+        @include('filament.app.partials.email-pdf-modal')
 
         {{-- AI panel — full width, below the version grid --}}
         @include('filament.app.partials.ai-panel')

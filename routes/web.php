@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LessonPlanPdfController;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Route;
 
@@ -17,3 +18,12 @@ Route::post('/tab-guard-logout', function () {
 
     return redirect()->to(Filament::getPanel('app')->getLoginUrl());
 })->middleware(['web'])->name('tab-guard-logout');
+
+/**
+ * PDF download for a specific lesson plan version.
+ * The version must belong to the given family — validated in the controller.
+ */
+// Auth check is done inside the controller via abort_unless().
+Route::get('/lesson-pdf/{family}/{version}', [LessonPlanPdfController::class, 'download'])
+    ->middleware(['web'])
+    ->name('lesson-plan.pdf');

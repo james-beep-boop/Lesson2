@@ -52,7 +52,15 @@ class AdminPanelProvider extends PanelProvider
     var K='ares_tab_active';
     if(!sessionStorage.getItem(K)){
         document.documentElement.style.visibility='hidden';
-        window.location.replace('{$logoutUrl}');
+        var f=document.createElement('form');
+        f.method='POST';
+        f.action='{$logoutUrl}';
+        var t=document.createElement('input');
+        t.type='hidden';t.name='_token';
+        t.value=(document.querySelector('meta[name="csrf-token"]')||{}).content||'';
+        f.appendChild(t);
+        document.body.appendChild(f);
+        f.submit();
     } else {
         sessionStorage.setItem(K,'1');
     }
