@@ -13,10 +13,10 @@ use App\Models\User;
 use App\Services\DeletionRequestService;
 use App\Services\DiffService;
 use App\Services\FavoriteService;
+use App\Services\LessonPlanPdfService;
 use App\Services\MarkdownSelectionMatcher;
 use App\Services\TranslationService;
 use App\Services\VersionService;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Database\Eloquent\Collection;
@@ -648,13 +648,7 @@ class ViewLessonPlanFamily extends Page
         set_time_limit(60);
 
         try {
-            $pdf = Pdf::loadView('pdf.lesson-plan', [
-                'family' => $version->family,
-                'version' => $version,
-                'exportedAt' => now(),
-            ]);
-
-            $pdfContent = $pdf->output();
+            $pdfContent = app(LessonPlanPdfService::class)->render($version->family, $version);
 
             Mail::to($this->emailPdfTo)->send(new LessonPlanPdfMail(
                 version: $version,

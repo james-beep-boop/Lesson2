@@ -43,38 +43,20 @@ test('create form submits successfully when version_major and version_minor are 
 });
 
 // ----------------------------------------------------------------
-// Custom versionString roundtrip
+// First version is always 1.0.0
 // ----------------------------------------------------------------
 
-test('VersionService stores custom version string correctly', function () {
+test('VersionService always creates first version as 1.0.0', function () {
     $sg = makeSubjectGrade();
     $contributor = makeTeacher();
     $service = new VersionService;
 
     $version = $service->createFamilyWithFirstVersion(
-        $sg->id, '5', '# Content', null, $contributor, '2.3.1'
+        $sg->id, '5', '# Content', null, $contributor,
     );
 
-    expect($version->version)->toBe('2.3.1');
-    expect($version->fresh()->version)->toBe('2.3.1');
-});
-
-test('VersionService rejects an invalid version string', function () {
-    $sg = makeSubjectGrade();
-    $contributor = makeTeacher();
-    $service = new VersionService;
-
-    expect(fn () => $service->createFamilyWithFirstVersion(
-        $sg->id, '5', '# Content', null, $contributor, 'v2.3'
-    ))->toThrow(InvalidArgumentException::class);
-
-    expect(fn () => $service->createFamilyWithFirstVersion(
-        $sg->id, '5', '# Content', null, $contributor, '1.0'
-    ))->toThrow(InvalidArgumentException::class);
-
-    expect(fn () => $service->createFamilyWithFirstVersion(
-        $sg->id, '5', '# Content', null, $contributor, 'bad'
-    ))->toThrow(InvalidArgumentException::class);
+    expect($version->version)->toBe('1.0.0');
+    expect($version->fresh()->version)->toBe('1.0.0');
 });
 
 // ----------------------------------------------------------------

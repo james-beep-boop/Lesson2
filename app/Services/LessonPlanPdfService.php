@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\LessonPlanFamily;
+use App\Models\LessonPlanVersion;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+class LessonPlanPdfService
+{
+    /**
+     * Render a lesson plan version to PDF and return the raw bytes.
+     */
+    public function render(LessonPlanFamily $family, LessonPlanVersion $version): string
+    {
+        $family->loadMissing(['subjectGrade.subject']);
+        $version->loadMissing(['contributor']);
+
+        return Pdf::loadView('pdf.lesson-plan', [
+            'family' => $family,
+            'version' => $version,
+            'exportedAt' => now(),
+        ])->output();
+    }
+
+    /**
+     * Build the download filename for a version.
+     */
+    public function filename(LessonPlanVersion $version): string
+    {
+        return str_replace('.md', '.pdf', $version->getFilename());
+    }
+}

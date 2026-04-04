@@ -91,7 +91,7 @@
 </div>
 
 <div class="content">
-    {!! \Illuminate\Support\Str::markdown($version->content ?? '') !!}
+    {!! \Illuminate\Support\Str::markdown($version->content ?? '', ['html_input' => 'escape']) !!}
 </div>
 
 <div class="footer">

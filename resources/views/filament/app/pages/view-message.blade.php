@@ -23,7 +23,13 @@
 
         {{-- Message body --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div class="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-gray-800 dark:text-gray-200">{{ $this->record->body }}</div>
+            <div class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200">
+                {!! preg_replace(
+                    '~(https?://\S+)~',
+                    '<a href="$1" target="_blank" rel="noopener noreferrer" style="text-decoration:underline;">$1</a>',
+                    nl2br(e($this->record->body))
+                ) !!}
+            </div>
         </div>
 
     </div>

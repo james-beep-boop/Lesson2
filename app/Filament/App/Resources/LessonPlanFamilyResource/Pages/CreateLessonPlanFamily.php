@@ -95,34 +95,6 @@ class CreateLessonPlanFamily extends CreateRecord
                         ->createOptionUsing(fn (array $data): int => (int) $data['day']),
                 ]),
 
-            // ── Row 2: Version · Major Revision · Minor Revision ──────────────
-            Grid::make(3)
-                ->schema([
-                    Select::make('version_number')
-                        ->label('Version')
-                        ->options(array_combine(range(1, 9), range(1, 9)))
-                        ->default(1)
-                        ->required()
-                        ->createOptionForm($this->integerOptionForm('version_number', 'Version number', 1))
-                        ->createOptionUsing(fn (array $data): int => (int) $data['version_number']),
-
-                    Select::make('version_major')
-                        ->label('Major Revision')
-                        ->options(array_combine(range(0, 9), range(0, 9)))
-                        ->default(0)
-                        ->required()
-                        ->createOptionForm($this->integerOptionForm('version_major', 'Major revision number', 0))
-                        ->createOptionUsing(fn (array $data): int => (int) $data['version_major']),
-
-                    Select::make('version_minor')
-                        ->label('Minor Revision')
-                        ->options(array_combine(range(0, 9), range(0, 9)))
-                        ->default(0)
-                        ->required()
-                        ->createOptionForm($this->integerOptionForm('version_minor', 'Minor revision number', 0))
-                        ->createOptionUsing(fn (array $data): int => (int) $data['version_minor']),
-                ]),
-
             // ── Content ───────────────────────────────────────────────────────
             FileUpload::make('lesson_file')
                 ->label('Upload file (optional)')
@@ -150,13 +122,10 @@ class CreateLessonPlanFamily extends CreateRecord
                         return;
                     }
 
-                    // Auto-populate Day and version fields from canonical filenames:
+                    // Auto-populate Day from canonical filenames:
                     // SUBJ_GRADE_DAY_REV_VER.MAJ.MIN.md  e.g. ENGL_10_1_REV_1.0.0.md
-                    if (preg_match('/^[A-Z]{1,4}_\d+_(\d+)_REV_(\d+)\.(\d+)\.(\d+)\.md$/i', $state->getClientOriginalName(), $m)) {
+                    if (preg_match('/^[A-Z]{1,4}_\d+_(\d+)_REV_/i', $state->getClientOriginalName(), $m)) {
                         $set('day', (int) $m[1]);
-                        $set('version_number', (int) $m[2]);
-                        $set('version_major', (int) $m[3]);
-                        $set('version_minor', (int) $m[4]);
                     }
 
                     $ext = strtolower($state->getClientOriginalExtension());
@@ -228,14 +197,9 @@ class CreateLessonPlanFamily extends CreateRecord
     {
         $d = $this->data ?? [];
 
-        // filled() returns false for 0 — use explicit null checks so that
-        // version_major=0 and version_minor=0 are treated as valid values.
         return filled($d['subject_id'] ?? null)
             && filled($d['grade'] ?? null)
-            && filled($d['day'] ?? null)
-            && filled($d['version_number'] ?? null)
-            && isset($d['version_major']) && $d['version_major'] !== null && $d['version_major'] !== ''
-            && isset($d['version_minor']) && $d['version_minor'] !== null && $d['version_minor'] !== '';
+            && filled($d['day'] ?? null);
     }
 
     /** Shared createOptionForm schema for any integer-value Select. */
@@ -297,8 +261,6 @@ class CreateLessonPlanFamily extends CreateRecord
             abort_unless($user->isSubjectAdminFor($subjectGrade), 403);
         }
 
-        $versionString = $data['version_number'].'.'.$data['version_major'].'.'.$data['version_minor'];
-
         try {
             $version = app(VersionService::class)->createFamilyWithFirstVersion(
                 $subjectGrade->id,
@@ -306,7 +268,6 @@ class CreateLessonPlanFamily extends CreateRecord
                 $data['content'],
                 $data['revision_note'] ?? null,
                 $user,
-                $versionString
             );
 
             return LessonPlanFamily::findOrFail($version->lesson_plan_family_id);

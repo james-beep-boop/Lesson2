@@ -19,13 +19,8 @@ class VersionService
         string $content,
         ?string $revisionNote,
         User $contributor,
-        string $versionString = '1.0.0'
     ): LessonPlanVersion {
-        if (! preg_match('/^\d+\.\d+\.\d+$/', $versionString)) {
-            throw new \InvalidArgumentException("Invalid version string: {$versionString}");
-        }
-
-        return DB::transaction(function () use ($subjectGradeId, $day, $content, $revisionNote, $contributor, $versionString) {
+        return DB::transaction(function () use ($subjectGradeId, $day, $content, $revisionNote, $contributor) {
             $family = LessonPlanFamily::create([
                 'subject_grade_id' => $subjectGradeId,
                 'day' => $day,
@@ -37,7 +32,7 @@ class VersionService
                 'revision_note' => $revisionNote,
             ]);
             $version->contributor_id = $contributor->id;
-            $version->version = $versionString;
+            $version->version = '1.0.0';
             $version->save();
 
             return $version;
