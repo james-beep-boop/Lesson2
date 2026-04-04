@@ -71,6 +71,12 @@ class ViewLessonPlanFamily extends Page
 
     public string $translatedContent = '';
 
+    public bool $showTranslationEmailPanel = false;
+
+    public string $translationEmailTo = '';
+
+    public string $translationEmailMessage = '';
+
     // -------------------------------------------------------------------------
     // Lesson-context messaging state
     // -------------------------------------------------------------------------
@@ -435,6 +441,63 @@ class ViewLessonPlanFamily extends Page
             Notification::make('translation-failed')
                 ->title('Translation unavailable')
                 ->body('The translation service could not complete the request. Please ensure AI suggestions are configured.')
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function openTranslationEmailPanel(): void
+    {
+        abort_unless(auth()->check(), 403);
+        $this->showTranslationEmailPanel = true;
+        $this->translationEmailTo = '';
+        $this->translationEmailMessage = '';
+    }
+
+    public function sendTranslationEmailPdf(): void
+    {
+        abort_unless(auth()->check(), 403);
+
+        $this->validate([
+            'translationEmailTo' => 'required|email|max:255',
+        ]);
+
+        if (! $this->selectedVersion || ! $this->translatedContent) {
+            return;
+        }
+
+        $version = $this->selectedVersion;
+        $version->load(['family.subjectGrade.subject', 'contributor']);
+
+        set_time_limit(60);
+
+        try {
+            $pdfContent = app(LessonPlanPdfService::class)->renderTranslation(
+                $version->family,
+                $version,
+                $this->translatedContent,
+            );
+
+            Mail::to($this->translationEmailTo)->send(new LessonPlanPdfMail(
+                version: $version,
+                pdfContent: $pdfContent,
+                senderName: auth()->user()->name,
+                customMessage: 'Swahili translation — preview only, not saved to database.'
+                    .($this->translationEmailMessage ? "\n\n".$this->translationEmailMessage : ''),
+            ));
+
+            $this->showTranslationEmailPanel = false;
+            $this->translationEmailTo = '';
+            $this->translationEmailMessage = '';
+
+            Notification::make('translation-email-sent')
+                ->title('Translation PDF sent successfully.')
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make('translation-email-error')
+                ->title('Failed to send translation PDF.')
+                ->body($e->getMessage())
                 ->danger()
                 ->send();
         }
