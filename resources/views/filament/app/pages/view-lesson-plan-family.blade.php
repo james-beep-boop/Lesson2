@@ -433,10 +433,11 @@
         </div>
         @endif
 
-        {{-- Email PDF / AI / Translation panels — below buttons, above lesson --}}
+        {{-- Action panels — below buttons, above lesson --}}
         @include('filament.app.partials.email-pdf-modal')
         @include('filament.app.partials.ai-panel')
         @include('filament.app.partials.translation-preview-panel')
+        @include('filament.app.partials.message-modal')
 
         {{-- Versions panel --}}
         @php
@@ -612,7 +613,5 @@
                 @endif
             </div>
 
-        {{-- Messaging modal --}}
-        @include('filament.app.partials.message-modal')
     @endif
 </x-filament-panels::page>
