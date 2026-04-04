@@ -34,7 +34,7 @@
     >
         <x-filament::section heading="Swahili Translation — Preview Only">
             <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">
-                Preview only — this translation has not been saved to the database.
+                Preview only — this translation has not been saved to the database. May take up to one minute.
             </p>
 
             @if($translatedHtml)

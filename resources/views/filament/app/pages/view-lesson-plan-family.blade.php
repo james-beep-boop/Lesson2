@@ -449,47 +449,41 @@
         @endphp
         <div class="mb-4" data-noprint>
             <x-filament::section>
-                <div class="flex flex-col gap-2">
-                    {{-- Current version --}}
-                    <div>
-                        <x-filament::button color="info" size="sm" disabled>
-                            Current version: v{{ $selectedVersion->version }}
+                <div class="flex flex-wrap items-center gap-3">
+                    {{-- Official version — first --}}
+                    @if($officialVersion)
+                        <x-filament::button
+                            color="info"
+                            size="sm"
+                            wire:click="selectVersion({{ $officialVersion->id }})"
+                        >
+                            Official version: v{{ $officialVersion->version }}
                         </x-filament::button>
-                    </div>
+                    @else
+                        <x-filament::button color="info" size="sm" disabled>
+                            Official version: none
+                        </x-filament::button>
+                    @endif
 
-                    {{-- Official version --}}
-                    <div>
-                        @if($officialVersion)
-                            <x-filament::button
-                                color="info"
-                                size="sm"
-                                wire:click="selectVersion({{ $officialVersion->id }})"
-                            >
-                                Official version: v{{ $officialVersion->version }}
-                            </x-filament::button>
-                        @else
-                            <x-filament::button color="info" size="sm" disabled>
-                                Official version: none
-                            </x-filament::button>
-                        @endif
-                    </div>
+                    {{-- Now Viewing — second --}}
+                    <x-filament::button color="info" size="sm" disabled>
+                        Now Viewing v{{ $selectedVersion->version }}
+                    </x-filament::button>
 
                     {{-- Other versions --}}
                     @if($otherVersions->isNotEmpty())
-                        <div class="flex flex-wrap items-center gap-2">
-                            <x-filament::button color="info" size="sm" disabled>
-                                Other Versions:
+                        <x-filament::button color="info" size="sm" disabled>
+                            Other Versions:
+                        </x-filament::button>
+                        @foreach($otherVersions as $v)
+                            <x-filament::button
+                                wire:click="selectVersion({{ $v->id }})"
+                                color="gray"
+                                size="sm"
+                            >
+                                v{{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}{{ $favorite && $favorite->lesson_plan_version_id === $v->id ? ' ★' : '' }}
                             </x-filament::button>
-                            @foreach($otherVersions as $v)
-                                <x-filament::button
-                                    wire:click="selectVersion({{ $v->id }})"
-                                    color="gray"
-                                    size="sm"
-                                >
-                                    v{{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}{{ $favorite && $favorite->lesson_plan_version_id === $v->id ? ' ★' : '' }}
-                                </x-filament::button>
-                            @endforeach
-                        </div>
+                        @endforeach
                     @endif
                 </div>
             </x-filament::section>
