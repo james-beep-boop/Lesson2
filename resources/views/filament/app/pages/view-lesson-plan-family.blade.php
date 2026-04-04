@@ -449,7 +449,7 @@
         @endphp
         <div class="mb-4" data-noprint>
             <x-filament::section>
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-wrap items-center" style="gap: 0.75rem;">
                     {{-- Official version — first --}}
                     @if($officialVersion)
                         <x-filament::button
