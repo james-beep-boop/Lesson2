@@ -433,36 +433,70 @@
         </div>
         @endif
 
-        {{-- Normal view: sidebar + content --}}
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
-            {{-- Version list sidebar --}}
-            <div class="lg:col-span-1" data-noprint>
-                <x-filament::section heading="Versions">
-                    <ul class="space-y-1">
-                        @foreach($record->versions->sortByDesc('created_at') as $v)
-                            <li>
-                                <button
-                                    wire:click="selectVersion({{ $v->id }})"
-                                    class="flex w-full items-center justify-between rounded px-2 py-1 text-sm {{ $selectedVersion && $selectedVersion->id === $v->id ? 'bg-primary-100 font-bold' : 'hover:bg-gray-100' }}"
-                                >
-                                    <span>v{{ $v->version }}</span>
-                                    <span class="flex gap-1">
-                                        @if($record->official_version_id === $v->id)
-                                            <span class="rounded bg-green-100 px-1 text-xs text-green-700">Official</span>
-                                        @endif
-                                        @if($favorite && $favorite->lesson_plan_version_id === $v->id)
-                                            <span class="text-amber-400">★</span>
-                                        @endif
-                                    </span>
-                                </button>
-                            </li>
-                        @endforeach
-                    </ul>
-                </x-filament::section>
-            </div>
+        {{-- Email PDF / AI / Translation panels — below buttons, above lesson --}}
+        @include('filament.app.partials.email-pdf-modal')
+        @include('filament.app.partials.ai-panel')
+        @include('filament.app.partials.translation-preview-panel')
 
-            {{-- Main content area --}}
-            <div class="lg:col-span-3" id="print-area">
+        {{-- Versions panel --}}
+        @php
+            $officialVersion = $record->official_version_id
+                ? $record->versions->firstWhere('id', $record->official_version_id)
+                : null;
+            $otherVersions = $selectedVersion
+                ? $record->versions->sortByDesc('created_at')->where('id', '!=', $selectedVersion->id)->values()
+                : collect();
+        @endphp
+        <div class="mb-4" data-noprint>
+            <x-filament::section>
+                <div class="flex flex-col gap-2">
+                    {{-- Current version --}}
+                    <div>
+                        <x-filament::button color="info" size="sm" disabled>
+                            Current version: v{{ $selectedVersion->version }}
+                        </x-filament::button>
+                    </div>
+
+                    {{-- Official version --}}
+                    <div>
+                        @if($officialVersion)
+                            <x-filament::button
+                                color="info"
+                                size="sm"
+                                wire:click="selectVersion({{ $officialVersion->id }})"
+                            >
+                                Official version: v{{ $officialVersion->version }}
+                            </x-filament::button>
+                        @else
+                            <x-filament::button color="info" size="sm" disabled>
+                                Official version: none
+                            </x-filament::button>
+                        @endif
+                    </div>
+
+                    {{-- Other versions --}}
+                    @if($otherVersions->isNotEmpty())
+                        <div class="flex flex-wrap items-center gap-2">
+                            <x-filament::button color="info" size="sm" disabled>
+                                Other Versions:
+                            </x-filament::button>
+                            @foreach($otherVersions as $v)
+                                <x-filament::button
+                                    wire:click="selectVersion({{ $v->id }})"
+                                    color="gray"
+                                    size="sm"
+                                >
+                                    v{{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}{{ $favorite && $favorite->lesson_plan_version_id === $v->id ? ' ★' : '' }}
+                                </x-filament::button>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </x-filament::section>
+        </div>
+
+        {{-- Main content area --}}
+        <div id="print-area">
                 @if($selectedVersion)
                     @if($compareMode && $compareVersion)
                         {{-- Compare mode: visual diff --}}
@@ -584,18 +618,7 @@
                 @endif
             </div>
 
-        </div>
-
         {{-- Messaging modal --}}
         @include('filament.app.partials.message-modal')
-
-        {{-- Email PDF modal --}}
-        @include('filament.app.partials.email-pdf-modal')
-
-        {{-- AI panel — full width, below the version grid --}}
-        @include('filament.app.partials.ai-panel')
-
-        {{-- Translation preview — full width, below the AI panel --}}
-        @include('filament.app.partials.translation-preview-panel')
     @endif
 </x-filament-panels::page>
