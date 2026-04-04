@@ -442,28 +442,39 @@
         {{-- Request Deletion panel --}}
         @if($showDeletionForm && $selectedVersion)
         <div class="mt-4" data-noprint>
-            <x-filament::section heading="Request Deletion of Version {{ $selectedVersion->version }}">
-                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                    This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
-                </p>
-                <div class="mb-4">
-                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reason (optional)</label>
-                    <textarea
-                        wire:model="deletionReason"
-                        rows="3"
-                        class="w-full rounded-lg border border-gray-300 p-3 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                        placeholder="Explain why this version should be deleted…"
-                    ></textarea>
-                </div>
-                <div class="flex gap-2">
-                    <x-filament::button wire:click="requestDeletion" color="danger">
-                        Submit Request
-                    </x-filament::button>
+            @if($isOfficialSelected)
+                <x-filament::section heading="Cannot Delete Official Version">
+                    <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                        The official version of a lesson plan cannot be deleted. To delete this version, first mark a different version as official.
+                    </p>
                     <x-filament::button wire:click="$set('showDeletionForm', false)" color="gray">
-                        Cancel
+                        Close
                     </x-filament::button>
-                </div>
-            </x-filament::section>
+                </x-filament::section>
+            @else
+                <x-filament::section heading="Request Deletion of Version {{ $selectedVersion->version }}">
+                    <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                        This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
+                    </p>
+                    <div class="mb-4">
+                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reason (optional)</label>
+                        <textarea
+                            wire:model="deletionReason"
+                            rows="3"
+                            class="w-full rounded-lg border border-gray-300 p-3 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                            placeholder="Explain why this version should be deleted…"
+                        ></textarea>
+                    </div>
+                    <div class="flex gap-2">
+                        <x-filament::button wire:click="requestDeletion" color="danger">
+                            Submit Request
+                        </x-filament::button>
+                        <x-filament::button wire:click="$set('showDeletionForm', false)" color="gray">
+                            Cancel
+                        </x-filament::button>
+                    </div>
+                </x-filament::section>
+            @endif
         </div>
         @endif
 
