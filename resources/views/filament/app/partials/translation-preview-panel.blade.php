@@ -6,10 +6,10 @@
     @endphp
 
     {{--
-        Outer div initialises an Alpine component that:
-        - Automatically calls translatePreview() once the panel is mounted
-        - Provides a printTranslation() helper used by the Print button
-        x-init fires after the DOM is ready, ensuring wire:stream="translatedContent" exists.
+        Outer div provides the printTranslation() Alpine helper.
+        Translation is triggered by the 'start-translation' window event dispatched
+        from openTranslationPanel() — not x-init — so it only fires once and does
+        not re-fire on subsequent Livewire re-renders.
     --}}
     <div
         class="mt-4"
@@ -30,7 +30,7 @@
                 w.print();
             }
         }"
-        x-init="$nextTick(() => $wire.translatePreview())"
+        @start-translation.window="$wire.translatePreview()"
     >
         <x-filament::section heading="Swahili Translation — Preview Only">
             <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">

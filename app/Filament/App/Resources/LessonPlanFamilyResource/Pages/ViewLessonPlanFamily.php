@@ -405,18 +405,18 @@ class ViewLessonPlanFamily extends Page
     {
         $this->authorize('translate', $this->selectedVersion);
 
-        $alreadyOpen = $this->translationPanelOpen;
-
         $this->translatedContent = '';
         $this->translationPanelOpen = true;
 
-        if (! $alreadyOpen) {
-            Notification::make('translation-started')
-                ->title('Translation in progress')
-                ->body('The Swahili translation will appear above the lesson content.')
-                ->info()
-                ->send();
-        }
+        // Dispatch a one-time event that Alpine listens for to start translation.
+        // Using dispatch instead of x-init prevents re-firing on every re-render.
+        $this->dispatch('start-translation');
+
+        Notification::make('translation-started')
+            ->title('Translation in progress')
+            ->body('The Swahili translation will appear above the lesson content.')
+            ->info()
+            ->send();
     }
 
     public function closeTranslationPanel(): void
