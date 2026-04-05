@@ -91,7 +91,7 @@
 </div>
 
 <div class="content">
-    {!! \Illuminate\Support\Str::markdown($version->content ?? '', ['html_input' => 'allow']) !!}
+    {!! (new \League\CommonMark\GithubFlavoredMarkdownConverter(['html_input' => 'allow']))->convert($version->content ?? '') !!}
 </div>
 
 <div class="footer">

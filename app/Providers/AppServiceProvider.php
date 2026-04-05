@@ -15,6 +15,7 @@ use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContrac
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use League\CommonMark\GithubFlavoredMarkdownConverter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,11 +28,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Centralised safe Markdown renderer — strips raw HTML to prevent XSS.
+        // Centralised GFM renderer — strips raw HTML to prevent XSS.
+        // Uses GitHub Flavored Markdown (tables, strikethrough, task lists).
         // html_input:'strip' removes any raw HTML in the source before parsing,
         // so {!! !!} output is safe without pre-escaping with e().
         Blade::directive('markdown', function (string $expression): string {
-            return "<?php echo \Illuminate\Support\Str::markdown({$expression}, ['html_input' => 'strip']); ?>";
+            return "<?php echo (new \League\CommonMark\GithubFlavoredMarkdownConverter(['html_input' => 'strip']))->convert({$expression}); ?>";
         });
 
         Gate::policy(LessonPlanFamily::class, LessonPlanFamilyPolicy::class);

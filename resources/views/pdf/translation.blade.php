@@ -76,7 +76,7 @@
 </div>
 
 <div class="content">
-    {!! \Illuminate\Support\Str::markdown($translatedContent ?? '', ['html_input' => 'allow']) !!}
+    {!! (new \League\CommonMark\GithubFlavoredMarkdownConverter(['html_input' => 'allow']))->convert($translatedContent ?? '') !!}
 </div>
 
 <div class="footer">
