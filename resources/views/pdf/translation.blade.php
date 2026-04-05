@@ -76,7 +76,7 @@
 </div>
 
 <div class="content">
-    {!! \Illuminate\Support\Str::markdown($translatedContent ?? '', ['html_input' => 'escape']) !!}
+    {!! \Illuminate\Support\Str::markdown($translatedContent ?? '', ['html_input' => 'allow']) !!}
 </div>
 
 <div class="footer">
