@@ -72,14 +72,83 @@
     </div>
 
     @if($editMode)
-        @php
-            $previews = $this->versionPreviews();
-            $editContentHtml = \Illuminate\Support\Str::markdown($editContent ?? '', ['html_input' => 'strip']);
-        @endphp
+        @php $previews = $this->versionPreviews(); @endphp
 
         {{-- Action bar: Save / version bump / Discard --}}
-        <div class="mb-4 flex flex-wrap items-center" style="gap: 1.25rem;" data-noprint>
-            <x-filament::button wire:click="saveNewVersion">Save Edits</x-filament::button>
+        <div
+            x-data="{
+                editor: null,
+                saving: false,
+                initialMarkdown: '',
+                baseLatestVersionId: {{ Js::from($baseLatestVersionId) }},
+
+                async init() {
+                    if (!window.ToastUIEditor) {
+                        await window.loadToastUIEditor();
+                    }
+                    this.editor = new window.ToastUIEditor({
+                        el: document.getElementById('toast-editor-mount-{{ $record->id }}'),
+                        initialValue: {{ Js::from($editContent) }},
+                        previewStyle: 'tab',
+                        initialEditType: 'wysiwyg',
+                        language: 'en',
+                        height: '600px',
+                        minHeight: '300px',
+                        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                        toolbarItems: [
+                            ['heading', 'bold', 'italic', 'strike'],
+                            ['ul', 'ol', 'task'],
+                            ['table', 'link'],
+                        ],
+                    });
+                    this.initialMarkdown = this.editor.getMarkdown();
+
+                    this._beforeUnload = (e) => {
+                        if (this.editor && this.editor.getMarkdown() !== this.initialMarkdown) {
+                            e.preventDefault();
+                            e.returnValue = '';
+                        }
+                    };
+                    window.addEventListener('beforeunload', this._beforeUnload);
+                },
+
+                async save() {
+                    if (this.saving) return;
+                    this.saving = true;
+                    try {
+                        const md = this.editor.getMarkdown();
+                        await $wire.set('editContent', md);
+                        await $wire.call('saveNewVersion');
+                        this.initialMarkdown = md;
+                    } finally {
+                        this.saving = false;
+                    }
+                },
+
+                cancel() {
+                    $wire.call('cancelEditMode');
+                },
+
+                destroy() {
+                    window.removeEventListener('beforeunload', this._beforeUnload);
+                    if (this.editor) {
+                        this.editor.destroy();
+                        this.editor = null;
+                    }
+                },
+            }"
+            class="mb-4 flex flex-wrap items-center"
+            style="gap: 1.25rem;"
+            data-noprint
+        >
+            <x-filament::button
+                x-on:click="save()"
+                x-bind:disabled="saving"
+                x-bind:class="saving ? 'opacity-50 cursor-not-allowed' : ''"
+            >
+                <span x-show="!saving">Save Edits</span>
+                <span x-show="saving" style="display:none;">Saving…</span>
+            </x-filament::button>
 
             <div class="flex flex-wrap" style="gap: 1rem;">
                 @foreach(['major', 'minor', 'patch'] as $bump)
@@ -90,156 +159,27 @@
                 @endforeach
             </div>
 
-            <x-filament::button wire:click="$set('editMode', false)" color="gray">Discard Edits</x-filament::button>
-        </div>
+            <x-filament::button x-on:click="cancel()" color="gray">Discard Edits</x-filament::button>
 
-        {{-- Revision note --}}
-        <div class="mb-4 max-w-md" data-noprint>
-            <x-filament::input.wrapper label="Revision note (optional)">
-                <x-filament::input wire:model="revisionNote" type="text" />
-            </x-filament::input.wrapper>
-        </div>
-
-        {{-- Tabbed editor with text-selection-to-source mapping --}}
-        <x-filament::section>
-            <div
-                x-data="{
-                    tab: 'preview',
-                    selText: '',
-                    selBefore: '',
-                    selAfter: '',
-                    btnVisible: false,
-                    btnX: 0,
-                    btnY: 0,
-                    ambiguous: false,
-                    captureSelection() {
-                        const sel = window.getSelection();
-                        if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-                            this.btnVisible = false;
-                            return;
-                        }
-                        const range = sel.getRangeAt(0);
-                        const container = $el.querySelector('[data-prose-target]');
-                        if (!container || !container.contains(range.commonAncestorContainer)) {
-                            this.btnVisible = false;
-                            return;
-                        }
-                        this.selText = sel.toString();
-                        const beforeRange = document.createRange();
-                        beforeRange.setStart(container, 0);
-                        beforeRange.setEnd(range.startContainer, range.startOffset);
-                        const textBefore = beforeRange.toString();
-                        const afterRange = document.createRange();
-                        afterRange.setStart(range.endContainer, range.endOffset);
-                        afterRange.setEnd(container, container.childNodes.length);
-                        const textAfter = afterRange.toString();
-                        this.selBefore = textBefore.slice(-120);
-                        this.selAfter  = textAfter.slice(0, 120);
-                        const rect = range.getBoundingClientRect();
-                        const scrollY = window.scrollY || document.documentElement.scrollTop;
-                        this.btnX = rect.left + rect.width / 2;
-                        this.btnY = rect.top - 44;
-                        this.btnVisible = true;
-                        this.ambiguous = false;
-                    },
-                    editSelected() {
-                        this.btnVisible = false;
-                        this.ambiguous = false;
-
-                        const ta = $el.querySelector('textarea[data-source-textarea]');
-                        if (!ta) { this.tab = 'source'; return; }
-
-                        const src    = ta.value;
-                        const needle = this.selText.trim();
-                        if (!needle) { this.tab = 'source'; return; }
-
-                        const hits = [];
-                        let i = 0;
-                        while ((i = src.indexOf(needle, i)) !== -1) { hits.push(i); i += needle.length; }
-
-                        if (hits.length === 0) { this.tab = 'source'; this.ambiguous = true; return; }
-
-                        let start = hits[0];
-
-                        if (hits.length > 1) {
-                            const ctxB = this.selBefore.trim();
-                            const ctxA = this.selAfter.trim();
-                            if (!ctxB && !ctxA) { this.tab = 'source'; this.ambiguous = true; return; }
-                            let best = -1, bestScore = -1, bestCount = 0;
-                            for (const h of hits) {
-                                let score = 0;
-                                if (ctxB && src.slice(Math.max(0, h - 120), h).includes(ctxB)) score++;
-                                if (ctxA && src.slice(h + needle.length, h + needle.length + 120).includes(ctxA)) score++;
-                                if (score > bestScore) { bestScore = score; best = h; bestCount = 1; }
-                                else if (score === bestScore) { bestCount++; }
-                            }
-                            if (bestCount !== 1) { this.tab = 'source'; this.ambiguous = true; return; }
-                            start = best;
-                        }
-
-                        ta.setSelectionRange(start, start + needle.length);
-                        const linesBefore = src.slice(0, start).split('\n').length;
-                        const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
-                        ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
-
-                        this.tab = 'source';
-                        requestAnimationFrame(() => ta.focus());
-                    },
-                }"
-                @mouseup.window="captureSelection()"
-                @keyup.window.debounce.150ms="if (!window.getSelection()?.toString().trim()) { btnVisible = false; }"
-            >
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <x-filament::button @click="tab = 'preview'" x-show="tab === 'preview'">View Lesson</x-filament::button>
-                    <x-filament::button @click="tab = 'preview'" x-show="tab !== 'preview'" color="gray">View Lesson</x-filament::button>
-                    <x-filament::button @click="tab = 'source'" x-show="tab === 'source'">Edit Lesson</x-filament::button>
-                    <x-filament::button @click="tab = 'source'" x-show="tab !== 'source'" color="gray">Edit Lesson</x-filament::button>
-                </div>
-
-                <div x-show="tab === 'preview'" data-prose-target>
-                    @include('filament.forms.components.markdown-preview', [
-                        'wireProp' => 'editContent',
-                        'initialContent' => $editContent ?? '',
-                        'initialHtml' => $editContentHtml,
-                    ])
-                </div>
-
-                <div x-show="tab === 'source'">
-                    <textarea
-                        wire:model="editContent"
-                        x-on:input.debounce.300ms="$dispatch('markdown-input', {value: $event.target.value})"
-                        rows="28"
-                        class="rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                        style="width: 100%; box-sizing: border-box;"
-                        data-source-textarea
-                    ></textarea>
-                </div>
-
-                {{-- Ambiguous-match banner --}}
-                <div
-                    x-show="ambiguous"
-                    x-transition
-                    class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                    style="display:none;"
-                >
-                    The selected text appears more than once in the source — please locate it manually in the editor.
-                    <button @click="ambiguous = false" style="margin-left:0.75rem;text-decoration:underline;cursor:pointer;">Dismiss</button>
-                </div>
-
-                {{-- Floating "Edit Selected Text" button --}}
-                <div
-                    x-show="tab === 'preview' && btnVisible"
-                    x-transition.opacity
-                    :style="`position:fixed; top:${btnY}px; left:${btnX}px; transform:translateX(-50%); z-index:9999;`"
-                    style="display:none;"
-                >
-                    <button
-                        @mousedown.prevent="editSelected()"
-                        style="background:#1d4ed8;color:#fff;border:none;border-radius:0.375rem;padding:0.375rem 0.875rem;font-size:0.8125rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.18);white-space:nowrap;"
-                    >Edit Selected Text</button>
-                </div>
+            {{-- Revision note --}}
+            <div class="w-full max-w-md">
+                <x-filament::input.wrapper label="Revision note (optional)">
+                    <x-filament::input wire:model="revisionNote" type="text" />
+                </x-filament::input.wrapper>
             </div>
-        </x-filament::section>
+
+            {{-- Paste tip banner --}}
+            <div class="w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                Pasting from Word or Google Docs? Use <strong>Paste as Plain Text</strong> (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.
+            </div>
+
+            {{-- Toast UI editor mount point --}}
+            <div class="w-full">
+                <x-filament::section>
+                    <div wire:ignore id="toast-editor-mount-{{ $record->id }}"></div>
+                </x-filament::section>
+            </div>
+        </div>
 
     @else
         @if($selectedVersion)

@@ -64,7 +64,7 @@ test('save new version creates a new version and sends notification', function (
     $this->actingAs($subjectAdmin);
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->set('editMode', true)
+        ->call('enterEditMode')
         ->set('editContent', '# Updated content')
         ->set('versionBump', 'patch')
         ->call('saveNewVersion')

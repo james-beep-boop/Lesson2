@@ -42,6 +42,7 @@ class AppPanelProvider extends PanelProvider
             ->profile(Profile::class, isSimple: false)
             ->topNavigation()
             ->brandName('Kenya Lesson Plans')
+            ->viteTheme(['resources/css/app.css', 'resources/js/app.js'])
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): HtmlString => new HtmlString('
