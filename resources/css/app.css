@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import '@toast-ui/editor/dist/toastui-editor.css';
+@import '@toast-ui/editor/dist/theme/toastui-editor-dark.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';

@@ -14,7 +14,7 @@ use App\Services\DeletionRequestService;
 use App\Services\DiffService;
 use App\Services\FavoriteService;
 use App\Services\LessonPlanPdfService;
-use App\Services\MarkdownSelectionMatcher;
+use App\Services\MarkdownNormalizer;
 use App\Services\TranslationService;
 use App\Services\VersionService;
 use Filament\Notifications\Notification;
@@ -50,6 +50,8 @@ class ViewLessonPlanFamily extends Page
     public string $versionBump = 'patch';
 
     public ?string $revisionNote = null;
+
+    public ?int $baseLatestVersionId = null;
 
     public ?Favorite $userFavorite = null;
 
@@ -164,15 +166,14 @@ class ViewLessonPlanFamily extends Page
     public function enterEditMode(): void
     {
         $this->authorize('create', [LessonPlanVersion::class, $this->record]);
-        $this->enterEditModeIfNeeded();
+        $this->editContent = $this->selectedVersion?->content ?? '';
+        $this->baseLatestVersionId = $this->record->latestVersion?->id;
+        $this->editMode = true;
     }
 
-    private function enterEditModeIfNeeded(): void
+    public function cancelEditMode(): void
     {
-        if (! $this->editMode) {
-            $this->editContent = $this->selectedVersion?->content ?? '';
-            $this->editMode = true;
-        }
+        $this->resetEditState();
     }
 
     public function saveNewVersion(VersionService $versionService): void
@@ -184,9 +185,38 @@ class ViewLessonPlanFamily extends Page
             'versionBump' => 'required|in:patch,minor,major',
         ]);
 
+        // Stale version guard — query fresh database state
+        $freshLatestVersionId = $this->record->fresh(['latestVersion'])->latestVersion?->id;
+
+        if ($freshLatestVersionId !== $this->baseLatestVersionId) {
+            Notification::make('stale-version')
+                ->title('The lesson plan was updated while you were editing.')
+                ->body('A newer version exists. Copy any unsaved changes before refreshing.')
+                ->warning()
+                ->send();
+
+            // Leave edit mode open — the user may have unsaved work to copy
+            return;
+        }
+
+        $normalizer = app(MarkdownNormalizer::class);
+        $normalized = $normalizer->normalize($this->editContent);
+        $normalizedCurrent = $normalizer->normalize($this->selectedVersion?->content ?? '');
+
+        // No-op check — don't create a version if content is unchanged
+        if ($normalized === $normalizedCurrent) {
+            Notification::make('no-change')
+                ->title('No changes detected — content is identical to the current version.')
+                ->info()
+                ->send();
+            $this->resetEditState();
+
+            return;
+        }
+
         $version = $versionService->addVersion(
             $this->record,
-            $this->editContent,
+            $normalized,
             $this->versionBump,
             $this->revisionNote ?: null,
             auth()->user()
@@ -194,11 +224,19 @@ class ViewLessonPlanFamily extends Page
 
         $this->record->refresh();
         $this->selectedVersion = $version;
-        $this->editMode = false;
-        $this->revisionNote = null;
         $this->hasPendingDeletion = false;
+        $this->resetEditState();
 
         Notification::make('version-saved')->title('New version saved.')->success()->send();
+    }
+
+    private function resetEditState(): void
+    {
+        $this->editMode = false;
+        $this->editContent = $this->selectedVersion?->content ?? '';
+        $this->revisionNote = null;
+        $this->versionBump = 'patch';
+        $this->baseLatestVersionId = null;
     }
 
     public function markOfficial(VersionService $versionService): void
@@ -354,31 +392,6 @@ class ViewLessonPlanFamily extends Page
 
         $this->diffHtml = $result['html'];
         $this->diffCss = $result['css'];
-    }
-
-    // -------------------------------------------------------------------------
-    // Text-selection mapping (for inline edit)
-    // -------------------------------------------------------------------------
-
-    /**
-     * @return array{start: int, end: int, confident: bool}
-     */
-    public function mapSelectionToSource(
-        string $text,
-        string $before,
-        string $after,
-        MarkdownSelectionMatcher $matcher,
-    ): array {
-        $this->authorize('create', [LessonPlanVersion::class, $this->record]);
-        $this->enterEditModeIfNeeded();
-
-        $result = $matcher->find($this->editContent, $text, $before, $after);
-
-        return [
-            'start' => $result->start,
-            'end' => $result->end,
-            'confident' => $result->confident,
-        ];
     }
 
     // -------------------------------------------------------------------------
