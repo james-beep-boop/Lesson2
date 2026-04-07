@@ -33,3 +33,4 @@ Thumbs.db
 /public/favicon.gif
 /public/test.php
 /public/vendor/
+.claude/worktrees/
