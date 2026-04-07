@@ -58,8 +58,9 @@ class GuideContent
                 'title' => 'Editing & Saving a New Version',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Click **Edit This Plan** to enter edit mode.\n"
-                    ."- Use the **View Lesson / Edit Lesson** tabs to switch between preview and source.\n"
-                    ."- In the preview tab, **select text** then click **Edit Selected Text** to jump to that location in the source.\n"
+                    ."- The editor opens in **WYSIWYG mode** — use the toolbar to format text, add headings, lists, tables, and links.\n"
+                    ."- Switch to **Markdown source mode** at any time using the mode toggle in the toolbar.\n"
+                    ."- Pasting from Word or Google Docs? Use **Paste as Plain Text** (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.\n"
                     ."- Choose a version bump: **Patch** (small fix), **Minor** (new content), or **Major** (complete rewrite).\n"
                     .'- Add an optional revision note, then click **Save Edits** to create the new version.',
             ],
@@ -132,8 +133,9 @@ class GuideContent
                 'title' => 'Kuhariri na Kuhifadhi Toleo Jipya',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Bonyeza **Hariri Mpango Huu** kuingia katika hali ya kuhariri.\n"
-                    ."- Tumia vichupo **Tazama Somo / Hariri Somo** kubadilisha kati ya hakikisho na chanzo.\n"
-                    ."- Katika kichupo cha hakikisho, **chagua maandishi** kisha bonyeza **Hariri Maandishi Yaliyochaguliwa** kuruka mahali hapo kwenye chanzo.\n"
+                    ."- Mhariri unafungua katika **hali ya WYSIWYG** — tumia mwambaa wa zana kupanga maandishi, vichwa, orodha, meza, na viungo.\n"
+                    ."- Badilisha kwenda **hali ya chanzo cha Markdown** wakati wowote ukitumia kubadilisha hali kwenye mwambaa wa zana.\n"
+                    ."- Unapobandika kutoka Word au Google Docs? Tumia **Bandika kama Maandishi Wazi** (Ctrl+Shift+V / Cmd+Shift+V) kuepuka matatizo ya uumbizaji.\n"
                     ."- Chagua aina ya kuongeza toleo: **Kiraka** (marekebisho madogo), **Ndogo** (maudhui mapya), au **Kubwa** (uandishi upya kamili).\n"
                     .'- Ongeza dokezo la marekebisho (hiari), kisha bonyeza **Hifadhi Mabadiliko** kuunda toleo jipya.',
             ],
