@@ -95,8 +95,7 @@
 
                 async init() {
                     if (!window.ToastUIEditor) {
-                        const m = await import({{ Js::from(\Illuminate\Support\Facades\Vite::asset('resources/js/toast-editor.js')) }});
-                        window.ToastUIEditor = m.default;
+                        await window.loadToastUIEditor();
                     }
                     this.editor = new window.ToastUIEditor({
                         el: document.getElementById('toast-editor-mount-{{ $record->id }}'),

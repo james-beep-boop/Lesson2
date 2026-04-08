@@ -44,7 +44,7 @@ class AppPanelProvider extends PanelProvider
             ->brandName('Kenya Lesson Plans')
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn () => app(\Illuminate\Foundation\Vite::class)(['resources/css/toast-ui.css'])
+                fn () => app(\Illuminate\Foundation\Vite::class)(['resources/css/toast-ui.css', 'resources/js/app.js'])
             )
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
