@@ -51,8 +51,10 @@ class GuideContent
                 'title' => 'Print & Export',
                 'roles' => null,
                 'body' => "- **Print**: opens your browser's print dialog with a clean layout.\n"
-                    ."- **Download PDF**: saves the selected version as a PDF file.\n"
-                    .'- **Email PDF**: enter any email address to send the lesson plan as a PDF attachment.',
+                    ."- **Save PDF**: saves the selected version as a PDF file.\n"
+                    ."- **Email PDF**: enter any email address to send the lesson plan as a PDF attachment.\n"
+                    ."- **Save .docx**: saves the selected version as a Word (.docx) file.\n"
+                    .'- **Email .docx**: enter any email address to send the lesson plan as a .docx attachment.',
             ],
             [
                 'title' => 'Editing & Saving a New Version',
@@ -126,8 +128,10 @@ class GuideContent
                 'title' => 'Chapisha na Hamisha',
                 'roles' => null,
                 'body' => "- **Chapisha**: hufungua mazungumzo ya kuchapisha ya kivinjari chako kwa mpangilio safi.\n"
-                    ."- **Pakua PDF**: huhifadhi toleo lililochaguliwa kama faili la PDF.\n"
-                    .'- **Tuma PDF kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha PDF.',
+                    ."- **Hifadhi PDF**: huhifadhi toleo lililochaguliwa kama faili la PDF.\n"
+                    ."- **Tuma PDF kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha PDF.\n"
+                    ."- **Hifadhi .docx**: huhifadhi toleo lililochaguliwa kama faili la Word (.docx).\n"
+                    .'- **Tuma .docx kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha .docx.',
             ],
             [
                 'title' => 'Kuhariri na Kuhifadhi Toleo Jipya',

@@ -22,7 +22,7 @@
         @endonce
     @endif
 
-    {{-- Button grid layout --}}
+    {{-- Button grid layout (12 buttons: 6×2 → 4×3 → 3×4 → 2×6 → 1×12) --}}
     @once
     <style>
         .lesson-btn-grid {
@@ -30,11 +30,17 @@
             grid-template-columns: 1fr;
             gap: 0.75rem;
         }
-        @@media (min-width: 640px) {
+        @@media (min-width: 480px) {
             .lesson-btn-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        @@media (min-width: 1024px) {
-            .lesson-btn-grid { grid-template-columns: repeat(5, 1fr); }
+        @@media (min-width: 640px) {
+            .lesson-btn-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @@media (min-width: 900px) {
+            .lesson-btn-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        @@media (min-width: 1280px) {
+            .lesson-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
         .lesson-btn-grid > * {
             display: flex !important;
@@ -210,37 +216,7 @@
                         <div></div>
                     @endif
 
-                    {{-- 2: Translate to Swahili --}}
-                    @if($canTranslate)
-                        <x-filament::button
-                            wire:click="openTranslationPanel"
-                            wire:loading.attr="disabled"
-                            wire:target="openTranslationPanel,translatePreview"
-                            color="gray"
-                            icon="heroicon-o-language"
-                            class="w-full justify-center"
-                        >
-                            Translate to Swahili
-                        </x-filament::button>
-                    @else
-                        <div></div>
-                    @endif
-
-                    {{-- 3: Ask AI --}}
-                    @if($canAskAi)
-                        <x-filament::button
-                            wire:click="openAiPanel"
-                            color="gray"
-                            icon="heroicon-o-sparkles"
-                            class="w-full justify-center"
-                        >
-                            Ask AI
-                        </x-filament::button>
-                    @else
-                        <div></div>
-                    @endif
-
-                    {{-- 4: Compare to Other / Exit Compare --}}
+                    {{-- 2: Compare to Other / Exit Compare --}}
                     @if($compareMode)
                         <x-filament::button
                             wire:click="$set('compareMode', false)"
@@ -263,21 +239,37 @@
                         <div></div>
                     @endif
 
-                    {{-- 5: Request Deletion --}}
-                    @if($canRequestDeletion)
+                    {{-- 3: Ask AI --}}
+                    @if($canAskAi)
                         <x-filament::button
-                            wire:click="$set('showDeletionForm', true)"
-                            color="danger"
-                            icon="heroicon-o-trash"
+                            wire:click="openAiPanel"
+                            color="gray"
+                            icon="heroicon-o-sparkles"
                             class="w-full justify-center"
                         >
-                            Request Deletion
+                            Ask AI
                         </x-filament::button>
                     @else
                         <div></div>
                     @endif
 
-                    {{-- 6: Favorite --}}
+                    {{-- 4: Translate to Swahili --}}
+                    @if($canTranslate)
+                        <x-filament::button
+                            wire:click="openTranslationPanel"
+                            wire:loading.attr="disabled"
+                            wire:target="openTranslationPanel,translatePreview"
+                            color="gray"
+                            icon="heroicon-o-language"
+                            class="w-full justify-center"
+                        >
+                            Translate to Swahili
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 5: Favorite --}}
                     <x-filament::button
                         wire:click="favorite"
                         color="gray"
@@ -287,17 +279,7 @@
                         {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Favorite' }}
                     </x-filament::button>
 
-                    {{-- 7: Print --}}
-                    <x-filament::button
-                        color="gray"
-                        icon="heroicon-o-printer"
-                        x-on:click="window.print()"
-                        class="w-full justify-center"
-                    >
-                        Print
-                    </x-filament::button>
-
-                    {{-- 8: Save PDF --}}
+                    {{-- 6: Save PDF --}}
                     <x-filament::button
                         tag="a"
                         href="{{ route('lesson-plan.pdf', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
@@ -309,7 +291,7 @@
                         Save PDF
                     </x-filament::button>
 
-                    {{-- 9: Email PDF --}}
+                    {{-- 7: Email PDF --}}
                     <x-filament::button
                         wire:click="openEmailPdfModal"
                         color="gray"
@@ -317,6 +299,28 @@
                         class="w-full justify-center"
                     >
                         Email PDF
+                    </x-filament::button>
+
+                    {{-- 8: Save .docx --}}
+                    <x-filament::button
+                        tag="a"
+                        href="{{ route('lesson-plan.docx', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
+                        target="_blank"
+                        color="gray"
+                        icon="heroicon-o-arrow-down-tray"
+                        class="w-full justify-center"
+                    >
+                        Save .docx
+                    </x-filament::button>
+
+                    {{-- 9: Email .docx --}}
+                    <x-filament::button
+                        wire:click="openEmailDocxModal"
+                        color="gray"
+                        icon="heroicon-o-envelope"
+                        class="w-full justify-center"
+                    >
+                        Email .docx
                     </x-filament::button>
 
                     {{-- 10: Message About This --}}
@@ -328,6 +332,30 @@
                             class="w-full justify-center"
                         >
                             Message About This
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 11: Print --}}
+                    <x-filament::button
+                        color="gray"
+                        icon="heroicon-o-printer"
+                        x-on:click="window.print()"
+                        class="w-full justify-center"
+                    >
+                        Print
+                    </x-filament::button>
+
+                    {{-- 12: Request Deletion --}}
+                    @if($canRequestDeletion)
+                        <x-filament::button
+                            wire:click="$set('showDeletionForm', true)"
+                            color="danger"
+                            icon="heroicon-o-trash"
+                            class="w-full justify-center"
+                        >
+                            Request Deletion
                         </x-filament::button>
                     @else
                         <div></div>
@@ -385,6 +413,7 @@
 
         {{-- Action panels — below buttons, above lesson --}}
         @include('filament.app.partials.email-pdf-modal')
+        @include('filament.app.partials.email-docx-modal')
         @include('filament.app.partials.ai-panel')
         @include('filament.app.partials.translation-preview-panel')
         @include('filament.app.partials.message-modal')

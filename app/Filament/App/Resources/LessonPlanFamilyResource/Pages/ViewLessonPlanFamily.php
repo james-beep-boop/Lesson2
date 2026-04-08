@@ -4,6 +4,7 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 
 use App\Ai\Agents\LessonPlanAdvisor;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
+use App\Mail\LessonPlanDocxMail;
 use App\Mail\LessonPlanPdfMail;
 use App\Models\Favorite;
 use App\Models\LessonPlanFamily;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Services\DeletionRequestService;
 use App\Services\DiffService;
 use App\Services\FavoriteService;
+use App\Services\LessonPlanDocxService;
 use App\Services\LessonPlanPdfService;
 use App\Services\MarkdownNormalizer;
 use App\Services\TranslationService;
@@ -105,6 +107,16 @@ class ViewLessonPlanFamily extends Page
     public string $emailPdfTo = '';
 
     public string $emailPdfMessage = '';
+
+    // -------------------------------------------------------------------------
+    // Email DOCX state
+    // -------------------------------------------------------------------------
+
+    public bool $showEmailDocxModal = false;
+
+    public string $emailDocxTo = '';
+
+    public string $emailDocxMessage = '';
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -756,6 +768,62 @@ class ViewLessonPlanFamily extends Page
         } catch (\Throwable $e) {
             Notification::make('email-pdf-failed')
                 ->title('Failed to send PDF.')
+                ->body('Please try again or contact the site administrator.')
+                ->danger()
+                ->send();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Email DOCX
+    // -------------------------------------------------------------------------
+
+    public function openEmailDocxModal(): void
+    {
+        abort_unless(auth()->check(), 403);
+        $this->showEmailDocxModal = true;
+        $this->emailDocxTo = '';
+        $this->emailDocxMessage = '';
+    }
+
+    public function sendEmailDocx(): void
+    {
+        abort_unless(auth()->check(), 403);
+
+        $this->validate([
+            'emailDocxTo' => 'required|email|max:255',
+        ]);
+
+        if (! $this->selectedVersion) {
+            return;
+        }
+
+        $version = $this->selectedVersion;
+        $version->load(['family.subjectGrade.subject', 'contributor']);
+
+        set_time_limit(60);
+
+        try {
+            $docxContent = app(LessonPlanDocxService::class)->render($version->family, $version);
+
+            Mail::to($this->emailDocxTo)->send(new LessonPlanDocxMail(
+                version: $version,
+                docxContent: $docxContent,
+                senderName: auth()->user()->name,
+                customMessage: $this->emailDocxMessage,
+            ));
+
+            $this->showEmailDocxModal = false;
+            $this->emailDocxTo = '';
+            $this->emailDocxMessage = '';
+
+            Notification::make('email-docx-sent')
+                ->title('.docx sent successfully.')
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make('email-docx-failed')
+                ->title('Failed to send .docx.')
                 ->body('Please try again or contact the site administrator.')
                 ->danger()
                 ->send();

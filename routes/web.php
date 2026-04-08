@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LessonPlanDocxController;
 use App\Http\Controllers\LessonPlanPdfController;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Route;
@@ -27,3 +28,11 @@ Route::post('/tab-guard-logout', function () {
 Route::get('/lesson-pdf/{family}/{version}', [LessonPlanPdfController::class, 'download'])
     ->middleware(['web'])
     ->name('lesson-plan.pdf');
+
+/**
+ * DOCX download for a specific lesson plan version.
+ * The version must belong to the given family — validated in the controller.
+ */
+Route::get('/lesson-docx/{family}/{version}', [LessonPlanDocxController::class, 'download'])
+    ->middleware(['web'])
+    ->name('lesson-plan.docx');
