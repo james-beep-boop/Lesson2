@@ -74,6 +74,17 @@
     @if($editMode)
         @php $previews = $this->versionPreviews(); @endphp
 
+        @once
+        <style>
+            .ares-edit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; margin-bottom: 1rem; }
+            .ares-bump-group { display: flex; flex-wrap: wrap; gap: 1rem; }
+            .ares-bump-label { display: flex; cursor: pointer; align-items: center; gap: 0.375rem; font-size: 0.875rem; }
+            .ares-revision-note { flex: 0 0 100%; max-width: 28rem; }
+            .ares-paste-tip { flex: 0 0 100%; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid #bfdbfe; background: #eff6ff; font-size: 0.875rem; color: #1e40af; }
+            .ares-editor-wrap { flex: 0 0 100%; min-width: 0; }
+        </style>
+        @endonce
+
         {{-- Action bar: Save / version bump / Discard --}}
         <div
             x-data="{
@@ -138,8 +149,7 @@
                     }
                 },
             }"
-            class="mb-4 flex flex-wrap items-center"
-            style="gap: 1.25rem;"
+            class="ares-edit-bar"
             data-noprint
         >
             <x-filament::button
@@ -151,9 +161,9 @@
                 <span x-show="saving" style="display:none;">Saving…</span>
             </x-filament::button>
 
-            <div class="flex flex-wrap" style="gap: 1rem;">
+            <div class="ares-bump-group">
                 @foreach(['major', 'minor', 'patch'] as $bump)
-                    <label wire:key="bump-{{ $bump }}" class="flex cursor-pointer items-center" style="gap: 0.375rem; font-size: 0.875rem;">
+                    <label wire:key="bump-{{ $bump }}" class="ares-bump-label">
                         <input type="radio" name="versionBump" wire:model.live="versionBump" value="{{ $bump }}">
                         {{ ucfirst($bump) }} ({{ $previews[$bump] }})
                     </label>
@@ -163,19 +173,19 @@
             <x-filament::button x-on:click="cancel()" color="gray">Discard Edits</x-filament::button>
 
             {{-- Revision note --}}
-            <div class="w-full max-w-md">
+            <div class="ares-revision-note">
                 <x-filament::input.wrapper label="Revision note (optional)">
                     <x-filament::input wire:model="revisionNote" type="text" />
                 </x-filament::input.wrapper>
             </div>
 
             {{-- Paste tip banner --}}
-            <div class="w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:border-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            <div class="ares-paste-tip">
                 Pasting from Word or Google Docs? Use <strong>Paste as Plain Text</strong> (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.
             </div>
 
             {{-- Toast UI editor mount point --}}
-            <div class="w-full">
+            <div class="ares-editor-wrap">
                 <x-filament::section>
                     <div wire:ignore id="toast-editor-mount-{{ $record->id }}"></div>
                 </x-filament::section>
