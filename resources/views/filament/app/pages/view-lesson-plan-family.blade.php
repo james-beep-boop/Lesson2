@@ -557,13 +557,21 @@
                                     {!! $diffHtml !!}
                                 </div>
                             @else
-                                <div class="grid grid-cols-{{ $diffLayout === 'side-by-side' ? '2' : '1' }} gap-4">
-                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        @markdown($compareVersion->content)
+                                <div style="display:grid; grid-template-columns:{{ $diffLayout === 'side-by-side' ? '1fr 1fr' : '1fr' }}; gap:1rem;">
+                                    <div
+                                        wire:key="compare-viewer-from-{{ $compareVersion->id }}"
+                                        x-data="toastViewer({{ Js::from($compareVersion->content) }})"
+                                        style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem; overflow-x:auto;"
+                                    >
+                                        <div data-toast-viewer wire:ignore></div>
                                     </div>
                                     @if($diffLayout === 'side-by-side')
-                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        @markdown($selectedVersion->content)
+                                    <div
+                                        wire:key="compare-viewer-to-{{ $selectedVersion->id }}"
+                                        x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
+                                        style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem; overflow-x:auto;"
+                                    >
+                                        <div data-toast-viewer wire:ignore></div>
                                     </div>
                                     @endif
                                 </div>
@@ -592,9 +600,12 @@
                                 @endif
                             </div>
 
-                            {{-- Content viewer --}}
-                            <div class="prose max-w-none">
-                                @markdown($selectedVersion->content)
+                            {{-- Content viewer — Toast UI Viewer --}}
+                            <div
+                                wire:key="toast-viewer-{{ $selectedVersion->id }}"
+                                x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
+                            >
+                                <div data-toast-viewer wire:ignore></div>
                             </div>
                         </x-filament::section>
                     @endif
