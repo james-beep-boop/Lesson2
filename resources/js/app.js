@@ -10,6 +10,16 @@ window.loadToastUIEditor = () => {
     return _editorPromise;
 };
 
+let _viewerPromise = null;
+window.loadToastUIViewer = () => {
+    if (!_viewerPromise) {
+        _viewerPromise = import('@toast-ui/editor/viewer').then(m => {
+            window.ToastUIViewer = m.default;
+        });
+    }
+    return _viewerPromise;
+};
+
 window.getTheme = () =>
     document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
@@ -17,13 +27,12 @@ window.getTheme = () =>
 // Usage: x-data="toastViewer({{ Js::from($content) }})"
 window.toastViewer = (content) => ({
     async init() {
-        if (!window.ToastUIEditor) {
-            await window.loadToastUIEditor();
+        if (!window.ToastUIViewer) {
+            await window.loadToastUIViewer();
         }
-        this._viewer = window.ToastUIEditor.factory({
+        this._viewer = new window.ToastUIViewer({
             el: this.$el.querySelector('[data-toast-viewer]'),
             initialValue: content,
-            viewer: true,
             theme: window.getTheme(),
         });
     },

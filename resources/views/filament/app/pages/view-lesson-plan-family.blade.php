@@ -59,12 +59,16 @@
     {{-- Print CSS --}}
     @once
     <style>
+        .ares-print-content { display: none; }
         @@media print {
             /* Hide everything except the print area */
             body > *:not(#print-area-wrapper) { display: none !important; }
             .fi-topbar, .fi-sidebar, .fi-header, nav, [data-noprint] { display: none !important; }
             #print-area { display: block !important; }
             .prose { max-width: none; }
+            /* Show server-rendered fallback, hide async viewer */
+            .ares-print-content { display: block !important; }
+            .ares-toast-viewer { display: none !important; }
         }
         @@page { margin: 2cm; }
     </style>
@@ -564,20 +568,30 @@
                                 </div>
                             @else
                                 <div style="display:grid; grid-template-columns:{{ $diffLayout === 'side-by-side' ? '1fr 1fr' : '1fr' }}; gap:1rem;">
-                                    <div
-                                        wire:key="compare-viewer-from-{{ $compareVersion->id }}"
-                                        x-data="toastViewer({{ Js::from($compareVersion->content) }})"
-                                        class="ares-compare-viewer"
-                                    >
-                                        <div data-toast-viewer wire:ignore></div>
+                                    <div class="ares-compare-viewer">
+                                        <div
+                                            wire:key="compare-viewer-from-{{ $compareVersion->id }}"
+                                            x-data="toastViewer({{ Js::from($compareVersion->content) }})"
+                                            class="ares-toast-viewer"
+                                        >
+                                            <div data-toast-viewer wire:ignore></div>
+                                        </div>
+                                        <div class="ares-print-content prose max-w-none">
+                                            {!! \Illuminate\Support\Str::markdown($compareVersion->content) !!}
+                                        </div>
                                     </div>
                                     @if($diffLayout === 'side-by-side')
-                                    <div
-                                        wire:key="compare-viewer-to-{{ $selectedVersion->id }}"
-                                        x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
-                                        class="ares-compare-viewer"
-                                    >
-                                        <div data-toast-viewer wire:ignore></div>
+                                    <div class="ares-compare-viewer">
+                                        <div
+                                            wire:key="compare-viewer-to-{{ $selectedVersion->id }}"
+                                            x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
+                                            class="ares-toast-viewer"
+                                        >
+                                            <div data-toast-viewer wire:ignore></div>
+                                        </div>
+                                        <div class="ares-print-content prose max-w-none">
+                                            {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
+                                        </div>
                                     </div>
                                     @endif
                                 </div>
@@ -606,12 +620,16 @@
                                 @endif
                             </div>
 
-                            {{-- Content viewer — Toast UI Viewer --}}
+                            {{-- Content viewer — Toast UI Viewer (screen) + server-rendered fallback (print) --}}
                             <div
                                 wire:key="toast-viewer-{{ $selectedVersion->id }}"
                                 x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
+                                class="ares-toast-viewer"
                             >
                                 <div data-toast-viewer wire:ignore></div>
+                            </div>
+                            <div class="ares-print-content prose max-w-none">
+                                {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
                             </div>
                         </x-filament::section>
                     @endif
