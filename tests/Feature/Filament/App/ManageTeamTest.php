@@ -30,7 +30,7 @@ test('page heading includes subject name and grade', function () {
         ->assertSee("Manage Team: {$sg->subject->name}, Grade {$sg->grade}");
 });
 
-test('editors table renders column headers, checkbox, and editor data', function () {
+test('editors table renders column headers, bulk-action checkbox, and editor data', function () {
     $sg = makeSubjectGrade();
     $subjectAdmin = makeSubjectAdmin($sg);
     $editor = makeEditor($sg);
@@ -85,6 +85,25 @@ test('remove editor detaches the user from the pivot', function () {
 
     Livewire::test(ManageTeam::class)
         ->call('removeEditor', $editor->id)
+        ->assertNotified();
+
+    expect(
+        DB::table('subject_grade_user')
+            ->where('subject_grade_id', $sg->id)
+            ->where('user_id', $editor->id)
+            ->exists()
+    )->toBeFalse();
+});
+
+test('bulk remove action detaches editors from the pivot', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $editor = makeEditor($sg);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ManageTeam::class)
+        ->callTableBulkAction('remove', [$editor])
         ->assertNotified();
 
     expect(

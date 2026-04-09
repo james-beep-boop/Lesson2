@@ -5,11 +5,17 @@ namespace App\Filament\App\Pages;
 use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\SubjectAdminService;
+use Filament\Actions\BulkAction;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Support\Collection;
 
-class ManageTeam extends Page
+class ManageTeam extends Page implements Tables\Contracts\HasTable
 {
+    use Tables\Concerns\InteractsWithTable;
+
     protected string $view = 'filament.app.pages.manage-team';
 
     protected static ?string $navigationLabel = 'Manage Team';
@@ -71,6 +77,49 @@ class ManageTeam extends Page
             ->whereNotIn('id', $excludeIds)
             ->orderBy('name')
             ->get();
+    }
+
+    public function table(Table $table): Table
+    {
+        $sg = $this->getSubjectGrade();
+
+        return $table
+            ->query(
+                User::query()->whereHas('subjectGrades', fn ($q) => $q->where('subject_grades.id', $sg->id))
+            )
+            ->columns([
+                Tables\Columns\TextColumn::make('name')->label('Full name'),
+                Tables\Columns\TextColumn::make('username')->label('Username'),
+                Tables\Columns\TextColumn::make('email')->label('Email'),
+            ])
+            ->bulkActions([
+                BulkAction::make('remove')
+                    ->label('Remove from team')
+                    ->color('danger')
+                    ->icon('heroicon-o-user-minus')
+                    ->requiresConfirmation()
+                    ->modalHeading('Remove editors')
+                    ->modalDescription('Remove the selected editors from this team?')
+                    ->action(function (Collection $records) use ($sg): void {
+                        abort_unless(auth()->user()->isSubjectAdminFor($sg), 403);
+                        $service = app(SubjectAdminService::class);
+                        foreach ($records as $user) {
+                            $service->removeUser($user, $sg);
+                        }
+                        $count = $records->count();
+                        Notification::make('editors-removed')
+                            ->title($count === 1
+                                ? "{$records->first()->name} removed from team."
+                                : "{$count} editors removed from team.")
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+            ])
+            ->heading('Current Editors')
+            ->emptyStateHeading('No editors assigned yet.')
+            ->emptyStateIcon('heroicon-o-user-group')
+            ->paginated(false);
     }
 
     public function addEditor(): void
