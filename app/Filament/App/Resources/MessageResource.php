@@ -6,6 +6,7 @@ use App\Filament\App\Resources\MessageResource\Pages;
 use App\Models\Message;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -74,6 +75,9 @@ class MessageResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->recordClasses(fn (Message $record) => $record->isRead() ? null : 'font-semibold bg-primary-50 dark:bg-primary-950/20')
             ->recordUrl(fn (Message $record): string => static::getUrl('view', ['record' => $record->id]))
+            ->bulkActions([
+                DeleteBulkAction::make(),
+            ])
             ->emptyStateIcon('heroicon-o-inbox')
             ->emptyStateHeading('Your inbox is empty')
             ->emptyStateDescription('Messages from other users will appear here.');
@@ -129,6 +133,6 @@ class MessageResource extends Resource
 
     public static function canDelete(Model $record): bool
     {
-        return false;
+        return $record->to_user_id === auth()->id();
     }
 }
