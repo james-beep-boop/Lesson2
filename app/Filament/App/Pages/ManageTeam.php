@@ -12,7 +12,7 @@ class ManageTeam extends Page
 {
     protected string $view = 'filament.app.pages.manage-team';
 
-    protected static ?string $navigationLabel = 'My Team';
+    protected static ?string $navigationLabel = 'Manage Team';
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
@@ -38,6 +38,13 @@ class ManageTeam extends Page
     public function mount(): void
     {
         abort_unless(static::canAccess(), 403);
+    }
+
+    public function getHeading(): string
+    {
+        $sg = $this->getSubjectGrade();
+
+        return "Manage Team: {$sg->subject->name}, Grade {$sg->grade}";
     }
 
     /** The Subject Admin's one subject_grade. Cached for the lifetime of this request. */

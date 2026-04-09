@@ -7,39 +7,42 @@
 
     <div class="mx-auto max-w-2xl space-y-6">
 
-        {{-- Subject Grade context --}}
-        <div class="rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">Managing editors for</p>
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-                {{ $sg->subject->name }} — Grade {{ $sg->grade }}
-            </h2>
-        </div>
-
         {{-- Current editors --}}
         <x-filament::section heading="Current Editors">
 
             @if ($editors->isEmpty())
                 <p class="text-sm text-gray-400 dark:text-gray-500">No editors assigned yet.</p>
             @else
-                <ul class="divide-y divide-gray-100 dark:divide-gray-800">
-                    @foreach ($editors as $editor)
-                        <li class="flex items-center justify-between py-3">
-                            <div>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $editor->name }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ '@'.$editor->username }}</p>
-                            </div>
-                            <x-filament::button
-                                wire:click="removeEditor({{ $editor->id }})"
-                                wire:confirm="Remove {{ $editor->name }} from this team?"
-                                color="danger"
-                                size="sm"
-                                icon="heroicon-o-user-minus"
-                            >
-                                Remove
-                            </x-filament::button>
-                        </li>
-                    @endforeach
-                </ul>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400 w-8">Remove</th>
+                                <th class="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400">Full name</th>
+                                <th class="py-2 pr-4 font-medium text-gray-500 dark:text-gray-400">Username</th>
+                                <th class="py-2 font-medium text-gray-500 dark:text-gray-400">Email</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @foreach ($editors as $editor)
+                                <tr>
+                                    <td class="py-3 pr-4">
+                                        <input
+                                            type="checkbox"
+                                            wire:change="removeEditor({{ $editor->id }})"
+                                            wire:confirm="Remove {{ $editor->name }} from this team?"
+                                            class="rounded border-gray-300 text-danger-600 focus:ring-danger-500 dark:border-gray-600 dark:bg-gray-800 cursor-pointer"
+                                            title="Remove {{ $editor->name }}"
+                                        >
+                                    </td>
+                                    <td class="py-3 pr-4 font-medium text-gray-900 dark:text-white">{{ $editor->name }}</td>
+                                    <td class="py-3 pr-4 text-gray-500 dark:text-gray-400">{{ $editor->username }}</td>
+                                    <td class="py-3 text-gray-500 dark:text-gray-400">{{ $editor->email }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @endif
 
         </x-filament::section>
@@ -61,7 +64,7 @@
                         >
                             <option value="">— Choose a user —</option>
                             @foreach ($availableUsers as $u)
-                                <option value="{{ $u->id }}">{{ $u->name }} ({{ '@'.$u->username }})</option>
+                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->username }})</option>
                             @endforeach
                         </select>
                         @error('addUserId')

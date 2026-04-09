@@ -20,6 +20,33 @@ test('manage team page loads for subject admin', function () {
         ->assertOk();
 });
 
+test('page heading includes subject name and grade', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ManageTeam::class)
+        ->assertSee("Manage Team: {$sg->subject->name}, Grade {$sg->grade}");
+});
+
+test('editors table renders column headers, checkbox, and editor data', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $editor = makeEditor($sg);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ManageTeam::class)
+        ->assertSeeHtml('type="checkbox"')
+        ->assertSee('Full name')
+        ->assertSee('Username')
+        ->assertSee('Email')
+        ->assertSee($editor->name)
+        ->assertSee($editor->username)
+        ->assertSee($editor->email);
+});
+
 test('teacher cannot access the manage team page', function () {
     $teacher = makeTeacher();
 
