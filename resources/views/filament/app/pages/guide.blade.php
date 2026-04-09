@@ -1,21 +1,18 @@
 <x-filament-panels::page>
     <div class="max-w-2xl">
         {{-- Language toggle --}}
-        <div class="mb-6 flex items-center gap-2">
-            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Language:</span>
+        <div class="mb-6 flex items-center gap-3">
             <x-filament::button
                 wire:click="switchLanguage('en')"
                 :color="$language === 'en' ? 'primary' : 'gray'"
-                size="sm"
             >
                 English
             </x-filament::button>
             <x-filament::button
                 wire:click="switchLanguage('sw')"
                 :color="$language === 'sw' ? 'primary' : 'gray'"
-                size="sm"
             >
-                Swahili / Kiswahili
+                Swahili
             </x-filament::button>
         </div>
 
