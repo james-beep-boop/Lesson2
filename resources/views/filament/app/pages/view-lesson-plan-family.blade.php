@@ -47,6 +47,12 @@
             width: 100% !important;
             justify-content: center !important;
         }
+        .ares-compare-viewer {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+        }
     </style>
     @endonce
 
@@ -111,7 +117,7 @@
                         language: 'en',
                         height: '600px',
                         minHeight: '300px',
-                        theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+                        theme: window.getTheme(),
                         toolbarItems: [
                             ['heading', 'bold', 'italic', 'strike'],
                             ['ul', 'ol', 'task'],
@@ -561,7 +567,7 @@
                                     <div
                                         wire:key="compare-viewer-from-{{ $compareVersion->id }}"
                                         x-data="toastViewer({{ Js::from($compareVersion->content) }})"
-                                        style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem; overflow-x:auto;"
+                                        class="ares-compare-viewer"
                                     >
                                         <div data-toast-viewer wire:ignore></div>
                                     </div>
@@ -569,7 +575,7 @@
                                     <div
                                         wire:key="compare-viewer-to-{{ $selectedVersion->id }}"
                                         x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
-                                        style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem; overflow-x:auto;"
+                                        class="ares-compare-viewer"
                                     >
                                         <div data-toast-viewer wire:ignore></div>
                                     </div>

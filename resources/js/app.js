@@ -1,14 +1,21 @@
 import './bootstrap';
 
-window.loadToastUIEditor = () =>
-    import('@toast-ui/editor').then(m => {
-        window.ToastUIEditor = m.default;
-    });
+let _editorPromise = null;
+window.loadToastUIEditor = () => {
+    if (!_editorPromise) {
+        _editorPromise = import('@toast-ui/editor').then(m => {
+            window.ToastUIEditor = m.default;
+        });
+    }
+    return _editorPromise;
+};
+
+window.getTheme = () =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
 // Alpine data factory shared by all read-only Toast UI Viewer instances.
 // Usage: x-data="toastViewer({{ Js::from($content) }})"
 window.toastViewer = (content) => ({
-    _viewer: null,
     async init() {
         if (!window.ToastUIEditor) {
             await window.loadToastUIEditor();
@@ -17,7 +24,7 @@ window.toastViewer = (content) => ({
             el: this.$el.querySelector('[data-toast-viewer]'),
             initialValue: content,
             viewer: true,
-            theme: document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+            theme: window.getTheme(),
         });
     },
     destroy() {
