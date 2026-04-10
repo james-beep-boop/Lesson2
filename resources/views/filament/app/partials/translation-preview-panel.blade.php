@@ -1,10 +1,4 @@
 @if($translationPanelOpen)
-    @php
-        $translatedHtml = $translatedContent
-            ? \Illuminate\Support\Str::markdown($translatedContent, ['html_input' => 'strip'])
-            : '';
-    @endphp
-
     {{--
         Outer div provides the printTranslation() Alpine helper.
         Translation is triggered by the 'start-translation' window event dispatched
@@ -37,13 +31,20 @@
                 Preview only — this translation has not been saved to the database. May take up to one minute.
             </p>
 
-            @if($translatedHtml)
-                {{-- Final rendered output after streaming completes --}}
+            @if($translationComplete && filled($translatedContent))
+                <div
+                    wire:key="translation-viewer"
+                    x-data="toastViewer({{ Js::from($translatedContent) }})"
+                    class="ares-toast-viewer rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+                >
+                    <div data-toast-viewer wire:ignore></div>
+                </div>
+
                 <div
                     id="translation-printable"
-                    class="prose max-w-none rounded-lg border border-gray-200 bg-white p-4 dark:prose-invert dark:border-gray-700 dark:bg-gray-900"
+                    class="ares-print-content prose max-w-none"
                 >
-                    {!! $translatedHtml !!}
+                    @markdown($translatedContent)
                 </div>
             @else
                 {{-- Streaming in progress --}}
@@ -54,7 +55,7 @@
             @endif
 
             <div class="mt-3 flex gap-2">
-                @if($translatedHtml)
+                @if($translationComplete && filled($translatedContent))
                     <x-filament::button
                         x-on:click="printTranslation()"
                         color="gray"
@@ -65,7 +66,7 @@
                     </x-filament::button>
                 @endif
 
-                @if($translatedHtml)
+                @if($translationComplete && filled($translatedContent))
                     <x-filament::button
                         wire:click="openTranslationEmailPanel"
                         color="gray"

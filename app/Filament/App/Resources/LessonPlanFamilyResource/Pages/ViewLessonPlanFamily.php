@@ -70,10 +70,14 @@ class ViewLessonPlanFamily extends Page
 
     public string $aiResponse = '';
 
+    public bool $aiResponseComplete = false;
+
     // Translation preview state
     public bool $translationPanelOpen = false;
 
     public string $translatedContent = '';
+
+    public bool $translationComplete = false;
 
     public bool $showTranslationEmailPanel = false;
 
@@ -420,6 +424,8 @@ class ViewLessonPlanFamily extends Page
     public function closeAiPanel(): void
     {
         $this->aiPanelOpen = false;
+        $this->aiResponse = '';
+        $this->aiResponseComplete = false;
     }
 
     // -------------------------------------------------------------------------
@@ -431,6 +437,7 @@ class ViewLessonPlanFamily extends Page
         $this->authorize('translate', $this->selectedVersion);
 
         $this->translatedContent = '';
+        $this->translationComplete = false;
         $this->translationPanelOpen = true;
 
         // Dispatch a one-time event that Alpine listens for to start translation.
@@ -448,6 +455,7 @@ class ViewLessonPlanFamily extends Page
     {
         $this->translationPanelOpen = false;
         $this->translatedContent = '';
+        $this->translationComplete = false;
         $this->showTranslationEmailPanel = false;
     }
 
@@ -461,6 +469,8 @@ class ViewLessonPlanFamily extends Page
 
         set_time_limit(120);
 
+        $this->translationComplete = false;
+
         try {
             $accumulated = '';
 
@@ -472,6 +482,7 @@ class ViewLessonPlanFamily extends Page
             }
 
             $this->translatedContent = $accumulated;
+            $this->translationComplete = true;
         } catch (\Throwable) {
             $this->translationPanelOpen = false;
 
@@ -557,6 +568,7 @@ class ViewLessonPlanFamily extends Page
                  ."\n\n---\n\nUser's request: {$this->aiPrompt}";
 
         $this->aiResponse = '';
+        $this->aiResponseComplete = false;
         $accumulated = '';
 
         set_time_limit(120);
@@ -571,6 +583,7 @@ class ViewLessonPlanFamily extends Page
         }
 
         $this->aiResponse = $accumulated;
+        $this->aiResponseComplete = true;
     }
 
     // -------------------------------------------------------------------------

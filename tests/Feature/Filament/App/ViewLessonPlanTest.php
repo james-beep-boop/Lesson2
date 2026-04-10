@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\LessonPlanAdvisor;
 use App\Ai\Agents\LessonPlanTranslator;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFamily;
 use App\Models\DeletionRequest;
@@ -300,4 +301,108 @@ test('translatePreview shows danger notification and closes panel when translati
         ->call('translatePreview')
         ->assertNotified('Translation unavailable')
         ->assertSet('translationPanelOpen', false);
+});
+
+// ---------------------------------------------------------------------------
+// aiResponseComplete / translationComplete completion flags
+// ---------------------------------------------------------------------------
+
+test('submitAiPrompt sets aiResponseComplete false before streaming and true after', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanAdvisor::fake(['Here is some advice.']);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('aiPanelOpen', true)
+        ->set('aiPrompt', 'Suggest improvements')
+        ->call('submitAiPrompt');
+
+    $component
+        ->assertSet('aiResponse', 'Here is some advice.')
+        ->assertSet('aiResponseComplete', true);
+});
+
+test('closeAiPanel clears aiResponse and resets aiResponseComplete', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('aiPanelOpen', true)
+        ->set('aiResponse', '## Previous response')
+        ->set('aiResponseComplete', true)
+        ->call('closeAiPanel')
+        ->assertSet('aiPanelOpen', false)
+        ->assertSet('aiResponse', '')
+        ->assertSet('aiResponseComplete', false);
+});
+
+test('openTranslationPanel resets translationComplete to false', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationComplete', true)
+        ->set('translatedContent', 'stale')
+        ->call('openTranslationPanel')
+        ->assertSet('translationPanelOpen', true)
+        ->assertSet('translatedContent', '')
+        ->assertSet('translationComplete', false);
+});
+
+test('translatePreview sets translationComplete true after successful completion', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanTranslator::fake(['Mpango wa Somo']);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->call('translatePreview')
+        ->assertSet('translatedContent', 'Mpango wa Somo')
+        ->assertSet('translationComplete', true)
+        ->assertSet('translationPanelOpen', true);
+});
+
+test('translatePreview does not set translationComplete true when translation fails', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanTranslator::fake(fn () => throw new RuntimeException('API unavailable'));
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->call('translatePreview')
+        ->assertSet('translationComplete', false);
+});
+
+test('closeTranslationPanel resets translationComplete to false', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->set('translationComplete', true)
+        ->set('translatedContent', 'Mpango wa Somo')
+        ->call('closeTranslationPanel')
+        ->assertSet('translationPanelOpen', false)
+        ->assertSet('translationComplete', false)
+        ->assertSet('translatedContent', '');
 });

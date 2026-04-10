@@ -10,10 +10,20 @@
             @endforeach
         </div>
         <textarea wire:model="aiPrompt" rows="3" class="w-full rounded border border-gray-300 p-2 text-sm" placeholder="What would you like help with?"></textarea>
-        <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap min-h-[2rem]">
-            <span wire:stream="aiResponse">{{ $aiResponse }}</span>
-            <span wire:loading wire:target="submitAiPrompt" class="text-gray-400 italic">Thinking…</span>
-        </div>
+        @if(! $aiResponseComplete)
+            <div class="mt-3 rounded bg-gray-50 border p-3 text-sm whitespace-pre-wrap min-h-[2rem]">
+                <span wire:stream="aiResponse">{{ $aiResponse }}</span>
+                <span wire:loading wire:target="submitAiPrompt" class="text-gray-400 italic">Thinking…</span>
+            </div>
+        @elseif(filled($aiResponse))
+            <div
+                class="mt-3"
+                wire:key="ai-response-viewer"
+                x-data="toastViewer({{ Js::from($aiResponse) }})"
+            >
+                <div data-toast-viewer wire:ignore></div>
+            </div>
+        @endif
         <div class="mt-3 flex gap-2">
             <x-filament::button wire:click="submitAiPrompt" wire:loading.attr="disabled" wire:target="submitAiPrompt" size="sm">Submit</x-filament::button>
             <x-filament::button wire:click="closeAiPanel" color="gray" size="sm">Close</x-filament::button>
