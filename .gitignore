@@ -1,6 +1,7 @@
 *.log
 .DS_Store
 .claude/settings.local.json
+.claude/worktrees/
 .env
 .env.backup
 .env.production
@@ -32,3 +33,4 @@ Thumbs.db
 /public/favicon.gif
 /public/test.php
 /public/vendor/
+.claude/worktrees/

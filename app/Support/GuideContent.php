@@ -51,15 +51,18 @@ class GuideContent
                 'title' => 'Print & Export',
                 'roles' => null,
                 'body' => "- **Print**: opens your browser's print dialog with a clean layout.\n"
-                    ."- **Download PDF**: saves the selected version as a PDF file.\n"
-                    .'- **Email PDF**: enter any email address to send the lesson plan as a PDF attachment.',
+                    ."- **Save PDF**: saves the selected version as a PDF file.\n"
+                    ."- **Email PDF**: enter any email address to send the lesson plan as a PDF attachment.\n"
+                    ."- **Save .docx**: saves the selected version as a Word (.docx) file.\n"
+                    .'- **Email .docx**: enter any email address to send the lesson plan as a .docx attachment.',
             ],
             [
                 'title' => 'Editing & Saving a New Version',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Click **Edit This Plan** to enter edit mode.\n"
-                    ."- Use the **View Lesson / Edit Lesson** tabs to switch between preview and source.\n"
-                    ."- In the preview tab, **select text** then click **Edit Selected Text** to jump to that location in the source.\n"
+                    ."- The editor opens in **WYSIWYG mode** — use the toolbar to format text, add headings, lists, tables, and links.\n"
+                    ."- Switch to **Markdown source mode** at any time using the mode toggle in the toolbar.\n"
+                    ."- Pasting from Word or Google Docs? Use **Paste as Plain Text** (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.\n"
                     ."- Choose a version bump: **Patch** (small fix), **Minor** (new content), or **Major** (complete rewrite).\n"
                     .'- Add an optional revision note, then click **Save Edits** to create the new version.',
             ],
@@ -125,15 +128,18 @@ class GuideContent
                 'title' => 'Chapisha na Hamisha',
                 'roles' => null,
                 'body' => "- **Chapisha**: hufungua mazungumzo ya kuchapisha ya kivinjari chako kwa mpangilio safi.\n"
-                    ."- **Pakua PDF**: huhifadhi toleo lililochaguliwa kama faili la PDF.\n"
-                    .'- **Tuma PDF kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha PDF.',
+                    ."- **Hifadhi PDF**: huhifadhi toleo lililochaguliwa kama faili la PDF.\n"
+                    ."- **Tuma PDF kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha PDF.\n"
+                    ."- **Hifadhi .docx**: huhifadhi toleo lililochaguliwa kama faili la Word (.docx).\n"
+                    .'- **Tuma .docx kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha .docx.',
             ],
             [
                 'title' => 'Kuhariri na Kuhifadhi Toleo Jipya',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Bonyeza **Hariri Mpango Huu** kuingia katika hali ya kuhariri.\n"
-                    ."- Tumia vichupo **Tazama Somo / Hariri Somo** kubadilisha kati ya hakikisho na chanzo.\n"
-                    ."- Katika kichupo cha hakikisho, **chagua maandishi** kisha bonyeza **Hariri Maandishi Yaliyochaguliwa** kuruka mahali hapo kwenye chanzo.\n"
+                    ."- Mhariri unafungua katika **hali ya WYSIWYG** — tumia mwambaa wa zana kupanga maandishi, vichwa, orodha, meza, na viungo.\n"
+                    ."- Badilisha kwenda **hali ya chanzo cha Markdown** wakati wowote ukitumia kubadilisha hali kwenye mwambaa wa zana.\n"
+                    ."- Unapobandika kutoka Word au Google Docs? Tumia **Bandika kama Maandishi Wazi** (Ctrl+Shift+V / Cmd+Shift+V) kuepuka matatizo ya uumbizaji.\n"
                     ."- Chagua aina ya kuongeza toleo: **Kiraka** (marekebisho madogo), **Ndogo** (maudhui mapya), au **Kubwa** (uandishi upya kamili).\n"
                     .'- Ongeza dokezo la marekebisho (hiari), kisha bonyeza **Hifadhi Mabadiliko** kuunda toleo jipya.',
             ],

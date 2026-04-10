@@ -175,15 +175,15 @@ Run through this before writing code in each phase. Use Boost `search_docs` or W
 After the first `composer install`, record the resolved versions of key packages here. **Only useful if actively maintained — if it falls out of date, delete it rather than leave it wrong.**
 
 ```
-# Resolved package versions — 2026-03-22
-laravel/framework: 13.1.1
-filament/filament: 5.4.1
-livewire/livewire: 4.2.1
-laravel/ai: 0.3.2
+# Resolved package versions — 2026-04-06
+laravel/framework: 13.2.0
+filament/filament: 5.4.3
+livewire/livewire: 4.2.2
+laravel/ai: 0.4.2
 laravel/pennant: (not installed — not used; direct config check used instead)
-laravel/boost: (install separately: composer require laravel/boost --dev)
+laravel/boost: 2.4.1
 laravel-shift/blueprint: 2.13.0
-spatie/laravel-permission: 6.25.0
+spatie/laravel-permission: 7.2.4
 bezhansalleh/filament-shield: 4.2.0
 ```
 
@@ -404,7 +404,7 @@ Creating a **new lesson-plan family** (a brand-new lesson plan, not a new versio
 
 | Method | Details |
 |---|---|
-| Type / paste | User writes or pastes Markdown directly into the editor. Filament `MarkdownEditor` field with live preview. |
+| Type / paste | User writes or pastes Markdown directly into the editor. The agreed next editor implementation uses Toast UI inside the existing lesson-page edit mode. |
 | Upload `.md` or `.txt` | File contents are read server-side and loaded into the editor for review before saving. |
 | Upload `.docx` | File is converted to Markdown via a two-step pipeline (see below) and loaded into the editor. A prominent warning is shown before conversion begins. |
 
@@ -418,6 +418,20 @@ Creating a **new lesson-plan family** (a brand-new lesson plan, not a new versio
 - Maximum upload size: follow DreamHost's `upload_max_filesize` (typically 32MB on shared hosting)
 
 **Adding a new version to an existing family** follows the same editor flow but is available to Editors and above. The version number is bumped from the current highest; user chooses Patch / Minor / Major.
+
+### Editor implementation note
+
+The agreed next-step editor architecture is documented in `Toast_UI_Editor_Plan.md`.
+
+Key implementation decisions already agreed:
+
+- Toast UI is mounted as an Alpine-managed editor island inside the existing `ViewLessonPlanFamily` Livewire page
+- Do not introduce a custom Filament field class or a standalone Livewire sub-component for the editor
+- Sync edited markdown back to Livewire only on save, not on every keystroke
+- Add a `MarkdownNormalizer` service before version-save comparisons and persistence
+- Enforce stale-version detection against fresh database state before saving
+
+If implementation details in the plan and this spec diverge, update this spec once the implementation decision is finalized in code.
 
 **DOCX conversion pipeline:**
 PHPWord has no Markdown writer. The conversion uses two steps:
@@ -437,8 +451,8 @@ Both packages are required in `composer.json`. Fidelity limits apply at each ste
 | Favorite a specific version / change favorite | ✓ | ✓ | ✓ | ✓ |
 | Use inbox / send messages | ✓ | ✓ | ✓ | ✓ |
 | Use "Ask AI" in editor | — | ✓ | ✓ | ✓ |
+| Use "Translate to Swahili" preview | — | own subject_grades | own subject_grade | ✓ |
 | Create new lesson plan (new family) | — | — | own subject_grade | ✓ |
-| Translate lesson plan to Swahili | — | — | own subject_grade | ✓ |
 | Add new version to existing family (edit) | — | own subject_grades | own subject_grades | ✓ |
 | Mark version official | — | — | own subject_grades | ✓ |
 | Promote/demote Teacher ↔ Editor | — | — | own subject_grades | ✓ |
@@ -553,34 +567,33 @@ class LessonPlanTranslator implements Agent {
 
 ### Translation feature (English → Swahili)
 
-Subject Administrators (own subject_grade) and Site Administrators can trigger an AI-powered translation of any English lesson plan version into Swahili.
+Current implemented behavior: Editors, Subject Administrators, and Site Administrators can open an AI-powered Swahili **preview** for lesson plans they are allowed to edit when `AI_SUGGESTIONS_ENABLED` is on.
 
-**Why not Editors?** Translation that targets a non-existent Swahili family creates a new family, which is an admin-only action. Restricting translation to Subject Admins and Site Admins keeps the permission model consistent — the same user who may create a new English family may create the Swahili equivalent.
+Planned persisted translation behavior remains more restrictive: if or when the app saves a translated lesson plan as a new Swahili family/version, that write path should remain Subject Admin or Site Admin only because it can create new families.
 
 **UX flow:**
 
 1. User views a lesson-plan version (language = English).
-2. A **"Translate to Swahili"** button is visible to Subject Admins (own subject_grade) and Site Admins.
+2. A **"Translate to Swahili"** button is visible to authorized users.
 3. User clicks the button. The current version's Markdown content is sent to `LessonPlanTranslator`.
-4. The translated content appears in a **review panel** — the user can read and optionally edit it before saving.
-5. User confirms. The system creates in a single transaction:
-   - A new `lesson_plan_family` record (if none exists): same `subject_grade_id` + `day`, `language = 'sw'`
-   - A new `lesson_plan_version` record: `version` = **same version number as the English source**, `contributor_id` = the user who triggered it
-   - If the user abandons the review panel without confirming, nothing is written to the database.
-6. User is navigated to the new Swahili version.
+4. The translated content appears in a **review panel**.
+5. The user may review, print/save as PDF, or email the translation preview.
+6. If the user abandons the review panel, nothing is written to the database.
+
+Persisted translation save flow is a later step, not the current implemented behavior.
 
 **Rules:**
 
-- If a Swahili family already exists for that `subject_grade + day` combination, the new version inherits the English source version number. If that version number already exists in the Swahili family (conflict), the system falls back to the standard bump flow from the highest existing Swahili version — user chooses Patch / Minor / Major.
-- The English source version is never modified.
-- The "Translate to Swahili" button requires **both** `config('features.ai_suggestions') === true` **and** Subject Admin or Site Admin role. The config flag alone is not sufficient — role is checked independently.
-- Teacher-only users do not see the button. Editor-role users see "Ask AI" but not "Translate to Swahili".
+- Preview translation never modifies the English source version.
+- Preview translation does not create or update database records.
+- The "Translate to Swahili" preview button requires `config('features.ai_suggestions') === true` and an edit-capable role in the relevant `subject_grade`.
+- Teacher-only users do not see the button.
+- If persisted translation save is implemented later, the version inheritance rule remains: the first saved Swahili version should inherit the English source version number, with fallback to a normal bump only on conflict.
 
 **Testing:**
 
-- Translation creates a new Swahili family when none exists
-- Translation adds a new version to an existing Swahili family when one exists
-- Source English version is unchanged after translation
+- Translation preview writes nothing to the database
+- Source English version is unchanged after translation preview
 - Button is hidden from Teachers
 - Button is hidden when `config('features.ai_suggestions')` is false
 - Use `LessonPlanTranslator::fake()` in tests
@@ -737,11 +750,11 @@ Required test coverage:
 
 **AI suggestions and translation**
 - "Ask AI" button and "Translate to Swahili" button do not render when `config('features.ai_suggestions')` is false
-- When flag is on: "Ask AI" button visible to Editors, Subject Admins, and Site Admins; "Translate to Swahili" button visible to Subject Admins and Site Admins only; both hidden from Teachers
-- An Editor sees "Ask AI" but does NOT see "Translate to Swahili" even when the flag is on
-- A Subject Admin sees both buttons for their own subject_grade
-- A Teacher sees neither button regardless of flag state
+- When the flag is on: "Ask AI" is visible to Editors, Subject Admins, and Site Admins with edit rights for the relevant `subject_grade`
+- When the flag is on: translation preview is visible to Editors, Subject Admins, and Site Admins with edit rights for the relevant `subject_grade`
+- Teachers see neither button regardless of flag state
 - Submitting a prompt returns a suggestion response (use `LessonPlanAdvisor::fake()` in tests; assert with `LessonPlanAdvisor::assertPrompted(...)` — never make real API calls in tests)
+- Translation preview writes nothing to the database unless a future persisted-save workflow is explicitly added
 - AI response does not auto-modify the document content
 
 ---

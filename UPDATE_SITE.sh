@@ -88,6 +88,12 @@ echo "    PHP:     $("$PHP_BIN" -r 'echo PHP_VERSION;')"
 echo "    Release: $RELEASE_COMMIT"
 echo ""
 
+# rsync -a preserves local permissions (700/600 on macOS).
+# Apache needs traversable directories and readable static files.
+chmod 755 "$APP_DIR" 2>/dev/null || true
+find "$APP_DIR/public" -type d -exec chmod 755 {} + 2>/dev/null || true
+find "$APP_DIR/public" -type f -exec chmod 644 {} + 2>/dev/null || true
+
 if [ ! -f .env ]; then
     echo "ERROR: Missing $APP_DIR/.env"
     echo "Create the production .env on DreamHost before running this script."

@@ -1,48 +1,12 @@
 <x-filament-panels::page>
     @php
-        $sg             = $this->getSubjectGrade();
-        $editors        = $sg->users;
         $availableUsers = $this->getAvailableUsers();
     @endphp
 
     <div class="mx-auto max-w-2xl space-y-6">
 
-        {{-- Subject Grade context --}}
-        <div class="rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-            <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">Managing editors for</p>
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white">
-                {{ $sg->subject->name }} — Grade {{ $sg->grade }}
-            </h2>
-        </div>
-
         {{-- Current editors --}}
-        <x-filament::section heading="Current Editors">
-
-            @if ($editors->isEmpty())
-                <p class="text-sm text-gray-400 dark:text-gray-500">No editors assigned yet.</p>
-            @else
-                <ul class="divide-y divide-gray-100 dark:divide-gray-800">
-                    @foreach ($editors as $editor)
-                        <li class="flex items-center justify-between py-3">
-                            <div>
-                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $editor->name }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ '@'.$editor->username }}</p>
-                            </div>
-                            <x-filament::button
-                                wire:click="removeEditor({{ $editor->id }})"
-                                wire:confirm="Remove {{ $editor->name }} from this team?"
-                                color="danger"
-                                size="sm"
-                                icon="heroicon-o-user-minus"
-                            >
-                                Remove
-                            </x-filament::button>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-
-        </x-filament::section>
+        {{ $this->table }}
 
         {{-- Add editor --}}
         <x-filament::section heading="Add Editor">
@@ -61,7 +25,7 @@
                         >
                             <option value="">— Choose a user —</option>
                             @foreach ($availableUsers as $u)
-                                <option value="{{ $u->id }}">{{ $u->name }} ({{ '@'.$u->username }})</option>
+                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->username }})</option>
                             @endforeach
                         </select>
                         @error('addUserId')

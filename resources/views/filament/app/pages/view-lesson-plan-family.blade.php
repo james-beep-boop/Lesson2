@@ -22,7 +22,7 @@
         @endonce
     @endif
 
-    {{-- Button grid layout --}}
+    {{-- Button grid layout (12 buttons: 6×2 → 4×3 → 3×4 → 2×6 → 1×12) --}}
     @once
     <style>
         .lesson-btn-grid {
@@ -30,16 +30,28 @@
             grid-template-columns: 1fr;
             gap: 0.75rem;
         }
-        @@media (min-width: 640px) {
+        @@media (min-width: 480px) {
             .lesson-btn-grid { grid-template-columns: repeat(2, 1fr); }
         }
-        @@media (min-width: 1024px) {
-            .lesson-btn-grid { grid-template-columns: repeat(5, 1fr); }
+        @@media (min-width: 640px) {
+            .lesson-btn-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @@media (min-width: 900px) {
+            .lesson-btn-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        @@media (min-width: 1280px) {
+            .lesson-btn-grid { grid-template-columns: repeat(6, 1fr); }
         }
         .lesson-btn-grid > * {
             display: flex !important;
             width: 100% !important;
             justify-content: center !important;
+        }
+        .ares-compare-viewer {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
         }
     </style>
     @endonce
@@ -47,12 +59,16 @@
     {{-- Print CSS --}}
     @once
     <style>
+        .ares-print-content { display: none; }
         @@media print {
             /* Hide everything except the print area */
             body > *:not(#print-area-wrapper) { display: none !important; }
             .fi-topbar, .fi-sidebar, .fi-header, nav, [data-noprint] { display: none !important; }
             #print-area { display: block !important; }
             .prose { max-width: none; }
+            /* Show server-rendered fallback, hide async viewer */
+            .ares-print-content { display: block !important; }
+            .ares-toast-viewer { display: none !important; }
         }
         @@page { margin: 2cm; }
     </style>
@@ -72,174 +88,124 @@
     </div>
 
     @if($editMode)
-        @php
-            $previews = $this->versionPreviews();
-            $editContentHtml = \Illuminate\Support\Str::markdown($editContent ?? '', ['html_input' => 'strip']);
-        @endphp
+        @php $previews = $this->versionPreviews(); @endphp
+
+        @once
+        <style>
+            .ares-edit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; margin-bottom: 1rem; }
+            .ares-bump-group { display: flex; flex-wrap: wrap; gap: 1rem; }
+            .ares-bump-label { display: flex; cursor: pointer; align-items: center; gap: 0.375rem; font-size: 0.875rem; }
+            .ares-revision-note { flex: 0 0 100%; max-width: 28rem; }
+            .ares-paste-tip { flex: 0 0 100%; padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid #bfdbfe; background: #eff6ff; font-size: 0.875rem; color: #1e40af; }
+            .ares-editor-wrap { flex: 0 0 100%; min-width: 0; }
+        </style>
+        @endonce
 
         {{-- Action bar: Save / version bump / Discard --}}
-        <div class="mb-4 flex flex-wrap items-center" style="gap: 1.25rem;" data-noprint>
-            <x-filament::button wire:click="saveNewVersion">Save Edits</x-filament::button>
+        <div
+            x-data="{
+                editor: null,
+                saving: false,
+                initialMarkdown: '',
+                baseLatestVersionId: {{ Js::from($baseLatestVersionId) }},
 
-            <div class="flex flex-wrap" style="gap: 1rem;">
+                async init() {
+                    if (!window.ToastUIEditor) {
+                        await window.loadToastUIEditor();
+                    }
+                    this.editor = new window.ToastUIEditor({
+                        el: document.getElementById('toast-editor-mount-{{ $record->id }}'),
+                        initialValue: {{ Js::from($editContent) }},
+                        previewStyle: 'tab',
+                        initialEditType: 'wysiwyg',
+                        language: 'en',
+                        height: '600px',
+                        minHeight: '300px',
+                        theme: window.getTheme(),
+                        toolbarItems: [
+                            ['heading', 'bold', 'italic', 'strike'],
+                            ['ul', 'ol', 'task'],
+                            ['table', 'link'],
+                        ],
+                    });
+                    this.initialMarkdown = this.editor.getMarkdown();
+
+                    this._beforeUnload = (e) => {
+                        if (this.editor && this.editor.getMarkdown() !== this.initialMarkdown) {
+                            e.preventDefault();
+                            e.returnValue = '';
+                        }
+                    };
+                    window.addEventListener('beforeunload', this._beforeUnload);
+                },
+
+                async save() {
+                    if (this.saving) return;
+                    this.saving = true;
+                    try {
+                        const md = this.editor.getMarkdown();
+                        await $wire.set('editContent', md);
+                        await $wire.call('saveNewVersion');
+                        this.initialMarkdown = md;
+                    } finally {
+                        this.saving = false;
+                    }
+                },
+
+                cancel() {
+                    $wire.call('cancelEditMode');
+                },
+
+                destroy() {
+                    window.removeEventListener('beforeunload', this._beforeUnload);
+                    if (this.editor) {
+                        this.editor.destroy();
+                        this.editor = null;
+                    }
+                },
+            }"
+            class="ares-edit-bar"
+            data-noprint
+        >
+            <x-filament::button
+                x-on:click="save()"
+                x-bind:disabled="saving"
+                x-bind:class="saving ? 'opacity-50 cursor-not-allowed' : ''"
+            >
+                <span x-show="!saving">Save Edits</span>
+                <span x-show="saving" style="display:none;">Saving…</span>
+            </x-filament::button>
+
+            <div class="ares-bump-group">
                 @foreach(['major', 'minor', 'patch'] as $bump)
-                    <label wire:key="bump-{{ $bump }}" class="flex cursor-pointer items-center" style="gap: 0.375rem; font-size: 0.875rem;">
+                    <label wire:key="bump-{{ $bump }}" class="ares-bump-label">
                         <input type="radio" name="versionBump" wire:model.live="versionBump" value="{{ $bump }}">
                         {{ ucfirst($bump) }} ({{ $previews[$bump] }})
                     </label>
                 @endforeach
             </div>
 
-            <x-filament::button wire:click="$set('editMode', false)" color="gray">Discard Edits</x-filament::button>
-        </div>
+            <x-filament::button x-on:click="cancel()" color="gray">Discard Edits</x-filament::button>
 
-        {{-- Revision note --}}
-        <div class="mb-4 max-w-md" data-noprint>
-            <x-filament::input.wrapper label="Revision note (optional)">
-                <x-filament::input wire:model="revisionNote" type="text" />
-            </x-filament::input.wrapper>
-        </div>
-
-        {{-- Tabbed editor with text-selection-to-source mapping --}}
-        <x-filament::section>
-            <div
-                x-data="{
-                    tab: 'preview',
-                    selText: '',
-                    selBefore: '',
-                    selAfter: '',
-                    btnVisible: false,
-                    btnX: 0,
-                    btnY: 0,
-                    ambiguous: false,
-                    captureSelection() {
-                        const sel = window.getSelection();
-                        if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-                            this.btnVisible = false;
-                            return;
-                        }
-                        const range = sel.getRangeAt(0);
-                        const container = $el.querySelector('[data-prose-target]');
-                        if (!container || !container.contains(range.commonAncestorContainer)) {
-                            this.btnVisible = false;
-                            return;
-                        }
-                        this.selText = sel.toString();
-                        const beforeRange = document.createRange();
-                        beforeRange.setStart(container, 0);
-                        beforeRange.setEnd(range.startContainer, range.startOffset);
-                        const textBefore = beforeRange.toString();
-                        const afterRange = document.createRange();
-                        afterRange.setStart(range.endContainer, range.endOffset);
-                        afterRange.setEnd(container, container.childNodes.length);
-                        const textAfter = afterRange.toString();
-                        this.selBefore = textBefore.slice(-120);
-                        this.selAfter  = textAfter.slice(0, 120);
-                        const rect = range.getBoundingClientRect();
-                        const scrollY = window.scrollY || document.documentElement.scrollTop;
-                        this.btnX = rect.left + rect.width / 2;
-                        this.btnY = rect.top - 44;
-                        this.btnVisible = true;
-                        this.ambiguous = false;
-                    },
-                    editSelected() {
-                        this.btnVisible = false;
-                        this.ambiguous = false;
-
-                        const ta = $el.querySelector('textarea[data-source-textarea]');
-                        if (!ta) { this.tab = 'source'; return; }
-
-                        const src    = ta.value;
-                        const needle = this.selText.trim();
-                        if (!needle) { this.tab = 'source'; return; }
-
-                        const hits = [];
-                        let i = 0;
-                        while ((i = src.indexOf(needle, i)) !== -1) { hits.push(i); i += needle.length; }
-
-                        if (hits.length === 0) { this.tab = 'source'; this.ambiguous = true; return; }
-
-                        let start = hits[0];
-
-                        if (hits.length > 1) {
-                            const ctxB = this.selBefore.trim();
-                            const ctxA = this.selAfter.trim();
-                            if (!ctxB && !ctxA) { this.tab = 'source'; this.ambiguous = true; return; }
-                            let best = -1, bestScore = -1, bestCount = 0;
-                            for (const h of hits) {
-                                let score = 0;
-                                if (ctxB && src.slice(Math.max(0, h - 120), h).includes(ctxB)) score++;
-                                if (ctxA && src.slice(h + needle.length, h + needle.length + 120).includes(ctxA)) score++;
-                                if (score > bestScore) { bestScore = score; best = h; bestCount = 1; }
-                                else if (score === bestScore) { bestCount++; }
-                            }
-                            if (bestCount !== 1) { this.tab = 'source'; this.ambiguous = true; return; }
-                            start = best;
-                        }
-
-                        ta.setSelectionRange(start, start + needle.length);
-                        const linesBefore = src.slice(0, start).split('\n').length;
-                        const lh = parseInt(getComputedStyle(ta).lineHeight) || 20;
-                        ta.scrollTop = Math.max(0, (linesBefore - 3) * lh);
-
-                        this.tab = 'source';
-                        requestAnimationFrame(() => ta.focus());
-                    },
-                }"
-                @mouseup.window="captureSelection()"
-                @keyup.window.debounce.150ms="if (!window.getSelection()?.toString().trim()) { btnVisible = false; }"
-            >
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                    <x-filament::button @click="tab = 'preview'" x-show="tab === 'preview'">View Lesson</x-filament::button>
-                    <x-filament::button @click="tab = 'preview'" x-show="tab !== 'preview'" color="gray">View Lesson</x-filament::button>
-                    <x-filament::button @click="tab = 'source'" x-show="tab === 'source'">Edit Lesson</x-filament::button>
-                    <x-filament::button @click="tab = 'source'" x-show="tab !== 'source'" color="gray">Edit Lesson</x-filament::button>
-                </div>
-
-                <div x-show="tab === 'preview'" data-prose-target>
-                    @include('filament.forms.components.markdown-preview', [
-                        'wireProp' => 'editContent',
-                        'initialContent' => $editContent ?? '',
-                        'initialHtml' => $editContentHtml,
-                    ])
-                </div>
-
-                <div x-show="tab === 'source'">
-                    <textarea
-                        wire:model="editContent"
-                        x-on:input.debounce.300ms="$dispatch('markdown-input', {value: $event.target.value})"
-                        rows="28"
-                        class="rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                        style="width: 100%; box-sizing: border-box;"
-                        data-source-textarea
-                    ></textarea>
-                </div>
-
-                {{-- Ambiguous-match banner --}}
-                <div
-                    x-show="ambiguous"
-                    x-transition
-                    class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                    style="display:none;"
-                >
-                    The selected text appears more than once in the source — please locate it manually in the editor.
-                    <button @click="ambiguous = false" style="margin-left:0.75rem;text-decoration:underline;cursor:pointer;">Dismiss</button>
-                </div>
-
-                {{-- Floating "Edit Selected Text" button --}}
-                <div
-                    x-show="tab === 'preview' && btnVisible"
-                    x-transition.opacity
-                    :style="`position:fixed; top:${btnY}px; left:${btnX}px; transform:translateX(-50%); z-index:9999;`"
-                    style="display:none;"
-                >
-                    <button
-                        @mousedown.prevent="editSelected()"
-                        style="background:#1d4ed8;color:#fff;border:none;border-radius:0.375rem;padding:0.375rem 0.875rem;font-size:0.8125rem;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.18);white-space:nowrap;"
-                    >Edit Selected Text</button>
-                </div>
+            {{-- Revision note --}}
+            <div class="ares-revision-note">
+                <x-filament::input.wrapper label="Revision note (optional)">
+                    <x-filament::input wire:model="revisionNote" type="text" />
+                </x-filament::input.wrapper>
             </div>
-        </x-filament::section>
+
+            {{-- Paste tip banner --}}
+            <div class="ares-paste-tip">
+                Pasting from Word or Google Docs? Use <strong>Paste as Plain Text</strong> (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.
+            </div>
+
+            {{-- Toast UI editor mount point --}}
+            <div class="ares-editor-wrap">
+                <x-filament::section>
+                    <div wire:ignore id="toast-editor-mount-{{ $record->id }}"></div>
+                </x-filament::section>
+            </div>
+        </div>
 
     @else
         @if($selectedVersion)
@@ -260,37 +226,7 @@
                         <div></div>
                     @endif
 
-                    {{-- 2: Translate to Swahili --}}
-                    @if($canTranslate)
-                        <x-filament::button
-                            wire:click="openTranslationPanel"
-                            wire:loading.attr="disabled"
-                            wire:target="openTranslationPanel,translatePreview"
-                            color="gray"
-                            icon="heroicon-o-language"
-                            class="w-full justify-center"
-                        >
-                            Translate to Swahili
-                        </x-filament::button>
-                    @else
-                        <div></div>
-                    @endif
-
-                    {{-- 3: Ask AI --}}
-                    @if($canAskAi)
-                        <x-filament::button
-                            wire:click="openAiPanel"
-                            color="gray"
-                            icon="heroicon-o-sparkles"
-                            class="w-full justify-center"
-                        >
-                            Ask AI
-                        </x-filament::button>
-                    @else
-                        <div></div>
-                    @endif
-
-                    {{-- 4: Compare to Other / Exit Compare --}}
+                    {{-- 2: Compare to Other / Exit Compare --}}
                     @if($compareMode)
                         <x-filament::button
                             wire:click="$set('compareMode', false)"
@@ -313,21 +249,37 @@
                         <div></div>
                     @endif
 
-                    {{-- 5: Request Deletion --}}
-                    @if($canRequestDeletion)
+                    {{-- 3: Ask AI --}}
+                    @if($canAskAi)
                         <x-filament::button
-                            wire:click="$set('showDeletionForm', true)"
-                            color="danger"
-                            icon="heroicon-o-trash"
+                            wire:click="openAiPanel"
+                            color="gray"
+                            icon="heroicon-o-sparkles"
                             class="w-full justify-center"
                         >
-                            Request Deletion
+                            Ask AI
                         </x-filament::button>
                     @else
                         <div></div>
                     @endif
 
-                    {{-- 6: Favorite --}}
+                    {{-- 4: Translate to Swahili --}}
+                    @if($canTranslate)
+                        <x-filament::button
+                            wire:click="openTranslationPanel"
+                            wire:loading.attr="disabled"
+                            wire:target="openTranslationPanel,translatePreview"
+                            color="gray"
+                            icon="heroicon-o-language"
+                            class="w-full justify-center"
+                        >
+                            Translate to Swahili
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 5: Favorite --}}
                     <x-filament::button
                         wire:click="favorite"
                         color="gray"
@@ -337,17 +289,7 @@
                         {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Favorite' }}
                     </x-filament::button>
 
-                    {{-- 7: Print --}}
-                    <x-filament::button
-                        color="gray"
-                        icon="heroicon-o-printer"
-                        x-on:click="window.print()"
-                        class="w-full justify-center"
-                    >
-                        Print
-                    </x-filament::button>
-
-                    {{-- 8: Save PDF --}}
+                    {{-- 6: Save PDF --}}
                     <x-filament::button
                         tag="a"
                         href="{{ route('lesson-plan.pdf', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
@@ -359,7 +301,7 @@
                         Save PDF
                     </x-filament::button>
 
-                    {{-- 9: Email PDF --}}
+                    {{-- 7: Email PDF --}}
                     <x-filament::button
                         wire:click="openEmailPdfModal"
                         color="gray"
@@ -367,6 +309,28 @@
                         class="w-full justify-center"
                     >
                         Email PDF
+                    </x-filament::button>
+
+                    {{-- 8: Save .docx --}}
+                    <x-filament::button
+                        tag="a"
+                        href="{{ route('lesson-plan.docx', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
+                        target="_blank"
+                        color="gray"
+                        icon="heroicon-o-arrow-down-tray"
+                        class="w-full justify-center"
+                    >
+                        Save .docx
+                    </x-filament::button>
+
+                    {{-- 9: Email .docx --}}
+                    <x-filament::button
+                        wire:click="openEmailDocxModal"
+                        color="gray"
+                        icon="heroicon-o-envelope"
+                        class="w-full justify-center"
+                    >
+                        Email .docx
                     </x-filament::button>
 
                     {{-- 10: Message About This --}}
@@ -378,6 +342,30 @@
                             class="w-full justify-center"
                         >
                             Message About This
+                        </x-filament::button>
+                    @else
+                        <div></div>
+                    @endif
+
+                    {{-- 11: Print --}}
+                    <x-filament::button
+                        color="gray"
+                        icon="heroicon-o-printer"
+                        x-on:click="window.print()"
+                        class="w-full justify-center"
+                    >
+                        Print
+                    </x-filament::button>
+
+                    {{-- 12: Request Deletion --}}
+                    @if($canRequestDeletion)
+                        <x-filament::button
+                            wire:click="$set('showDeletionForm', true)"
+                            color="danger"
+                            icon="heroicon-o-trash"
+                            class="w-full justify-center"
+                        >
+                            Request Deletion
                         </x-filament::button>
                     @else
                         <div></div>
@@ -435,6 +423,7 @@
 
         {{-- Action panels — below buttons, above lesson --}}
         @include('filament.app.partials.email-pdf-modal')
+        @include('filament.app.partials.email-docx-modal')
         @include('filament.app.partials.ai-panel')
         @include('filament.app.partials.translation-preview-panel')
         @include('filament.app.partials.message-modal')
@@ -578,13 +567,31 @@
                                     {!! $diffHtml !!}
                                 </div>
                             @else
-                                <div class="grid grid-cols-{{ $diffLayout === 'side-by-side' ? '2' : '1' }} gap-4">
-                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        @markdown($compareVersion->content)
+                                <div style="display:grid; grid-template-columns:{{ $diffLayout === 'side-by-side' ? '1fr 1fr' : '1fr' }}; gap:1rem;">
+                                    <div class="ares-compare-viewer">
+                                        <div
+                                            wire:key="compare-viewer-from-{{ $compareVersion->id }}"
+                                            x-data="toastViewer({{ Js::from($compareVersion->content) }})"
+                                            class="ares-toast-viewer"
+                                        >
+                                            <div data-toast-viewer wire:ignore></div>
+                                        </div>
+                                        <div class="ares-print-content prose max-w-none">
+                                            {!! \Illuminate\Support\Str::markdown($compareVersion->content) !!}
+                                        </div>
                                     </div>
                                     @if($diffLayout === 'side-by-side')
-                                    <div class="prose max-w-none rounded border border-gray-200 p-4 text-sm">
-                                        @markdown($selectedVersion->content)
+                                    <div class="ares-compare-viewer">
+                                        <div
+                                            wire:key="compare-viewer-to-{{ $selectedVersion->id }}"
+                                            x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
+                                            class="ares-toast-viewer"
+                                        >
+                                            <div data-toast-viewer wire:ignore></div>
+                                        </div>
+                                        <div class="ares-print-content prose max-w-none">
+                                            {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
+                                        </div>
                                     </div>
                                     @endif
                                 </div>
@@ -613,9 +620,16 @@
                                 @endif
                             </div>
 
-                            {{-- Content viewer --}}
-                            <div class="prose max-w-none">
-                                @markdown($selectedVersion->content)
+                            {{-- Content viewer — Toast UI Viewer (screen) + server-rendered fallback (print) --}}
+                            <div
+                                wire:key="toast-viewer-{{ $selectedVersion->id }}"
+                                x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
+                                class="ares-toast-viewer"
+                            >
+                                <div data-toast-viewer wire:ignore></div>
+                            </div>
+                            <div class="ares-print-content prose max-w-none">
+                                {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
                             </div>
                         </x-filament::section>
                     @endif

@@ -1,205 +1,93 @@
 # ARES Lesson Repository — Build Progress
 
-Lightweight tracker extracted from `Lesson2.md`. Update this file as features are completed.
-For full spec details (data model, auth rules, UX flows, test requirements) always refer to `Lesson2.md`.
+Lightweight tracker extracted from `Lesson2.md`. For requirements and behavioral rules, defer to `Lesson2.md`.
 
 **Live site:** https://www.sheql.com
-**Last updated:** 2026-03-22 (session 5 end)
+**Last updated:** 2026-04-06
 
 ---
 
 ## Legend
-- ✅ Done and deployed
-- 🔧 In progress
-- ⬜ Not started
-- ❌ Deferred (Section 18 of spec — do not build)
+
+- `Done`: implemented and in the codebase
+- `In progress`: partially implemented or planned next
+- `Not started`: still pending
+- `Deferred`: intentionally out of scope for MVP
 
 ---
 
-## Infrastructure / Setup
-- ✅ Laravel 13 + Filament 5 + Livewire 4 scaffold
-- ✅ Spatie Permission + Filament Shield installed
-- ✅ Models, migrations, factories (Blueprint-generated)
-- ✅ DatabaseSeeder (System user + Site Admin)
-- ✅ DemoSeeder (5 demo users, subjects, subject_grades, lesson plans)
-- ✅ DreamHost deployment pipeline (`UPDATE_SITE.sh`, rsync for assets)
-- ✅ Trusted proxies, APP_KEY, session/cache as `file`, APP_DEBUG off
+## Current State
+
+### Infrastructure / Setup
+
+- Done: Laravel 13 + Filament 5 + Livewire 4 scaffold
+- Done: Spatie Permission + Filament Shield installed
+- Done: production-safe `DatabaseSeeder` and separate `DemoSeeder`
+- Done: current deploy pipeline is local rsync upload via `DEPLOY_SITE.sh` plus DreamHost finalization via `UPDATE_SITE.sh`
+- Done: DreamHost runtime configuration for trusted proxies, file-based session/cache, maintenance mode, cache rebuild, and OPcache reset
+
+### Authentication / Access
+
+- Done: login, logout, registration, email verification gate, forgot/reset password
+- Done: app-panel vs admin-panel access rules
+- Done: tab-guard logout route and tests
+
+### Lesson Plans
+
+- Done: family/version model, semantic version bumps, immutable versions
+- Done: compare view, official version marking, favorites, deletion request flow
+- Done: file import for `.md`, `.txt`, and `.docx`
+- Done: PDF download and email PDF
+- Done: Ask AI streaming panel
+- Done: Swahili translation preview and translation email PDF
+- In progress: richer editing experience will move from the current markdown editor to Toast UI
+- Not started: transactional save of translated Swahili family/version to the database
+
+### Messaging / Admin
+
+- Done: inbox list, message detail, compose, reply, unread counts
+- Done: admin user management, subject management, subject-grade management
+- Done: deletion request admin resource
+- Done: admin dashboard summary counts
+- Not started: system-generated duplicate-family message flow
+- Not started: admin user filtering by `subject_grade` assignment
+
+### Testing
+
+- Done: auth coverage exists
+- Done: role and permission coverage exists
+- Done: favorites, messaging, deletion, PDF, translation preview, and tab-guard tests exist
+- In progress: broader cleanup / expansion of the Pest suite to fully match Section 17 of `Lesson2.md`
 
 ---
 
-## Authentication (Section 5)
-- ✅ Login / Logout
-- ✅ Email verification required before access
-- ✅ Registration page (username + name + email + password; Teacher by default)
-- ✅ Forgot password / reset password flow (`password_reset_tokens` migration added)
-- ✅ Account page with password change (Profile page edit mode)
+## Next Sprint
+
+Definitive next step: [`Toast_UI_Editor_Plan.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/Toast_UI_Editor_Plan.md)
+
+Priority order:
+
+1. Toast UI editor integration inside the existing `ViewLessonPlanFamily` edit mode
+2. Save-only Alpine/Livewire sync
+3. `MarkdownNormalizer` service and tests
+4. stale-version guard during save
+5. paste guidance / editor UX cleanup
+
+After that:
+
+1. system-generated duplicate-family messaging
+2. admin user filtering by `subject_grade`
+3. broader spec-alignment testing
+4. persisted Swahili translation save flow
 
 ---
 
-## Admin Panel (Section 16)
+## Deferred
 
-### Users
-- ✅ List users (system user hidden)
-- ✅ Edit user (assign `site_administrator` global role)
-- ✅ Text search (name, email, username) via searchable columns
-- ✅ Tabs: All | Site Admins | Subject Admins | Editors | Teachers (live counts)
-- ✅ Role badge column (colour-coded)
-- ⬜ Filter by subject_grade assignment
-
-### Subjects
-- ✅ List, create, edit subjects
-
-### Subject Grades
-- ✅ List, create, edit subject_grades
-- ✅ Assign Subject Admin (via `SubjectAdminService` transaction)
-- ✅ Assign Editors (via pivot)
-- ⬜ Filter bar: subject dropdown, grade dropdown, has Subject Admin
-- ⬜ Tabs: All | Has Subject Admin | No Subject Admin
-
-### Lesson Plan Families (admin view)
-- ⬜ Admin resource for lesson plan families
-- ⬜ Filter bar: subject, grade, day, official status, contributor
-- ⬜ Tabs: All | Official | Latest revision | Pending deletion request
-
-### Deletion Requests
-- ✅ List deletion requests
-- ⬜ Filter bar: subject_grade, contributor, requesting admin, status
-- ✅ Tabs: All | Pending | Resolved (live counts)
-- ✅ Hard-delete action (Site Admin only)
-
-### Summary Counts
-- ✅ Dashboard widget: users, subjects, subject_grades, families, versions, pending deletions (clickable cards + deletion banner)
-
----
-
-## App Panel — Lesson Plan Browsing (Sections 10, 15)
-
-### List page
-- ✅ Table showing one row per version (not per family)
-- ✅ Filter bar: Subject, Grade, Language dropdowns
-- ✅ Tabs: All | Official | Latest | Favorites
-- ✅ Official column: ✓ checkmark or blank
-- ⬜ Filter bar: Official status toggle, Contributor, My favorites toggle
-- ⬜ Summary count cards at top (total families, total versions, favorites)
-- ⬜ "Favorite differs from official" indicator on list row
-- ⬜ Sortable columns on nested relationship attributes
-
-### View / Version detail page
-- ✅ Version sidebar (all versions, official badge, ★ favorite badge)
-- ✅ View mode: version metadata, content rendered as Markdown
-- ✅ Mark Official button (Subject Admin + Site Admin)
-- ✅ Favorite / Unfavorite button
-- ✅ "Your favorited version differs from official" warning
-- ✅ Compare mode: version selector
-- ✅ Compare diff view: side-by-side and unified, pink/green highlights
-- ✅ Edit This Plan button → save new version
-- ✅ Version bump selector: Major / Minor / Patch with preview version numbers
-- ✅ Discard Edits button
-- ⬜ Ask AI panel wired to `LessonPlanAdvisor` (UI shell exists; not connected)
-- ⬜ Translate to Swahili button wired to `LessonPlanTranslator` (UI shell exists; not connected)
-
-### Create new lesson plan (Section 10)
-- ✅ Permission gate: Subject Admin (own subject_grade) + Site Admin only
-- ✅ Duplicate family detection → redirect to existing with warning notification
-- ✅ "Family not created until save" transactional pattern (VersionService)
-- ✅ File upload: `.md` / `.txt` → reads content into editor
-- ✅ File upload: `.docx` → PHPWord → HTML → Markdown conversion, persistent warning notification
-
----
-
-## Messaging / Inbox (Section 14)
-- ✅ Inbox page: list messages (from, subject/preview, unread indicator)
-- ✅ Message detail view (ViewMessage page with formatted body)
-- ✅ Compose message (to any user except System user)
-- ✅ Mark as read (on first open)
-- ✅ Unread message count badge in navigation (`getNavigationBadge`)
-- ✅ Reply pre-fills To and Subject fields
-- ⬜ System-generated messages (duplicate alert, etc.) from System user
-
----
-
-## Deletion Workflow (Section 13)
-- ✅ "Request deletion" button (Subject Admin, own subject_grade)
-- ✅ Creates `deletion_requests` record + sends message to contributor + all Site Admins
-- ✅ Admin panel deletion request list + hard-delete action
-
----
-
-## Roles and Permissions UI (Section 6)
-- ✅ Site Admin assignment (admin panel UserResource)
-- ✅ Subject Admin assignment with auto-demotion (SubjectAdminService, SubjectGradeResource)
-- ✅ Editor assignment (subject_grade_user pivot, SubjectGradeResource)
-- ⬜ Role promotion/demotion from within lesson plan family view (promote Teacher → Editor, etc.)
-- ⬜ Filter users by role and subject_grade assignment (admin panel)
-
----
-
-## Branding and UI (Section 4)
-- ⬜ Header: ARES Education / Kenya Lesson Plan Repository top-left
-- ⬜ Header: Lessons | Admin (if authorized) | unread badge | account menu | sign out
-- ✅ Footer: "Kenya Lesson Plan Repository © 2026 ARES Education — CC BY-SA 4.0" (both panels)
-
----
-
-## AI Features (Sections 12, gated by `AI_SUGGESTIONS_ENABLED`)
-- ⬜ `LessonPlanAdvisor` agent class (`app/Ai/Agents/LessonPlanAdvisor.php`)
-- ⬜ Ask AI panel → sends prompt + document content → streams response
-- ⬜ `LessonPlanTranslator` agent class (`app/Ai/Agents/LessonPlanTranslator.php`)
-- ⬜ Translate to Swahili flow → review panel → transactional save of new Swahili family/version
-- ⬜ Version number inheritance rule on translation (inherits source version; fallback to bump if conflict)
-
----
-
-## Tests (Section 17)
-- ⬜ Auth: registration requires email verification
-- ⬜ Auth: password reset, logout
-- ⬜ Roles: Teachers cannot edit; Editors scoped to subject_grade; Subject Admin scoped
-- ⬜ Roles: one Subject Admin per subject_grade; auto-demotion on promotion
-- ⬜ Versioning: immutability, bump types, 1.0.0 first version, duplicate rejection
-- ⬜ Versioning: translation inherits source version number
-- ⬜ Compare: same-family only, read-only
-- ⬜ Messaging: unread count, deletion request creates messages
-- ⬜ Favorites: upsert, uniqueness per family per user
-- ⬜ AI: buttons hidden when flag off; correct role visibility; fake agent in tests
-
----
-
-## Deferred (do not build) — Section 18
-- ❌ DOC/DOCX export
-- ❌ Advanced PDF export / print formatting
-- ❌ Network/device transfer workflows
-- ❌ Rich analytics dashboards
-- ❌ Threaded messaging
-- ❌ Email-change workflow
-- ❌ "View Original" for DOCX uploads
-- ❌ Full-text content search
-
----
-
-## Current Sprint
-
-### ✅ Completed (sessions 1–5)
-- Version editor crash fix (`$user` undefined → `auth()->user()`)
-- Button labels: "Edit This Plan", "Discard Edits"
-- Version bump order (Major / Minor / Patch) with resulting version previews
-- Full-width edit mode
-- Compare: LCS diff with pink/green highlights, side-by-side + unified toggle
-- Lesson list: one row per version, All/Official/Latest/Favorites tabs, Subject/Grade/Language filters, ✓ Official column
-- Inbox / messaging: inbox list, message detail, compose, mark-as-read, unread badge in nav, reply pre-fill
-- Admin: Create User button + page (username, name, email, password; auto-verified)
-- Registration page (username + name + email + password + confirm password; auto email-verified)
-- Forgot password / reset password flow
-- Bug fixes (Nanoclaw round 1): compose 404, registration 403, filter leaks, version bump radios
-- Bug fixes (Nanoclaw round 2): message detail 404, confirm-password clearing on blur
-- Bug fix (Nanoclaw round 3): subject/grade filters completely non-functional — replaced dot-notation `whereHas` with explicit nested calls
-- Role badge in user avatar dropdown (Teacher / Editor / Subject Admin / Administrator)
-- Brand name 35% larger (1.5rem, bold)
-- **Deletion workflow**: Request Deletion button (Subject Admin), admin `DeletionRequestResource` with hard-delete action
-- **Admin dashboard**: stat cards (users, subjects, grades, families, versions, official), pending deletions banner (red when pending), clickable cards, quick links
-
-### 🔧 Next (in order)
-1. **System-generated messages** — duplicate alert from System user on Create
-2. **Filter by subject_grade in admin user list**
-3. **Tests** — Pest test suite (Section 17)
-4. **Translation to Swahili** — LessonPlanTranslator agent, review panel, transactional save, version inheritance
-5. **AI Ask AI panel** — LessonPlanAdvisor streaming panel, gated by `AI_SUGGESTIONS_ENABLED`
+- Deferred: DOC / DOCX export
+- Deferred: advanced PDF export / print formatting
+- Deferred: network or device transfer workflows
+- Deferred: rich analytics dashboards
+- Deferred: threaded messaging
+- Deferred: email-change workflow
+- Deferred: full-text content search
