@@ -24,8 +24,8 @@ window.getTheme = () =>
     document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
 // Alpine data factory for side-by-side rendered Markdown comparison.
-// Initialises two Toast UI Viewer instances and syncs their scroll positions
-// proportionally so both panes track together as the user scrolls.
+// Initialises two Toast UI Viewer instances, syncs their scroll positions
+// proportionally, and supports block-level diff highlighting.
 // Usage: x-data="toastCompareViewers({{ Js::from($left) }}, {{ Js::from($right) }})"
 window.toastCompareViewers = (leftContent, rightContent) => ({
     _leftViewer: null,
@@ -35,6 +35,7 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
     _rightScrollHandler: null,
     _leftPane: null,
     _rightPane: null,
+    highlightsEnabled: false,
 
     async init() {
         if (!window.ToastUIViewer) {
@@ -70,6 +71,72 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
         this._rightScrollHandler = () => sync(this._rightPane, this._leftPane);
         this._leftPane.addEventListener('scroll', this._leftScrollHandler, { passive: true });
         this._rightPane.addEventListener('scroll', this._rightScrollHandler, { passive: true });
+    },
+
+    toggleHighlights() {
+        this.highlightsEnabled = !this.highlightsEnabled;
+        if (this.highlightsEnabled) {
+            this._applyHighlights();
+        } else {
+            this._clearHighlights();
+        }
+    },
+
+    // Collect meaningful, non-nested block elements from a pane.
+    _getBlocks(pane) {
+        const selector = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, tr';
+        return Array.from(pane.querySelectorAll(selector)).filter(el => {
+            if (!el.textContent.trim()) return false;
+            // Exclude elements whose nearest block ancestor is also a block
+            // element — e.g. <p> inside <blockquote>, <p> inside <li>.
+            return !el.parentElement?.closest('p, li, blockquote, pre');
+        });
+    },
+
+    _buildFreqMap(blocks) {
+        const map = new Map();
+        for (const [, t] of blocks) map.set(t, (map.get(t) || 0) + 1);
+        return map;
+    },
+
+    _highlightSurplus(blocks, freqMap, oppositeFreqMap, className) {
+        const used = new Map();
+        for (const [el, t] of blocks) {
+            const surplus = Math.max(0, (freqMap.get(t) || 0) - (oppositeFreqMap.get(t) || 0));
+            const n = used.get(t) || 0;
+            if (n < surplus) {
+                // border-left/padding/margin don't apply to <tr>; highlight cells instead
+                const targets = el.tagName === 'TR'
+                    ? Array.from(el.querySelectorAll('td, th'))
+                    : [el];
+                for (const target of targets) target.classList.add(className);
+                used.set(t, n + 1);
+            }
+        }
+    },
+
+    _applyHighlights() {
+        if (!this._leftPane || !this._rightPane) return;
+
+        const normalize = el => el.textContent.trim().replace(/\s+/g, ' ');
+        const tag       = blocks => blocks.map(el => [el, normalize(el)]);
+
+        const leftBlocks  = tag(this._getBlocks(this._leftPane));
+        const rightBlocks = tag(this._getBlocks(this._rightPane));
+        const leftFreq    = this._buildFreqMap(leftBlocks);
+        const rightFreq   = this._buildFreqMap(rightBlocks);
+
+        this._highlightSurplus(leftBlocks,  leftFreq,  rightFreq, 'ares-diff-deleted');
+        this._highlightSurplus(rightBlocks, rightFreq, leftFreq,  'ares-diff-added');
+    },
+
+    _clearHighlights() {
+        for (const pane of [this._leftPane, this._rightPane]) {
+            if (!pane) continue;
+            for (const el of pane.querySelectorAll('.ares-diff-deleted, .ares-diff-added')) {
+                el.classList.remove('ares-diff-deleted', 'ares-diff-added');
+            }
+        }
     },
 
     destroy() {

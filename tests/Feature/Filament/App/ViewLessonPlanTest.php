@@ -245,6 +245,55 @@ test('rendered compare view shows Rendered View button to switch to source diff'
         ->assertSee('Stacked');
 });
 
+test('rendered compare view shows Highlight changes button', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)
+        ->call('enterCompareMode', $v1->id)
+        ->assertSee('Highlight changes');
+});
+
+test('source diff mode does not show Highlight changes button', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)
+        ->call('enterCompareMode', $v1->id)
+        ->call('toggleCompareView')
+        ->assertDontSee('Highlight changes');
+});
+
+test('rendered compare view wires Highlight button to toggleHighlights via Alpine', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)
+        ->call('enterCompareMode', $v1->id)
+        ->assertSee('toggleHighlights()', false);
+});
+
 // ---------------------------------------------------------------------------
 // Swahili translation preview
 // ---------------------------------------------------------------------------

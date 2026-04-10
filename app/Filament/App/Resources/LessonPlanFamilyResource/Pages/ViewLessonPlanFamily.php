@@ -410,11 +410,19 @@ class ViewLessonPlanFamily extends Page
             return;
         }
 
+        // Always diff from the lower version to the higher version
+        [$fromVersion, $toVersion] = version_compare(
+            $this->compareVersion->version,
+            $this->selectedVersion->version
+        ) <= 0
+            ? [$this->compareVersion, $this->selectedVersion]
+            : [$this->selectedVersion, $this->compareVersion];
+
         $diffService = app(DiffService::class);
 
         $result = $this->diffLayout === 'side-by-side'
-            ? $diffService->sideBySide($this->compareVersion->content ?? '', $this->selectedVersion->content ?? '')
-            : $diffService->unified($this->compareVersion->content ?? '', $this->selectedVersion->content ?? '');
+            ? $diffService->sideBySide($fromVersion->content ?? '', $toVersion->content ?? '')
+            : $diffService->unified($fromVersion->content ?? '', $toVersion->content ?? '');
 
         $this->diffHtml = $result['html'];
         $this->diffCss = $result['css'];
