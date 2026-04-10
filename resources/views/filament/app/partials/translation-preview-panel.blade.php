@@ -26,7 +26,35 @@
         }"
         @start-translation.window="$wire.translatePreview()"
     >
-        <x-filament::section heading="Swahili Translation — Preview Only">
+        <x-filament::section heading="Swahili Translation">
+            <x-slot name="afterHeader">
+                <div class="flex gap-2">
+                    @if($translationComplete && filled($translatedContent))
+                        <x-filament::button
+                            x-on:click="printTranslation()"
+                            color="gray"
+                            size="sm"
+                            icon="heroicon-o-printer"
+                        >
+                            Print / Save as PDF
+                        </x-filament::button>
+
+                        <x-filament::button
+                            wire:click="openTranslationEmailPanel"
+                            color="gray"
+                            size="sm"
+                            icon="heroicon-o-envelope"
+                        >
+                            Email PDF
+                        </x-filament::button>
+                    @endif
+
+                    <x-filament::button wire:click="closeTranslationPanel" color="gray" size="sm">
+                        Close
+                    </x-filament::button>
+                </div>
+            </x-slot>
+
             <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">
                 Preview only — this translation has not been saved to the database. May take up to one minute.
             </p>
@@ -53,34 +81,6 @@
                     <span class="italic text-gray-400 dark:text-gray-500">Translating to Swahili…</span>
                 </div>
             @endif
-
-            <div class="mt-3 flex gap-2">
-                @if($translationComplete && filled($translatedContent))
-                    <x-filament::button
-                        x-on:click="printTranslation()"
-                        color="gray"
-                        size="sm"
-                        icon="heroicon-o-printer"
-                    >
-                        Print / Save as PDF
-                    </x-filament::button>
-                @endif
-
-                @if($translationComplete && filled($translatedContent))
-                    <x-filament::button
-                        wire:click="openTranslationEmailPanel"
-                        color="gray"
-                        size="sm"
-                        icon="heroicon-o-envelope"
-                    >
-                        Email PDF
-                    </x-filament::button>
-                @endif
-
-                <x-filament::button wire:click="closeTranslationPanel" color="gray" size="sm">
-                    Close
-                </x-filament::button>
-            </div>
 
             @if($showTranslationEmailPanel)
             <div class="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
