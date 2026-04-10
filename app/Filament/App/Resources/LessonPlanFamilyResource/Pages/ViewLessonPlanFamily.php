@@ -39,6 +39,8 @@ class ViewLessonPlanFamily extends Page
 
     public bool $compareMode = false;
 
+    public string $compareView = 'rendered';
+
     public string $diffLayout = 'side-by-side';
 
     public string $diffHtml = '';
@@ -331,7 +333,15 @@ class ViewLessonPlanFamily extends Page
 
         $this->compareVersion = $other;
         $this->compareMode = true;
-        $this->computeDiff();
+        $this->compareView = 'rendered';
+    }
+
+    public function toggleCompareView(): void
+    {
+        $this->compareView = $this->compareView === 'rendered' ? 'source' : 'rendered';
+        if ($this->compareView === 'source') {
+            $this->computeDiff();
+        }
     }
 
     public function compareToPreviousVersion(VersionService $versionService): void
@@ -360,7 +370,7 @@ class ViewLessonPlanFamily extends Page
 
         $this->compareVersion = $previous;
         $this->compareMode = true;
-        $this->computeDiff();
+        $this->compareView = 'rendered';
     }
 
     public function compareToOfficialVersion(): void
@@ -385,7 +395,7 @@ class ViewLessonPlanFamily extends Page
 
         $this->compareVersion = $this->record->officialVersion;
         $this->compareMode = true;
-        $this->computeDiff();
+        $this->compareView = 'rendered';
     }
 
     public function toggleDiffLayout(): void

@@ -30,6 +30,21 @@
             padding: 1rem;
             overflow-x: auto;
         }
+        .ares-compare-panes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .ares-compare-labels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        @media (max-width: 639px) {
+            .ares-compare-panes { grid-template-columns: 1fr; }
+            .ares-compare-labels { display: none; }
+        }
     </style>
     @endonce
 
@@ -37,6 +52,7 @@
     @once
     <style>
         .ares-print-content { display: none; }
+        .ares-print-compare { display: none; }
         @@media print {
             /* Hide everything except the print area */
             body > *:not(#print-area-wrapper) { display: none !important; }
@@ -45,6 +61,7 @@
             .prose { max-width: none; }
             /* Show server-rendered fallback, hide async viewer */
             .ares-print-content { display: block !important; }
+            .ares-print-compare { display: grid !important; grid-template-columns: 1fr 1fr; gap: 1rem; }
             .ares-toast-viewer { display: none !important; }
         }
         @@page { margin: 2cm; }
@@ -491,8 +508,9 @@
         <div id="print-area">
                 @if($selectedVersion)
                     @if($compareMode && $compareVersion)
-                        {{-- Compare mode: visual diff --}}
+                        {{-- Compare mode --}}
                         <x-filament::section>
+                            {{-- Header: version info + mode toggle + (in source mode) layout toggle --}}
                             <div class="mb-3 flex flex-wrap items-center justify-between gap-2" data-noprint>
                                 <div>
                                     <span class="font-semibold">
@@ -504,19 +522,31 @@
                                         ({{ $compareVersion->contributor->username ?? '?' }} → {{ $selectedVersion->contributor->username ?? '?' }})
                                     </span>
                                 </div>
-                                <x-filament::button
-                                    wire:click="toggleDiffLayout"
-                                    color="gray"
-                                    size="sm"
-                                    icon="heroicon-o-arrows-right-left"
-                                >
-                                    {{ $diffLayout === 'side-by-side' ? 'Stacked' : 'Side-by-Side' }}
-                                </x-filament::button>
+                                <div class="flex gap-2">
+                                    <x-filament::button
+                                        wire:click="toggleCompareView"
+                                        color="gray"
+                                        size="sm"
+                                        :icon="$compareView === 'rendered' ? 'heroicon-o-code-bracket' : 'heroicon-o-eye'"
+                                    >
+                                        {{ $compareView === 'rendered' ? 'Source Diff' : 'Rendered View' }}
+                                    </x-filament::button>
+                                    @if($compareView === 'source')
+                                        <x-filament::button
+                                            wire:click="toggleDiffLayout"
+                                            color="gray"
+                                            size="sm"
+                                            icon="heroicon-o-arrows-right-left"
+                                        >
+                                            {{ $diffLayout === 'side-by-side' ? 'Stacked' : 'Side-by-Side' }}
+                                        </x-filament::button>
+                                    @endif
+                                </div>
                             </div>
 
-                            {{-- Version labels --}}
-                            @if($diffLayout === 'side-by-side')
-                                <div class="mb-2 grid grid-cols-2 gap-4">
+                            @if($compareView === 'rendered')
+                                {{-- Rendered side-by-side: two Toast UI Viewer instances with sync scroll --}}
+                                <div class="ares-compare-labels">
                                     <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                                         v{{ $compareVersion->version }} — from
                                     </div>
@@ -524,46 +554,61 @@
                                         v{{ $selectedVersion->version }} — to
                                     </div>
                                 </div>
-                            @else
-                                <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                    v{{ $compareVersion->version }} → v{{ $selectedVersion->version }}
-                                </div>
-                            @endif
 
-                            {{-- Diff output --}}
-                            @if($diffHtml)
-                                <div class="diff-wrapper overflow-x-auto rounded border border-gray-200 text-sm">
-                                    {!! $diffHtml !!}
+                                <div
+                                    wire:key="compare-rendered-{{ $compareVersion->id }}-{{ $selectedVersion->id }}"
+                                    x-data="toastCompareViewers({{ Js::from($compareVersion->content) }}, {{ Js::from($selectedVersion->content) }})"
+                                >
+                                    <div class="ares-compare-panes">
+                                        <div
+                                            data-compare-pane-left
+                                            class="ares-toast-viewer rounded border border-gray-200"
+                                            style="overflow-y:auto; max-height:70vh"
+                                        >
+                                            <div data-toast-viewer-left wire:ignore></div>
+                                        </div>
+                                        <div
+                                            data-compare-pane-right
+                                            class="ares-toast-viewer rounded border border-gray-200"
+                                            style="overflow-y:auto; max-height:70vh"
+                                        >
+                                            <div data-toast-viewer-right wire:ignore></div>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {{-- Print fallback: two-column server-rendered Markdown --}}
+                                <div class="ares-print-compare">
+                                    <div class="prose max-w-none">
+                                        @markdown($compareVersion->content)
+                                    </div>
+                                    <div class="prose max-w-none">
+                                        @markdown($selectedVersion->content)
+                                    </div>
+                                </div>
+
                             @else
-                                <div style="display:grid; grid-template-columns:{{ $diffLayout === 'side-by-side' ? '1fr 1fr' : '1fr' }}; gap:1rem;">
-                                    <div class="ares-compare-viewer">
-                                        <div
-                                            wire:key="compare-viewer-from-{{ $compareVersion->id }}"
-                                            x-data="toastViewer({{ Js::from($compareVersion->content) }})"
-                                            class="ares-toast-viewer"
-                                        >
-                                            <div data-toast-viewer wire:ignore></div>
+                                {{-- Source diff (existing raw-diff output) --}}
+                                @if($diffLayout === 'side-by-side')
+                                    <div class="mb-2 grid grid-cols-2 gap-4">
+                                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                            v{{ $compareVersion->version }} — from
                                         </div>
-                                        <div class="ares-print-content prose max-w-none">
-                                            {!! \Illuminate\Support\Str::markdown($compareVersion->content) !!}
+                                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                            v{{ $selectedVersion->version }} — to
                                         </div>
                                     </div>
-                                    @if($diffLayout === 'side-by-side')
-                                    <div class="ares-compare-viewer">
-                                        <div
-                                            wire:key="compare-viewer-to-{{ $selectedVersion->id }}"
-                                            x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
-                                            class="ares-toast-viewer"
-                                        >
-                                            <div data-toast-viewer wire:ignore></div>
-                                        </div>
-                                        <div class="ares-print-content prose max-w-none">
-                                            {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
-                                        </div>
+                                @else
+                                    <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        v{{ $compareVersion->version }} → v{{ $selectedVersion->version }}
                                     </div>
-                                    @endif
-                                </div>
+                                @endif
+
+                                @if($diffHtml)
+                                    <div class="diff-wrapper overflow-x-auto rounded border border-gray-200 text-sm">
+                                        {!! $diffHtml !!}
+                                    </div>
+                                @endif
                             @endif
                         </x-filament::section>
 
@@ -598,7 +643,7 @@
                                 <div data-toast-viewer wire:ignore></div>
                             </div>
                             <div class="ares-print-content prose max-w-none">
-                                {!! \Illuminate\Support\Str::markdown($selectedVersion->content) !!}
+                                @markdown($selectedVersion->content)
                             </div>
                         </x-filament::section>
                     @endif

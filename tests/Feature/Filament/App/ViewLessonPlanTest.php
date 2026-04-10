@@ -165,6 +165,87 @@ test('select version switches the displayed version', function () {
 });
 
 // ---------------------------------------------------------------------------
+// Rendered compare view
+// ---------------------------------------------------------------------------
+
+test('enterCompareMode sets compareMode true and compareView to rendered by default', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)
+        ->call('enterCompareMode', $v1->id)
+        ->assertSet('compareMode', true)
+        ->assertSet('compareView', 'rendered');
+});
+
+test('toggleCompareView cycles between rendered and source', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)
+        ->call('enterCompareMode', $v1->id)
+        ->assertSet('compareView', 'rendered')
+        ->call('toggleCompareView')
+        ->assertSet('compareView', 'source')
+        ->call('toggleCompareView')
+        ->assertSet('compareView', 'rendered');
+});
+
+test('rendered compare view shows version labels for both panes', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)
+        ->call('enterCompareMode', $v1->id)
+        ->assertSee('1.0.0')
+        ->assertSee('1.0.1')
+        ->assertSee('from')
+        ->assertSee('to')
+        ->assertSee('data-toast-viewer-left', false)
+        ->assertSee('data-toast-viewer-right', false);
+});
+
+test('rendered compare view shows Rendered View button to switch to source diff', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)
+        ->call('enterCompareMode', $v1->id)
+        ->assertSee('Source Diff')
+        ->call('toggleCompareView')
+        ->assertSee('Rendered View')
+        ->assertSee('Stacked');
+});
+
+// ---------------------------------------------------------------------------
 // Swahili translation preview
 // ---------------------------------------------------------------------------
 
