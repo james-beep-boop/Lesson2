@@ -22,31 +22,8 @@
         @endonce
     @endif
 
-    {{-- Button grid layout (12 buttons: 6×2 → 4×3 → 3×4 → 2×6 → 1×12) --}}
     @once
     <style>
-        .lesson-btn-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0.75rem;
-        }
-        @@media (min-width: 480px) {
-            .lesson-btn-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        @@media (min-width: 640px) {
-            .lesson-btn-grid { grid-template-columns: repeat(3, 1fr); }
-        }
-        @@media (min-width: 900px) {
-            .lesson-btn-grid { grid-template-columns: repeat(4, 1fr); }
-        }
-        @@media (min-width: 1280px) {
-            .lesson-btn-grid { grid-template-columns: repeat(6, 1fr); }
-        }
-        .lesson-btn-grid > * {
-            display: flex !important;
-            width: 100% !important;
-            justify-content: center !important;
-        }
         .ares-compare-viewer {
             border: 1px solid #e5e7eb;
             border-radius: 0.5rem;
@@ -209,61 +186,51 @@
 
     @else
         @if($selectedVersion)
-        {{-- ── Action button panel ──────────────────────────────────────────── --}}
+        {{-- ── Action button panel ─────────────────────────────────────────── --}}
         <div
-            x-data="{ compareOpen: false, compareVersionId: {{ $record->versions->where('id', '!=', $selectedVersion->id)->sortByDesc('created_at')->first()?->id ?? 'null' }} }"
+            x-data="{
+                openPanel: null,
+                compareVersionId: {{ $record->versions->where('id', '!=', $selectedVersion->id)->sortByDesc('created_at')->first()?->id ?? 'null' }}
+            }"
             class="mb-4"
             data-noprint
         >
             <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
-                <div class="lesson-btn-grid">
-                    {{-- 1: Edit This Plan --}}
+                <div class="flex flex-wrap gap-3">
                     @if($canEdit)
-                        <x-filament::button wire:click="enterEditMode" class="w-full justify-center">
+                        <x-filament::button wire:click="enterEditMode">
                             Edit This Plan
                         </x-filament::button>
-                    @else
-                        <div></div>
                     @endif
 
-                    {{-- 2: Compare to Other / Exit Compare --}}
                     @if($compareMode)
                         <x-filament::button
                             wire:click="$set('compareMode', false)"
                             color="gray"
                             icon="heroicon-o-x-mark"
-                            class="w-full justify-center"
                         >
                             Exit Compare
                         </x-filament::button>
                     @elseif($record->versions->count() > 1)
                         <x-filament::button
-                            @click="compareOpen = !compareOpen"
+                            @click="openPanel = openPanel === 'compare' ? null : 'compare'"
                             color="gray"
                             icon="heroicon-o-arrows-right-left"
-                            class="w-full justify-center"
                         >
-                            Compare to Other
+                            Compare Two Plans
                         </x-filament::button>
-                    @else
-                        <div></div>
                     @endif
 
-                    {{-- 3: Ask AI --}}
                     @if($canAskAi)
                         <x-filament::button
                             wire:click="openAiPanel"
                             color="gray"
                             icon="heroicon-o-sparkles"
-                            class="w-full justify-center"
                         >
                             Ask AI
                         </x-filament::button>
-                    @else
-                        <div></div>
                     @endif
 
-                    {{-- 4: Translate to Swahili --}}
                     @if($canTranslate)
                         <x-filament::button
                             wire:click="openTranslationPanel"
@@ -271,111 +238,34 @@
                             wire:target="openTranslationPanel,translatePreview"
                             color="gray"
                             icon="heroicon-o-language"
-                            class="w-full justify-center"
                         >
                             Translate to Swahili
                         </x-filament::button>
-                    @else
-                        <div></div>
                     @endif
 
-                    {{-- 5: Favorite --}}
                     <x-filament::button
-                        wire:click="favorite"
+                        @click="openPanel = openPanel === 'save' ? null : 'save'"
                         color="gray"
-                        icon="heroicon-o-star"
-                        class="w-full justify-center"
+                        icon="heroicon-o-share"
                     >
-                        {{ $favorite && $favorite->lesson_plan_version_id === $selectedVersion->id ? '★ Favorited' : 'Favorite' }}
+                        Save / Send Options
                     </x-filament::button>
 
-                    {{-- 6: Save PDF --}}
-                    <x-filament::button
-                        tag="a"
-                        href="{{ route('lesson-plan.pdf', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
-                        target="_blank"
-                        color="gray"
-                        icon="heroicon-o-arrow-down-tray"
-                        class="w-full justify-center"
-                    >
-                        Save PDF
-                    </x-filament::button>
-
-                    {{-- 7: Email PDF --}}
-                    <x-filament::button
-                        wire:click="openEmailPdfModal"
-                        color="gray"
-                        icon="heroicon-o-envelope"
-                        class="w-full justify-center"
-                    >
-                        Email PDF
-                    </x-filament::button>
-
-                    {{-- 8: Save .docx --}}
-                    <x-filament::button
-                        tag="a"
-                        href="{{ route('lesson-plan.docx', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
-                        target="_blank"
-                        color="gray"
-                        icon="heroicon-o-arrow-down-tray"
-                        class="w-full justify-center"
-                    >
-                        Save .docx
-                    </x-filament::button>
-
-                    {{-- 9: Email .docx --}}
-                    <x-filament::button
-                        wire:click="openEmailDocxModal"
-                        color="gray"
-                        icon="heroicon-o-envelope"
-                        class="w-full justify-center"
-                    >
-                        Email .docx
-                    </x-filament::button>
-
-                    {{-- 10: Message About This --}}
-                    @if($canMessage)
-                        <x-filament::button
-                            wire:click="openMessageModal('author')"
-                            color="gray"
-                            icon="heroicon-o-chat-bubble-left-right"
-                            class="w-full justify-center"
-                        >
-                            Message About This
-                        </x-filament::button>
-                    @else
-                        <div></div>
-                    @endif
-
-                    {{-- 11: Print --}}
-                    <x-filament::button
-                        color="gray"
-                        icon="heroicon-o-printer"
-                        x-on:click="window.print()"
-                        class="w-full justify-center"
-                    >
-                        Print
-                    </x-filament::button>
-
-                    {{-- 12: Request Deletion --}}
                     @if($canRequestDeletion)
                         <x-filament::button
                             wire:click="$set('showDeletionForm', true)"
                             color="danger"
                             icon="heroicon-o-trash"
-                            class="w-full justify-center"
                         >
                             Request Deletion
                         </x-filament::button>
-                    @else
-                        <div></div>
                     @endif
                 </div>
             </div>
 
             {{-- Compare picker — slides open below the button panel --}}
             <div
-                x-show="compareOpen"
+                x-show="openPanel === 'compare'"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-1"
                 x-transition:enter-end="opacity-100 translate-y-0"
@@ -403,19 +293,98 @@
                         @endforeach
                     </select>
                     <x-filament::button
-                        @click="$wire.enterCompareMode(compareVersionId); compareOpen = false"
+                        @click="$wire.enterCompareMode(compareVersionId); openPanel = null"
                         size="sm"
                         icon="heroicon-o-arrows-right-left"
                     >
                         Compare
                     </x-filament::button>
                     <x-filament::button
-                        @click="compareOpen = false"
+                        @click="openPanel = null"
                         color="gray"
                         size="sm"
                     >
                         Cancel
                     </x-filament::button>
+                </div>
+            </div>
+
+            {{-- Save / Send panel — slides open below the button panel --}}
+            <div
+                x-show="openPanel === 'save'"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0 -translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 -translate-y-1"
+                class="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
+                style="display: none;"
+            >
+                <p class="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">Save, print, or share this lesson plan:</p>
+                <div class="flex flex-wrap gap-3">
+                    <x-filament::button
+                        color="gray"
+                        icon="heroicon-o-printer"
+                        size="sm"
+                        x-on:click="window.print()"
+                    >
+                        Print
+                    </x-filament::button>
+
+                    <x-filament::button
+                        tag="a"
+                        href="{{ route('lesson-plan.pdf', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
+                        target="_blank"
+                        color="gray"
+                        icon="heroicon-o-arrow-down-tray"
+                        size="sm"
+                    >
+                        Save PDF
+                    </x-filament::button>
+
+                    <x-filament::button
+                        wire:click="openEmailPdfModal"
+                        @click="openPanel = null"
+                        color="gray"
+                        icon="heroicon-o-envelope"
+                        size="sm"
+                    >
+                        Email PDF
+                    </x-filament::button>
+
+                    <x-filament::button
+                        tag="a"
+                        href="{{ route('lesson-plan.docx', ['family' => $record->id, 'version' => $selectedVersion->id]) }}"
+                        target="_blank"
+                        color="gray"
+                        icon="heroicon-o-arrow-down-tray"
+                        size="sm"
+                    >
+                        Save .docx
+                    </x-filament::button>
+
+                    <x-filament::button
+                        wire:click="openEmailDocxModal"
+                        @click="openPanel = null"
+                        color="gray"
+                        icon="heroicon-o-envelope"
+                        size="sm"
+                    >
+                        Email .docx
+                    </x-filament::button>
+
+                    @if($canMessage)
+                        <x-filament::button
+                            wire:click="openMessageModal('author')"
+                            @click="openPanel = null"
+                            color="gray"
+                            icon="heroicon-o-chat-bubble-left-right"
+                            size="sm"
+                        >
+                            Message About This
+                        </x-filament::button>
+                    @endif
                 </div>
             </div>
         </div>
