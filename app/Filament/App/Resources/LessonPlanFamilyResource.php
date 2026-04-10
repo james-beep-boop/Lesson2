@@ -3,12 +3,16 @@
 namespace App\Filament\App\Resources;
 
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
+use App\Models\Favorite;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\Subject;
 use App\Models\SubjectGrade;
+use App\Services\FavoriteService;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -46,6 +50,12 @@ class LessonPlanFamilyResource extends Resource
      */
     public static function table(Table $table): Table
     {
+        // One query per page render; closed over in the icon closure to avoid N+1.
+        $favorites = auth()->check()
+            ? Favorite::where('user_id', auth()->id())
+                ->pluck('lesson_plan_version_id', 'lesson_plan_family_id')
+            : collect();
+
         return $table
             ->columns([
                 TextColumn::make('family.subjectGrade.subject.name')
@@ -132,6 +142,26 @@ class LessonPlanFamilyResource extends Resource
                     ->indicateUsing(fn (array $data): ?string => filled($data['grade'] ?? null) ? 'Grade '.$data['grade'] : null
                     ),
 
+            ])
+            ->actions([
+                Action::make('favorite')
+                    ->icon(fn (LessonPlanVersion $record): string => $favorites->get($record->lesson_plan_family_id) === $record->id
+                            ? 'heroicon-s-star'
+                            : 'heroicon-o-star'
+                    )
+                    ->label('')
+                    ->tooltip('Favorite this version')
+                    ->action(function (LessonPlanVersion $record) {
+                        $user = auth()->user();
+                        if (! $user) {
+                            return;
+                        }
+                        app(FavoriteService::class)->upsert($user, $record);
+                        Notification::make()
+                            ->title('Favorited')
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->recordUrl(fn (LessonPlanVersion $record): string => static::getUrl('view', ['record' => $record->lesson_plan_family_id])
             )
