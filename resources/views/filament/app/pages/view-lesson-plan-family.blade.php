@@ -602,7 +602,7 @@
                                             class="ares-toast-viewer rounded border border-gray-200"
                                             style="overflow-y:auto; max-height:70vh"
                                         >
-                                            <div data-toast-viewer-left></div>
+                                            <div data-toast-viewer-left x-ref="leftViewer"></div>
                                         </div>
                                         <div
                                             data-compare-pane-right
@@ -610,7 +610,7 @@
                                             class="ares-toast-viewer rounded border border-gray-200"
                                             style="overflow-y:auto; max-height:70vh"
                                         >
-                                            <div data-toast-viewer-right></div>
+                                            <div data-toast-viewer-right x-ref="rightViewer"></div>
                                         </div>
                                     </div>
 

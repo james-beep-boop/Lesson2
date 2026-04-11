@@ -38,18 +38,18 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
     highlightsEnabled: false,
 
     async init() {
+        // Capture element refs synchronously before any await — querying $el after an
+        // await can race with Livewire morphing the second wire:ignore sibling pane.
+        const leftEl  = this.$refs.leftViewer;
+        const rightEl = this.$refs.rightViewer;
         if (!window.ToastUIViewer) {
             await window.loadToastUIViewer();
         }
         this._leftViewer = new window.ToastUIViewer({
-            el: this.$el.querySelector('[data-toast-viewer-left]'),
-            initialValue: leftContent,
-            theme: window.getTheme(),
+            el: leftEl, initialValue: leftContent, theme: window.getTheme(),
         });
         this._rightViewer = new window.ToastUIViewer({
-            el: this.$el.querySelector('[data-toast-viewer-right]'),
-            initialValue: rightContent,
-            theme: window.getTheme(),
+            el: rightEl, initialValue: rightContent, theme: window.getTheme(),
         });
         this._setupScrollSync();
     },
