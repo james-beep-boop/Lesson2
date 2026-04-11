@@ -67,6 +67,7 @@ See [`deployment.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/deployment
 
 ## Important Docs
 
+- [`USER_GUIDE.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/USER_GUIDE.md): first-time user guide with roles and demo logins
 - [`Lesson2.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/Lesson2.md): canonical product/spec document
 - [`PROGRESS.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/PROGRESS.md): current build tracker
 - [`Toast_UI_Editor_Plan.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/Toast_UI_Editor_Plan.md): next implementation plan

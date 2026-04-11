@@ -761,9 +761,8 @@ Required test coverage:
 
 ## 18. Deferred Features (Do Not Build)
 
-- DOC / DOCX export
-- Advanced PDF export
-- Advanced print formatting
+- Advanced PDF export beyond the current Save PDF / Email PDF workflow
+- Advanced print formatting beyond the current browser-print layout
 - Network / device transfer workflows
 - Rich analytics dashboards or complex charting
 - Threaded messaging
@@ -771,6 +770,17 @@ Required test coverage:
 - Email-change workflow unless it comes almost free from existing auth scaffolding
 - "View Original" for DOCX uploads — store and allow download of the original `.docx` if the Markdown conversion is unreadable. Deferred: MVP handles this with the pre-conversion warning and mandatory editor review. Worth adding if user frustration with conversion quality is reported.
 - Full-text content search (searching within lesson plan Markdown text). If added, implement a `FULLTEXT` index on `lesson_plan_versions.content`. Not needed for MVP — the filter bar searches metadata only.
+
+### Implemented export and sharing actions
+
+The following user-facing actions are now implemented and should be treated as part of the product, not deferred work:
+
+- Print the current lesson plan from the browser.
+- Save the current lesson plan as a PDF file.
+- Email the current lesson plan as a PDF attachment.
+- Save the current lesson plan as a `.docx` file.
+- Email the current lesson plan as a `.docx` attachment.
+- Print or email the Swahili translation preview from the review panel when translation preview is available.
 
 ---
 
