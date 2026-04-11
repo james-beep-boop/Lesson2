@@ -23,6 +23,12 @@ window.loadToastUIViewer = () => {
 window.getTheme = () =>
     document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 
+// Load the viewer module (once) and return a new ToastUIViewer instance.
+async function createViewer(el, content) {
+    if (!window.ToastUIViewer) await window.loadToastUIViewer();
+    return new window.ToastUIViewer({ el, initialValue: content, theme: window.getTheme() });
+}
+
 // Alpine data factory for side-by-side rendered Markdown comparison.
 // Initialises two Toast UI Viewer instances, syncs their scroll positions
 // proportionally, and supports block-level diff highlighting.
@@ -36,22 +42,25 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
     _leftPane: null,
     _rightPane: null,
     highlightsEnabled: false,
+    mounted: false,
 
     async init() {
-        // Capture element refs synchronously before any await — querying $el after an
-        // await can race with Livewire morphing the second wire:ignore sibling pane.
-        const leftEl  = this.$refs.leftViewer;
-        const rightEl = this.$refs.rightViewer;
-        if (!window.ToastUIViewer) {
-            await window.loadToastUIViewer();
+        // Capture DOM elements before any await to avoid a race with Livewire
+        // morphing the second wire:ignore sibling pane mid-microtask.
+        const leftEl  = this.$el.querySelector('[data-toast-viewer-left]');
+        const rightEl = this.$el.querySelector('[data-toast-viewer-right]');
+        if (!leftEl || !rightEl) {
+            console.error('[toastCompareViewers] mount elements not found', { leftEl, rightEl });
+            return;
         }
-        this._leftViewer = new window.ToastUIViewer({
-            el: leftEl, initialValue: leftContent, theme: window.getTheme(),
-        });
-        this._rightViewer = new window.ToastUIViewer({
-            el: rightEl, initialValue: rightContent, theme: window.getTheme(),
-        });
-        this._setupScrollSync();
+        try {
+            this._leftViewer  = await createViewer(leftEl,  leftContent);
+            this._rightViewer = await createViewer(rightEl, rightContent);
+            this.mounted = true;
+            this._setupScrollSync();
+        } catch (err) {
+            console.error('[toastCompareViewers] init failed', err);
+        }
     },
 
     _setupScrollSync() {
@@ -140,9 +149,11 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
     },
 
     destroy() {
-        if (this._leftPane && this._leftScrollHandler) this._leftPane.removeEventListener('scroll', this._leftScrollHandler);
+        if (this._leftPane  && this._leftScrollHandler)  this._leftPane.removeEventListener('scroll',  this._leftScrollHandler);
         if (this._rightPane && this._rightScrollHandler) this._rightPane.removeEventListener('scroll', this._rightScrollHandler);
-        if (this._leftViewer) { this._leftViewer.destroy(); this._leftViewer = null; }
+        this._leftScrollHandler  = null;
+        this._rightScrollHandler = null;
+        if (this._leftViewer)  { this._leftViewer.destroy();  this._leftViewer  = null; }
         if (this._rightViewer) { this._rightViewer.destroy(); this._rightViewer = null; }
     },
 });
@@ -150,16 +161,23 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
 // Alpine data factory shared by all read-only Toast UI Viewer instances.
 // Usage: x-data="toastViewer({{ Js::from($content) }})"
 window.toastViewer = (content) => ({
+    _viewer: null,
+    mounted: false,
+
     async init() {
-        if (!window.ToastUIViewer) {
-            await window.loadToastUIViewer();
+        const mount = this.$el.querySelector('[data-toast-viewer]');
+        if (!mount) {
+            console.error('[toastViewer] mount element not found');
+            return;
         }
-        this._viewer = new window.ToastUIViewer({
-            el: this.$el.querySelector('[data-toast-viewer]'),
-            initialValue: content,
-            theme: window.getTheme(),
-        });
+        try {
+            this._viewer = await createViewer(mount, content);
+            this.mounted = true;
+        } catch (err) {
+            console.error('[toastViewer] init failed', err);
+        }
     },
+
     destroy() {
         if (this._viewer) {
             this._viewer.destroy();

@@ -602,7 +602,7 @@
                                             class="ares-toast-viewer rounded border border-gray-200"
                                             style="overflow-y:auto; max-height:70vh"
                                         >
-                                            <div data-toast-viewer-left x-ref="leftViewer"></div>
+                                            <div data-toast-viewer-left></div>
                                         </div>
                                         <div
                                             data-compare-pane-right
@@ -610,12 +610,13 @@
                                             class="ares-toast-viewer rounded border border-gray-200"
                                             style="overflow-y:auto; max-height:70vh"
                                         >
-                                            <div data-toast-viewer-right x-ref="rightViewer"></div>
+                                            <div data-toast-viewer-right></div>
                                         </div>
                                     </div>
 
-                                    {{-- Print fallback: two-column server-rendered Markdown --}}
-                                    <div class="ares-print-compare">
+                                    {{-- Screen: two-column grid until viewers mount (:style > CSS); print !important overrides :style --}}
+                                    <div class="ares-print-compare"
+                                         :style="mounted ? 'display:none' : 'display:grid;grid-template-columns:1fr 1fr;gap:1rem'">
                                         <div class="prose max-w-none">
                                             @markdown($leftVersion->content)
                                         </div>
@@ -672,16 +673,19 @@
                                 @endif
                             </div>
 
-                            {{-- Content viewer — Toast UI Viewer (screen) + server-rendered fallback (print) --}}
+                            {{-- Content viewer — Toast UI Viewer (screen) + server-rendered fallback (print/JS-fail) --}}
                             <div
                                 wire:key="toast-viewer-{{ $selectedVersion->id }}"
                                 x-data="toastViewer({{ Js::from($selectedVersion->content) }})"
-                                class="ares-toast-viewer"
                             >
-                                <div data-toast-viewer wire:ignore></div>
-                            </div>
-                            <div class="ares-print-content prose max-w-none">
-                                @markdown($selectedVersion->content)
+                                <div class="ares-toast-viewer">
+                                    <div data-toast-viewer wire:ignore></div>
+                                </div>
+                                {{-- Screen: visible until viewer mounts (:style > CSS); print !important overrides :style --}}
+                                <div class="ares-print-content prose max-w-none"
+                                     :style="mounted ? 'display:none' : 'display:block'">
+                                    @markdown($selectedVersion->content)
+                                </div>
                             </div>
                         </x-filament::section>
                     @endif

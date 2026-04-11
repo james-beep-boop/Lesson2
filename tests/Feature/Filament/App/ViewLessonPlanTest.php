@@ -295,6 +295,37 @@ test('rendered compare view wires Highlight button to toggleHighlights via Alpin
 });
 
 // ---------------------------------------------------------------------------
+// Server-rendered fallback markup (robustness / JS-failure path)
+// ---------------------------------------------------------------------------
+
+test('single viewer emits server-rendered fallback with Alpine mounted binding', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertSee('ares-print-content', false)
+        ->assertSee("mounted ? 'display:none' : 'display:block'", false);
+});
+
+test('compare fallback emits two-column grid style until viewers mount', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterCompareMode', $v1->id)
+        ->assertSee('ares-print-compare', false)
+        ->assertSee('display:grid;grid-template-columns:1fr 1fr', false);
+});
+
+// ---------------------------------------------------------------------------
 // Swahili translation preview
 // ---------------------------------------------------------------------------
 
