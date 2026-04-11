@@ -57,6 +57,26 @@ class DemoSeeder extends Seeder
         // Eve — Subject Admin for Science Grade 10
         $sciG10->update(['subject_admin_user_id' => $eve->id]);
 
+        // --- Named test accounts (fixed credentials for manual QA) ---
+        $testUser         = $this->makeUser('Test User',         'user',          'user@demo.test');
+        $testEditor       = $this->makeUser('Test Editor',       'editor',        'editor@demo.test');
+        $testSubjectAdmin = $this->makeUser('Test SubjectAdmin', 'subject_admin', 'subject_admin@demo.test');
+        $testSiteAdmin    = $this->makeUser('Test SiteAdmin',    'site_admin',    'site_admin@demo.test');
+
+        // testUser — no role assignment (view only)
+
+        // testEditor — Editor for English Grade 10
+        \DB::table('subject_grade_user')->updateOrInsert(
+            ['subject_grade_id' => $englG10->id, 'user_id' => $testEditor->id],
+            ['role' => 'editor', 'created_at' => now(), 'updated_at' => now()]
+        );
+
+        // testSubjectAdmin — Subject Admin for English Grade 10
+        $englG10->update(['subject_admin_user_id' => $testSubjectAdmin->id]);
+
+        // testSiteAdmin — global site_administrator role
+        $testSiteAdmin->syncRoles(['site_administrator']);
+
         // --- Demo lesson plan: Maths Grade 10, Day 1 ---
         $family = LessonPlanFamily::firstOrCreate(
             ['subject_grade_id' => $mathG10->id, 'day' => '1'],
