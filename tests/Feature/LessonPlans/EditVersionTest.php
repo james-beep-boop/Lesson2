@@ -26,6 +26,18 @@ test('editor can enter edit mode — editMode becomes true, editContent equals c
     expect($component->get('baseLatestVersionId'))->toBe($v1->id);
 });
 
+test('the lesson editor opens in markdown mode to preserve table structure', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+    $editor = makeEditor($sg);
+
+    $this->actingAs($editor);
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterEditMode')
+        ->assertSee("initialEditType: 'markdown'", false);
+});
+
 test('teacher with no role cannot enter edit mode', function () {
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
@@ -120,6 +132,33 @@ test('the new version stores the normalized content, not the raw editor output',
     $latest = $family->fresh()->latestVersion;
     expect($latest->content)->toBe("# New content\nNo trailing newline\n");
     expect($latest->content)->not->toContain("\r");
+});
+
+test('saving content with a markdown table preserves the table structure', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+    $editor = makeEditor($sg);
+
+    $this->actingAs($editor);
+
+    $content = <<<'MD'
+# Lesson
+
+| Column A | Column B |
+| --- | --- |
+| One | Two |
+MD;
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterEditMode')
+        ->set('editContent', $content)
+        ->call('saveNewVersion');
+
+    $latest = $family->fresh()->latestVersion;
+
+    expect($latest->content)->toContain('| Column A | Column B |');
+    expect($latest->content)->toContain('| --- | --- |');
+    expect($latest->content)->toContain('| One | Two |');
 });
 
 test('cancelEditMode resets editMode, revisionNote, versionBump, editContent, and baseLatestVersionId', function () {

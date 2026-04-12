@@ -127,7 +127,7 @@
                         el: document.getElementById('toast-editor-mount-{{ $record->id }}'),
                         initialValue: {{ Js::from($editContent) }},
                         previewStyle: 'tab',
-                        initialEditType: 'wysiwyg',
+                        initialEditType: 'markdown',
                         language: 'en',
                         height: '600px',
                         minHeight: '300px',

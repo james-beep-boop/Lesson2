@@ -60,8 +60,8 @@ class GuideContent
                 'title' => 'Editing & Saving a New Version',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Click **Edit This Plan** to enter edit mode.\n"
-                    ."- The editor opens in **WYSIWYG mode** — use the toolbar to format text, add headings, lists, tables, and links.\n"
-                    ."- Switch to **Markdown source mode** at any time using the mode toggle in the toolbar.\n"
+                    ."- The editor opens in **Markdown source mode** so tables and other structure stay intact.\n"
+                    ."- Switch to **WYSIWYG mode** at any time using the mode toggle in the toolbar.\n"
                     ."- Pasting from Word or Google Docs? Use **Paste as Plain Text** (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.\n"
                     ."- Choose a version bump: **Patch** (small fix), **Minor** (new content), or **Major** (complete rewrite).\n"
                     .'- Add an optional revision note, then click **Save Edits** to create the new version.',
@@ -137,8 +137,8 @@ class GuideContent
                 'title' => 'Kuhariri na Kuhifadhi Toleo Jipya',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Bonyeza **Hariri Mpango Huu** kuingia katika hali ya kuhariri.\n"
-                    ."- Mhariri unafungua katika **hali ya WYSIWYG** — tumia mwambaa wa zana kupanga maandishi, vichwa, orodha, meza, na viungo.\n"
-                    ."- Badilisha kwenda **hali ya chanzo cha Markdown** wakati wowote ukitumia kubadilisha hali kwenye mwambaa wa zana.\n"
+                    ."- Mhariri unafungua katika **hali ya chanzo cha Markdown** ili meza na muundo mwingine visiharibike.\n"
+                    ."- Badilisha kwenda **hali ya WYSIWYG** wakati wowote ukitumia kubadilisha hali kwenye mwambaa wa zana.\n"
                     ."- Unapobandika kutoka Word au Google Docs? Tumia **Bandika kama Maandishi Wazi** (Ctrl+Shift+V / Cmd+Shift+V) kuepuka matatizo ya uumbizaji.\n"
                     ."- Chagua aina ya kuongeza toleo: **Kiraka** (marekebisho madogo), **Ndogo** (maudhui mapya), au **Kubwa** (uandishi upya kamili).\n"
                     .'- Ongeza dokezo la marekebisho (hiari), kisha bonyeza **Hifadhi Mabadiliko** kuunda toleo jipya.',
