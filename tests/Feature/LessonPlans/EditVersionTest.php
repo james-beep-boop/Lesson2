@@ -161,6 +161,28 @@ MD;
     expect($latest->content)->toContain('| One | Two |');
 });
 
+test('saving a complex GFM lesson preserves the full markdown structure', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+    $editor = makeEditor($sg);
+
+    $this->actingAs($editor);
+
+    $content = file_get_contents(base_path('tests/fixtures/TestComplexMarkdown.md'));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterEditMode')
+        ->set('editContent', $content)
+        ->call('saveNewVersion');
+
+    $latest = $family->fresh()->latestVersion;
+
+    expect($latest->content)->toBe($content);
+    expect($latest->content)->toContain('| Grade Level | Subject | Strand |');
+    expect($latest->content)->toContain('| :--- | :---: | ---: |');
+    expect($latest->content)->toContain('```markdown');
+});
+
 test('cancelEditMode resets editMode, revisionNote, versionBump, editContent, and baseLatestVersionId', function () {
     $sg = makeSubjectGrade();
     [$family, $v1] = makeFamilyWithVersion($sg);
