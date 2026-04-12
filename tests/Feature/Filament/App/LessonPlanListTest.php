@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ListLessonPlanFamilies;
 use App\Models\LessonPlanVersion;
 use App\Services\FavoriteService;
@@ -21,12 +22,17 @@ test('list page loads for authenticated user', function () {
 
 test('lesson plan versions appear in the table', function () {
     $sg = makeSubjectGrade();
-    [, $version] = makeFamilyWithVersion($sg);
+    [$family, $version] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeTeacher());
 
-    Livewire::test(ListLessonPlanFamilies::class)
-        ->assertCanSeeTableRecords([$version]);
+    $component = Livewire::test(ListLessonPlanFamilies::class);
+
+    $component->assertCanSeeTableRecords([$version]);
+
+    expect($component->instance()->getTable()->getRecordUrl($version))->toBe(
+        LessonPlanFamilyResource::versionUrl($version)
+    );
 });
 
 test('official tab shows only official versions', function () {

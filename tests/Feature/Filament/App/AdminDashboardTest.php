@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\App\Pages\AdminDashboard;
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Widgets\LessonVersionsWidget;
 use App\Filament\App\Widgets\UsersWidget;
 use App\Models\Favorite;
@@ -72,6 +73,19 @@ test('toggleOfficial marks a version as official', function () {
         ->assertNotified();
 
     expect($family->fresh()->official_version_id)->toBe($version->id);
+});
+
+test('lesson versions widget rows link to the selected version', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeSiteAdmin());
+
+    $component = Livewire::test(LessonVersionsWidget::class);
+
+    expect($component->instance()->getTable()->getRecordUrl($version))->toBe(
+        LessonPlanFamilyResource::versionUrl($version)
+    );
 });
 
 test('toggleOfficial toggles off when the version is already official', function () {

@@ -163,9 +163,21 @@ class LessonPlanFamilyResource extends Resource
                             ->send();
                     }),
             ])
-            ->recordUrl(fn (LessonPlanVersion $record): string => static::getUrl('view', ['record' => $record->lesson_plan_family_id])
-            )
+            ->recordUrl(fn (LessonPlanVersion $record): string => static::versionUrl($record))
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function versionUrl(LessonPlanVersion $version): string
+    {
+        return static::viewUrl($version->family, $version);
+    }
+
+    public static function viewUrl(LessonPlanFamily $family, ?LessonPlanVersion $version = null): string
+    {
+        return static::getUrl('view', [
+            'record' => $family->id,
+            'version' => $version?->id,
+        ]);
     }
 
     public static function getRelations(): array

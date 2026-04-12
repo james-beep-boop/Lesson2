@@ -3,6 +3,7 @@
 namespace App\Filament\App\Widgets;
 
 use App\Filament\App\Concerns\HasLessonPlanVersionTabs;
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Widgets\Concerns\HasVersionTable;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
@@ -155,6 +156,7 @@ class LessonVersionsWidget extends TableWidget
                     ->extraAttributes(['x-show' => '1']),
             ])
             ->checkIfRecordIsSelectableUsing(fn (LessonPlanVersion $record): bool => ! $record->isOfficial())
+            ->recordUrl(fn (LessonPlanVersion $record): string => LessonPlanFamilyResource::versionUrl($record))
             ->defaultSort('created_at', 'desc');
     }
 

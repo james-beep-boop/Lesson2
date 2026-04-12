@@ -43,6 +43,24 @@ test('view page selects the official version by default', function () {
     expect($component->get('selectedVersion')->id)->toBe($v1->id);
 });
 
+test('view page honors the version query parameter', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.2',
+    ]);
+    $family->official_version_id = $v1->id;
+    $family->save();
+
+    $this->actingAs(makeTeacher());
+
+    $component = Livewire::withQueryParams(['version' => $v2->id])
+        ->test(ViewLessonPlanFamily::class, ['record' => $family]);
+
+    expect($component->get('selectedVersion')->id)->toBe($v2->id);
+});
+
 test('mark official sets the official version', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
@@ -64,7 +82,7 @@ test('save new version creates a new version and sends notification', function (
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('enterEditMode')
         ->set('editContent', '# Updated content')
         ->set('versionBump', 'patch')
@@ -73,6 +91,7 @@ test('save new version creates a new version and sends notification', function (
 
     expect(LessonPlanVersion::where('lesson_plan_family_id', $family->id)->count())->toBe(2);
     expect(LessonPlanVersion::where('lesson_plan_family_id', $family->id)->where('version', '1.0.1')->exists())->toBeTrue();
+    $component->assertSet('versionId', LessonPlanVersion::where('lesson_plan_family_id', $family->id)->where('version', '1.0.1')->value('id'));
 });
 
 test('teacher cannot save a new version', function () {
@@ -162,6 +181,7 @@ test('select version switches the displayed version', function () {
         ->call('selectVersion', $v2->id);
 
     expect($component->get('selectedVersion')->id)->toBe($v2->id);
+    $component->assertSet('versionId', $v2->id);
 });
 
 // ---------------------------------------------------------------------------

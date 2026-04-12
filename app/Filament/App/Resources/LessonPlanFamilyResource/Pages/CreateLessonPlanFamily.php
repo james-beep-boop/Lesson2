@@ -301,7 +301,6 @@ class CreateLessonPlanFamily extends CreateRecord
                 // halt() aborts the Filament create flow without calling getRedirectUrl(),
                 // avoiding a null $this->record fatal error. The redirect fires from halt().
                 $this->halt();
-                $this->redirect(LessonPlanFamilyResource::getUrl('view', ['record' => $existing->id]));
             }
 
             throw new \RuntimeException('Family already exists but could not be found.');
@@ -310,7 +309,7 @@ class CreateLessonPlanFamily extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return LessonPlanFamilyResource::getUrl('view', ['record' => $this->record->getKey()]);
+        return LessonPlanFamilyResource::viewUrl($this->record, $this->record->latestVersion);
     }
 
     protected function getCreatedNotificationTitle(): ?string

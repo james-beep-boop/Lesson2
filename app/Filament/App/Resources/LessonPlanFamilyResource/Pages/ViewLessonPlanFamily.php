@@ -24,6 +24,7 @@ use Filament\Resources\Pages\Page;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Ai\Streaming\Events\TextDelta;
+use Livewire\Attributes\Url;
 
 class ViewLessonPlanFamily extends Page
 {
@@ -32,6 +33,9 @@ class ViewLessonPlanFamily extends Page
     protected string $view = 'filament.app.pages.view-lesson-plan-family';
 
     public LessonPlanFamily $record;
+
+    #[Url(as: 'version')]
+    public ?int $versionId = null;
 
     public ?LessonPlanVersion $selectedVersion = null;
 
@@ -136,7 +140,11 @@ class ViewLessonPlanFamily extends Page
     public function mount(LessonPlanFamily $record): void
     {
         $this->record = $record->load(['versions.contributor', 'officialVersion', 'latestVersion', 'subjectGrade.subject', 'subjectGrade.subjectAdmin']);
-        $this->selectedVersion = $record->officialVersion ?? $record->latestVersion;
+        $this->selectedVersion = $this->versionId
+            ? $record->versions->firstWhere('id', $this->versionId)
+            : null;
+
+        $this->selectedVersion ??= $record->officialVersion ?? $record->latestVersion;
         $this->syncDerivedState();
     }
 
@@ -168,6 +176,7 @@ class ViewLessonPlanFamily extends Page
             return;
         }
 
+        $this->versionId = $version->id;
         $this->selectedVersion = $version;
         $this->compareMode = false;
         $this->compareVersion = null;
@@ -241,6 +250,7 @@ class ViewLessonPlanFamily extends Page
         );
 
         $this->record->refresh();
+        $this->versionId = $version->id;
         $this->selectedVersion = $version;
         $this->hasPendingDeletion = false;
         $this->resetEditState();
@@ -735,7 +745,7 @@ class ViewLessonPlanFamily extends Page
     {
         $sg = $this->record->subjectGrade;
         $version = $this->selectedVersion;
-        $url = LessonPlanFamilyResource::getUrl('view', ['record' => $this->record->id]);
+        $url = LessonPlanFamilyResource::viewUrl($this->record, $version);
 
         $context = "--- Lesson Context ---\n"
             ."Subject:     {$sg->subject->name}\n"

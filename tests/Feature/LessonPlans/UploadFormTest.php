@@ -2,6 +2,7 @@
 
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\CreateLessonPlanFamily;
 use App\Models\LessonPlanFamily;
+use App\Models\LessonPlanVersion;
 use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Services\VersionService;
@@ -36,7 +37,8 @@ test('create form submits successfully when version_major and version_minor are 
             'content' => '# Lesson Plan',
         ])
         ->call('create')
-        ->assertHasNoFormErrors();
+        ->assertHasNoFormErrors()
+        ->assertRedirectContains('version=');
 
     expect(LessonPlanFamily::count())->toBe(1);
     expect(LessonPlanFamily::first()->versions()->first()->version)->toBe('1.0.0');
@@ -69,9 +71,13 @@ test('creating a duplicate family shows warning notification and does not fatal'
     $subjectAdmin = makeSubjectAdmin($sg);
 
     // Pre-create the family so the duplicate UniqueConstraintViolation fires.
-    LessonPlanFamily::factory()->create([
+    $family = LessonPlanFamily::factory()->create([
         'subject_grade_id' => $sg->id,
         'day' => '3',
+    ]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
     ]);
 
     $this->actingAs($subjectAdmin);
