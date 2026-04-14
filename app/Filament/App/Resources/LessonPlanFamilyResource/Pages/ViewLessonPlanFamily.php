@@ -148,6 +148,13 @@ class ViewLessonPlanFamily extends Page
         $this->syncDerivedState();
     }
 
+    private function syncPendingDeletion(): void
+    {
+        $this->hasPendingDeletion = (bool) $this->selectedVersion?->deletionRequests()
+            ->whereNull('resolved_at')
+            ->exists();
+    }
+
     private function syncDerivedState(): void
     {
         $user = auth()->user();
@@ -159,9 +166,7 @@ class ViewLessonPlanFamily extends Page
                 ->first()
             : null;
 
-        $this->hasPendingDeletion = (bool) ($this->selectedVersion?->deletionRequests()
-            ->whereNull('resolved_at')
-            ->exists());
+        $this->syncPendingDeletion();
     }
 
     // -------------------------------------------------------------------------
@@ -181,9 +186,7 @@ class ViewLessonPlanFamily extends Page
         $this->compareMode = false;
         $this->compareVersion = null;
         $this->diffHtml = '';
-        $this->hasPendingDeletion = (bool) $this->selectedVersion->deletionRequests()
-            ->whereNull('resolved_at')
-            ->exists();
+        $this->syncPendingDeletion();
     }
 
     // -------------------------------------------------------------------------
@@ -343,6 +346,33 @@ class ViewLessonPlanFamily extends Page
 
         $this->compareVersion = $other;
         $this->compareMode = true;
+        $this->compareView = 'rendered';
+    }
+
+    public function runCompare(int $leftVersionId, int $rightVersionId): void
+    {
+        $left = $this->record->versions->find($leftVersionId);
+        $right = $this->record->versions->find($rightVersionId);
+
+        if (! $left || ! $right || $left->id === $right->id) {
+            return;
+        }
+
+        $this->selectedVersion = $left;
+        $this->versionId = $left->id;
+        $this->compareVersion = $right;
+        $this->compareMode = true;
+        $this->compareView = 'rendered';
+        $this->diffHtml = '';
+        $this->syncPendingDeletion();
+    }
+
+    public function cancelCompare(): void
+    {
+        $this->compareMode = false;
+        $this->compareVersion = null;
+        $this->diffHtml = '';
+        $this->diffCss = '';
         $this->compareView = 'rendered';
     }
 

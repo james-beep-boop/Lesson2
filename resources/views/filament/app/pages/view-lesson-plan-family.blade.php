@@ -218,7 +218,7 @@
         </div>
 
     @else
-        @if($selectedVersion)
+        @if($selectedVersion && !$compareMode)
         {{-- ── Action button panel ─────────────────────────────────────────── --}}
         <div
             x-data="{
@@ -469,7 +469,67 @@
         </div>
         @endif
 
-        {{-- Versions panel --}}
+        {{-- ── Compare control panel (replaces action bar + version panel in compare mode) ─── --}}
+        @if($compareMode && $compareVersion)
+        <div
+            x-data="{
+                leftId: {{ $selectedVersion?->id ?? 'null' }},
+                rightId: {{ $compareVersion->id }},
+            }"
+            class="mb-4"
+            data-noprint
+        >
+            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Left Panel v{{ $selectedVersion?->version }}
+                    </label>
+                    <select
+                        x-model="leftId"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                    >
+                        @foreach($record->versions->sortByDesc('created_at') as $v)
+                            <option value="{{ $v->id }}" @selected($selectedVersion?->id === $v->id)>
+                                v{{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Right Panel v{{ $compareVersion->version }}
+                    </label>
+                    <select
+                        x-model="rightId"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                    >
+                        @foreach($record->versions->sortByDesc('created_at') as $v)
+                            <option value="{{ $v->id }}" @selected($compareVersion->id === $v->id)>
+                                v{{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <x-filament::button
+                        @click="$wire.runCompare(Number(leftId), Number(rightId))"
+                        icon="heroicon-o-arrows-right-left"
+                    >
+                        Compare
+                    </x-filament::button>
+
+                    <x-filament::button
+                        wire:click="cancelCompare"
+                        color="gray"
+                        icon="heroicon-o-x-mark"
+                    >
+                        Cancel Compare
+                    </x-filament::button>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        {{-- Versions panel (hidden in compare mode) --}}
+        @if(!$compareMode)
         @php
             $officialVersion = $record->official_version_id
                 ? $record->versions->firstWhere('id', $record->official_version_id)
@@ -519,16 +579,17 @@
                 </div>
             </x-filament::section>
         </div>
+        @endif
 
         {{-- Main content area --}}
         <div id="print-area">
                 @if($selectedVersion)
                     @if($compareMode && $compareVersion)
                         @php
-                            // Always show lower version on the left as "from", higher on the right as "to"
-                            [$leftVersion, $rightVersion] = version_compare($compareVersion->version, $selectedVersion->version) <= 0
-                                ? [$compareVersion, $selectedVersion]
-                                : [$selectedVersion, $compareVersion];
+                            // Honour the user's chosen dropdown order: selected = left pane, compare = right pane.
+                            // computeDiff() independently reorders to older→newer for correct diff direction.
+                            $leftVersion  = $selectedVersion;
+                            $rightVersion = $compareVersion;
                         @endphp
                         {{-- Compare mode --}}
                         <x-filament::section>
@@ -574,10 +635,10 @@
                                     {{-- Version labels --}}
                                     <div class="ares-compare-labels" data-noprint>
                                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $leftVersion->version }} — from
+                                            v{{ $leftVersion->version }} — Left
                                         </div>
                                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $rightVersion->version }} — to
+                                            v{{ $rightVersion->version }} — Right
                                         </div>
                                     </div>
 
@@ -631,10 +692,10 @@
                                 @if($diffLayout === 'side-by-side')
                                     <div class="mb-2 grid grid-cols-2 gap-4">
                                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $leftVersion->version }} — from
+                                            v{{ $leftVersion->version }} — Left
                                         </div>
                                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $rightVersion->version }} — to
+                                            v{{ $rightVersion->version }} — Right
                                         </div>
                                     </div>
                                 @else

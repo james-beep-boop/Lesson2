@@ -240,8 +240,8 @@ test('rendered compare view shows version labels for both panes', function () {
         ->call('enterCompareMode', $v1->id)
         ->assertSee('1.0.0')
         ->assertSee('1.0.1')
-        ->assertSee('from')
-        ->assertSee('to')
+        ->assertSee('Left')
+        ->assertSee('Right')
         ->assertSee('data-toast-viewer-left', false)
         ->assertSee('data-toast-viewer-right', false);
 });
@@ -586,4 +586,198 @@ test('closeTranslationPanel resets translationComplete to false', function () {
         ->assertSet('translationPanelOpen', false)
         ->assertSet('translationComplete', false)
         ->assertSet('translatedContent', '');
+});
+
+// ---------------------------------------------------------------------------
+// Compare UI — control panel, action bar hiding, new methods
+// ---------------------------------------------------------------------------
+
+test('action bar is hidden when compare mode is active', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeEditor($sg));
+
+    // Confirm action bar is visible in normal mode
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertSee('Compare Two Plans')
+        ->assertSee('Save / Send Options')
+        // Enter compare mode and confirm action bar is gone
+        ->call('enterCompareMode', $v2->id)
+        ->assertDontSee('Compare Two Plans')
+        ->assertDontSee('Save / Send Options')
+        ->assertDontSee('Edit This Plan');
+});
+
+test('version panel is hidden when compare mode is active', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertSee('Now Viewing')
+        ->call('enterCompareMode', $v2->id)
+        ->assertDontSee('Now Viewing')
+        ->assertDontSee('Other Versions');
+});
+
+test('compare control panel is shown with both dropdowns when in compare mode', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterCompareMode', $v2->id)
+        ->assertSee('Left Panel')
+        ->assertSee('Right Panel')
+        ->assertSee('Cancel Compare');
+});
+
+test('cancelCompare exits compare mode and clears compare state', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterCompareMode', $v2->id);
+
+    expect($component->get('compareMode'))->toBeTrue();
+
+    $component->call('cancelCompare');
+
+    expect($component->get('compareMode'))->toBeFalse();
+    expect($component->get('compareVersion'))->toBeNull();
+    expect($component->get('diffHtml'))->toBe('');
+});
+
+test('cancelCompare restores the normal view action bar', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterCompareMode', $v2->id)
+        ->call('cancelCompare')
+        ->assertSee('Compare Two Plans')
+        ->assertSee('Now Viewing');
+});
+
+test('runCompare sets both left and right versions and keeps compare mode active', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+    $v3 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.2',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterCompareMode', $v2->id)
+        ->call('runCompare', $v2->id, $v3->id);
+
+    expect($component->get('selectedVersion')->id)->toBe($v2->id);
+    expect($component->get('compareVersion')->id)->toBe($v3->id);
+    expect($component->get('compareMode'))->toBeTrue();
+    expect($component->get('versionId'))->toBe($v2->id);
+});
+
+test('runCompare ignores calls where both versions are the same', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterCompareMode', $v2->id);
+
+    $originalLeft = $component->get('selectedVersion')->id;
+
+    // Attempt to compare a version with itself — should be a no-op
+    $component->call('runCompare', $v1->id, $v1->id);
+
+    expect($component->get('selectedVersion')->id)->toBe($originalLeft);
+});
+
+test('runCompare rejects versions not belonging to the current family', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    [$otherFamily, $otherVersion] = makeFamilyWithVersion(makeSubjectGrade());
+
+    $this->actingAs(makeTeacher());
+
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('enterCompareMode', $v2->id);
+
+    $originalLeft = $component->get('selectedVersion')->id;
+
+    $component->call('runCompare', $v1->id, $otherVersion->id);
+
+    // Right version is from another family — should be a no-op
+    expect($component->get('selectedVersion')->id)->toBe($originalLeft);
+    expect($component->get('compareVersion')->id)->toBe($v2->id);
+});
+
+test('left pane shows the user-chosen left version regardless of version number order', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+        'content' => '# Newer lesson content',
+    ]);
+
+    $this->actingAs(makeTeacher());
+
+    // Select the NEWER version as left, older as right — the opposite of version-number order.
+    // The left pane must show the newer version, not have it silently swapped back.
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $v2->id)   // left = v1.0.1
+        ->call('enterCompareMode', $v1->id); // right = v1.0.0
+
+    expect($component->get('selectedVersion')->id)->toBe($v2->id);
+    expect($component->get('compareVersion')->id)->toBe($v1->id);
+
+    // The rendered HTML must have the newer version labelled Left and the older labelled Right,
+    // not swapped by version_compare.
+    $component
+        ->assertSeeInOrder(['1.0.1', 'Left'])
+        ->assertSeeInOrder(['1.0.0', 'Right']);
 });
