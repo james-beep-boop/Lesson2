@@ -475,6 +475,24 @@ test('submitAiPrompt sets aiResponseComplete false before streaming and true aft
         ->assertSet('aiResponseComplete', true);
 });
 
+test('submitAiPrompt shows danger notification instead of crashing when AI fails', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanAdvisor::fake(fn () => throw new RuntimeException('API unavailable'));
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('aiPanelOpen', true)
+        ->set('aiPrompt', 'Suggest improvements')
+        ->call('submitAiPrompt')
+        ->assertNotified('Ask AI unavailable')
+        ->assertSet('aiResponse', '')
+        ->assertSet('aiResponseComplete', false);
+});
+
 test('closeAiPanel clears aiResponse and resets aiResponseComplete', function () {
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);

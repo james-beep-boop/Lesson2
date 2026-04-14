@@ -21,6 +21,7 @@ use App\Services\VersionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Livewire\Attributes\Url;
@@ -459,12 +460,23 @@ class ViewLessonPlanFamily extends Page
 
             $this->translatedContent = $accumulated;
             $this->translationComplete = true;
-        } catch (\Throwable) {
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            Log::warning('Swahili translation failed.', [
+                'lesson_plan_version_id' => $this->selectedVersion->id,
+                'lesson_plan_family_id' => $this->record->id,
+                'provider' => config('ai.default'),
+                'message' => $exception->getMessage(),
+            ]);
+
             $this->translationPanelOpen = false;
+            $this->translatedContent = '';
+            $this->translationComplete = false;
 
             Notification::make('translation-failed')
                 ->title('Translation unavailable')
-                ->body('The translation service could not complete the request. Please ensure AI suggestions are configured.')
+                ->body('The translation service could not complete the request. Please check the AI provider configuration, quota, or timeout and try again.')
                 ->danger()
                 ->send();
         }
@@ -549,17 +561,37 @@ class ViewLessonPlanFamily extends Page
 
         set_time_limit(120);
 
-        $stream = LessonPlanAdvisor::make()->stream($prompt);
+        try {
+            $stream = LessonPlanAdvisor::make()->stream($prompt);
 
-        foreach ($stream as $event) {
-            if ($event instanceof TextDelta) {
-                $accumulated .= $event->delta;
-                $this->stream($event->delta, false, 'aiResponse');
+            foreach ($stream as $event) {
+                if ($event instanceof TextDelta) {
+                    $accumulated .= $event->delta;
+                    $this->stream($event->delta, false, 'aiResponse');
+                }
             }
-        }
 
-        $this->aiResponse = $accumulated;
-        $this->aiResponseComplete = true;
+            $this->aiResponse = $accumulated;
+            $this->aiResponseComplete = true;
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            Log::warning('Lesson plan AI advice failed.', [
+                'lesson_plan_version_id' => $this->selectedVersion->id,
+                'lesson_plan_family_id' => $this->record->id,
+                'provider' => config('ai.default'),
+                'message' => $exception->getMessage(),
+            ]);
+
+            $this->aiResponse = '';
+            $this->aiResponseComplete = false;
+
+            Notification::make('ask-ai-failed')
+                ->title('Ask AI unavailable')
+                ->body('The AI service could not complete the request. Please check the AI provider configuration, quota, or timeout and try again.')
+                ->danger()
+                ->send();
+        }
     }
 
     // -------------------------------------------------------------------------
