@@ -16,6 +16,25 @@ class LessonPlanDocxService
      */
     public function render(LessonPlanFamily $family, LessonPlanVersion $version): string
     {
+        // PhpWord emits E_DEPRECATED notices (null array-offset in Style::getStyle) during both
+        // style registration (addTitleStyle) and HTML parsing (Html::addHtml). With display_errors
+        // On, those notices are written to the PHP output buffer before the response body is sent,
+        // prepending text to the binary DOCX bytes and corrupting the file. Suppress for the full
+        // render pass and restore on exit.
+        $previousErrorLevel = error_reporting(error_reporting() & ~E_DEPRECATED);
+        $previousLibxmlErrors = libxml_use_internal_errors(true);
+
+        try {
+            return $this->doRender($family, $version);
+        } finally {
+            error_reporting($previousErrorLevel);
+            libxml_use_internal_errors($previousLibxmlErrors);
+            libxml_clear_errors();
+        }
+    }
+
+    private function doRender(LessonPlanFamily $family, LessonPlanVersion $version): string
+    {
         $family->loadMissing(['subjectGrade.subject']);
         $version->loadMissing(['contributor']);
 
@@ -77,19 +96,7 @@ class LessonPlanDocxService
         $html = $this->styleTablesForDocx($html);
         $html = $this->makeVoidElementsSelfClosing($html);
 
-        // Suppress E_DEPRECATED notices emitted by PhpWord (null array-offset in Style::getStyle).
-        // If display_errors is On on the host, those notices would be written to the output stream
-        // before the response headers are sent, prepending text to the binary DOCX and corrupting it.
-        $previousErrorLevel = error_reporting(error_reporting() & ~E_DEPRECATED);
-        $previousLibxmlErrors = libxml_use_internal_errors(true);
-
-        try {
-            Html::addHtml($section, $html, false, false);
-        } finally {
-            error_reporting($previousErrorLevel);
-            libxml_use_internal_errors($previousLibxmlErrors);
-            libxml_clear_errors();
-        }
+        Html::addHtml($section, $html, false, false);
 
         // Export footer — mirrors PDF footer
         $section->addTextBreak();
