@@ -26,7 +26,20 @@ class LessonPlanDocxService
         // Register Heading1 style so addTitle() emits a proper <w:pStyle w:val="Heading1"/> element.
         // Without this call, PhpWord cannot find "Heading_1" in its style registry and silently drops
         // the style reference, rendering the title as a plain Normal paragraph.
-        $phpWord->addTitleStyle(1, ['bold' => true, 'size' => 16, 'color' => '1e40af'], ['spaceAfter' => 80]);
+        foreach ([
+            [1, 16, '1e40af', 80],
+            [2, 14, '1e40af', 60],
+            [3, 12, '1e40af', 40],
+            [4, 11, '1e40af', 40],
+            [5, 10, '1e40af', 40],
+            [6, 10, '374151', 40],
+        ] as [$level, $size, $color, $spaceAfter]) {
+            $phpWord->addTitleStyle(
+                $level,
+                ['bold' => true, 'size' => $size, 'color' => $color],
+                ['spaceAfter' => $spaceAfter],
+            );
+        }
 
         $section = $phpWord->addSection();
 
@@ -62,6 +75,7 @@ class LessonPlanDocxService
         // Add visible grid borders and cell padding to all tables so the DOCX matches the PDF style.
         // PhpWord reads the HTML border attribute in parseTable() and sets all six border edges.
         $html = $this->styleTablesForDocx($html);
+        $html = $this->makeVoidElementsSelfClosing($html);
 
         // Suppress E_DEPRECATED notices emitted by PhpWord (null array-offset in Style::getStyle).
         // If display_errors is On on the host, those notices would be written to the output stream
@@ -101,6 +115,21 @@ class LessonPlanDocxService
                 '<th style="font-weight: bold; background-color: #dbeafe; padding: 4px 8px;">',
                 '<td style="padding: 4px 8px;">',
             ],
+            $html
+        );
+    }
+
+    /**
+     * GFM task list items produce bare <input> void elements (<input disabled="" type="checkbox">)
+     * which are valid HTML5 but break XML parsing. loadXML() returns false on the first such tag,
+     * leaving the DOM empty and causing a PHP TypeError when PhpWord traverses a null body node.
+     * The trailing \s*\/? strips any pre-existing self-closing slash so we never emit <br / />.
+     */
+    private function makeVoidElementsSelfClosing(string $html): string
+    {
+        return preg_replace(
+            '/<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)(\s[^>]*?)?\s*\/?>/',
+            '<$1$2 />',
             $html
         );
     }
