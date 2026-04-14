@@ -7,6 +7,7 @@ use App\Models\LessonPlanVersion;
 use League\CommonMark\GithubFlavoredMarkdownConverter;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\Shared\Html;
 
 class LessonPlanDocxService
@@ -23,10 +24,16 @@ class LessonPlanDocxService
         // render pass and restore on exit.
         $previousErrorLevel = error_reporting(error_reporting() & ~E_DEPRECATED);
         $previousLibxmlErrors = libxml_use_internal_errors(true);
+        // PhpWord defaults outputEscapingEnabled to false, writing all text with writeRaw().
+        // This leaves bare & in document.xml (e.g. "Science & Engineering") which is invalid XML
+        // and causes Word to refuse to open the file. Enable escaping so & → &amp; in all text nodes.
+        $previousEscaping = Settings::isOutputEscapingEnabled();
+        Settings::setOutputEscapingEnabled(true);
 
         try {
             return $this->doRender($family, $version);
         } finally {
+            Settings::setOutputEscapingEnabled($previousEscaping);
             error_reporting($previousErrorLevel);
             libxml_use_internal_errors($previousLibxmlErrors);
             libxml_clear_errors();
