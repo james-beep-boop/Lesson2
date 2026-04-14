@@ -417,10 +417,6 @@ class ViewLessonPlanFamily extends Page
         $this->translationComplete = false;
         $this->translationPanelOpen = true;
 
-        // Dispatch a one-time event that Alpine listens for to start translation.
-        // Using dispatch instead of x-init prevents re-firing on every re-render.
-        $this->dispatch('start-translation');
-
         Notification::make('translation-started')
             ->title('Translation in progress')
             ->body('The Swahili translation will appear above the lesson content.')
@@ -434,6 +430,12 @@ class ViewLessonPlanFamily extends Page
         $this->translatedContent = '';
         $this->translationComplete = false;
         $this->showTranslationEmailPanel = false;
+    }
+
+    public function useAiPrompt(string $prompt): void
+    {
+        $this->aiPrompt = $prompt;
+        $this->submitAiPrompt();
     }
 
     public function translatePreview(TranslationService $translationService): void

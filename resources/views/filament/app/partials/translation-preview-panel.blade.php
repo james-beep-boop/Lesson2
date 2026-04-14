@@ -1,13 +1,21 @@
 @if($translationPanelOpen)
     {{--
         Outer div provides the printTranslation() Alpine helper.
-        Translation is triggered by the 'start-translation' window event dispatched
-        from openTranslationPanel() — not x-init — so it only fires once and does
-        not re-fire on subsequent Livewire re-renders.
+        Translation starts once when the panel mounts, which keeps the request
+        lifecycle aligned with the visible UI state.
     --}}
     <div
         class="mt-4"
         x-data="{
+            started: false,
+            init() {
+                if (this.started) {
+                    return;
+                }
+
+                this.started = true;
+                this.$nextTick(() => $wire.translatePreview());
+            },
             printTranslation() {
                 const el = document.getElementById('translation-printable');
                 if (!el) return;
@@ -24,7 +32,6 @@
                 w.print();
             }
         }"
-        @start-translation.window="$wire.translatePreview()"
     >
         <x-filament::section heading="Swahili Translation">
             <x-slot name="afterHeader">

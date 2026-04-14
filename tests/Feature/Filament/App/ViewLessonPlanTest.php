@@ -493,6 +493,23 @@ test('submitAiPrompt shows danger notification instead of crashing when AI fails
         ->assertSet('aiResponseComplete', false);
 });
 
+test('useAiPrompt sets the prompt and submits immediately', function () {
+    config(['features.ai_suggestions' => true]);
+    LessonPlanAdvisor::fake(['Here is some advice.']);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('aiPanelOpen', true)
+        ->call('useAiPrompt', 'Check for clarity')
+        ->assertSet('aiPrompt', 'Check for clarity')
+        ->assertSet('aiResponse', 'Here is some advice.')
+        ->assertSet('aiResponseComplete', true);
+});
+
 test('closeAiPanel clears aiResponse and resets aiResponseComplete', function () {
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
