@@ -42,7 +42,7 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
     _rightScrollHandler: null,
     _leftPane: null,
     _rightPane: null,
-    highlightsEnabled: false,
+    highlightsEnabled: true,
     mounted: false,
 
     async init() {
@@ -59,6 +59,7 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
             this._rightViewer = await createViewer(rightEl, rightContent);
             this.mounted = true;
             this._setupScrollSync();
+            requestAnimationFrame(() => this._applyHighlights());
             if (this._pendingRight !== null) {
                 const queued = this._pendingRight;
                 this._pendingRight = null;
@@ -95,11 +96,11 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
             this._pendingRight = content ?? '';
             return;
         }
-        if (this.highlightsEnabled) {
-            this._clearHighlights();
-            this.highlightsEnabled = false;
-        }
+        this._clearHighlights();
         this._rightViewer.setMarkdown(content ?? '');
+        if (this.highlightsEnabled) {
+            requestAnimationFrame(() => this._applyHighlights());
+        }
     },
 
     toggleHighlights() {

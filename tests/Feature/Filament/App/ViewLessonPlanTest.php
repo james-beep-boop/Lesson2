@@ -243,11 +243,12 @@ test('rendered compare view shows the fixed left version label and right version
         ->assertSee("Version {$v2->version}")
         ->assertSee('Compare to')
         ->assertSee('compare-version-select')
+        ->assertSeeHtml('text-xl font-extrabold')
         ->assertSee('data-toast-viewer-left', false)
         ->assertSee('data-toast-viewer-right', false);
 });
 
-test('rendered compare view shows Highlight Changes button', function () {
+test('rendered compare view starts with highlights enabled', function () {
     $sg = makeSubjectGrade();
     [$family, $v1] = makeFamilyWithVersion($sg);
     $v2 = LessonPlanVersion::factory()->create([
@@ -260,7 +261,7 @@ test('rendered compare view shows Highlight Changes button', function () {
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('selectVersion', $v2->id)
         ->call('enterCompareMode', $v2->id)
-        ->assertSee('Highlight Changes');
+        ->assertSee('Hide Highlights');
 });
 
 test('rendered compare view wires Highlight button to toggleHighlights via Alpine', function () {
