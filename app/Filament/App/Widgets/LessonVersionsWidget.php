@@ -109,7 +109,7 @@ class LessonVersionsWidget extends TableWidget
                         : 'gray'
                     )
                     ->tooltip(fn (LessonPlanVersion $record): string => ($record->family && (int) $record->family->official_version_id === $record->id)
-                        ? 'Remove official status from this version'
+                        ? 'This version is currently the official one for this plan'
                         : 'Mark this version as the official one for this plan'
                     )
                     ->button()
@@ -128,13 +128,21 @@ class LessonVersionsWidget extends TableWidget
 
                         $isCurrentlyOfficial = (int) $family->official_version_id === $record->id;
 
-                        app(VersionService::class)->setOfficialVersion(
-                            $family,
-                            $isCurrentlyOfficial ? null : $record,
-                        );
+                        if ($isCurrentlyOfficial) {
+                            Notification::make('official-unchanged')
+                                ->title('This version is already official.')
+                                ->info()
+                                ->send();
+
+                            $this->resetTable();
+
+                            return;
+                        }
+
+                        app(VersionService::class)->setOfficialVersion($family, $record);
 
                         Notification::make('official-updated')
-                            ->title($isCurrentlyOfficial ? 'Official status removed.' : 'Official version set.')
+                            ->title('Official version set.')
                             ->success()
                             ->send();
 

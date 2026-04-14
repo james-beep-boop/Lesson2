@@ -88,7 +88,7 @@ test('lesson versions widget rows link to the selected version', function () {
     );
 });
 
-test('toggleOfficial toggles off when the version is already official', function () {
+test('toggleOfficial leaves the current official version unchanged', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
     $family->update(['official_version_id' => $version->id]);
@@ -99,7 +99,7 @@ test('toggleOfficial toggles off when the version is already official', function
         ->callTableAction('toggleOfficial', $version)
         ->assertNotified();
 
-    expect($family->fresh()->official_version_id)->toBeNull();
+    expect($family->fresh()->official_version_id)->toBe($version->id);
 });
 
 // ── LessonVersionsWidget – bulk delete ───────────────────────────────────────

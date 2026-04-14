@@ -69,9 +69,9 @@ MD;
     Livewire::test(CreateLessonPlanFamily::class)
         ->fillForm([
             'subject_id' => $sg->subject_id,
-            'grade'      => 10,
-            'day'        => 5,
-            'content'    => $content,
+            'grade' => 10,
+            'day' => 5,
+            'content' => $content,
         ])
         ->call('create')
         ->assertHasNoFormErrors();
@@ -80,6 +80,7 @@ MD;
     expect($version->content)->toContain('| Factor | Effect |');
     expect($version->content)->toContain('| --- | --- |');
     expect($version->content)->toContain('| Temperature | Increases then stops |');
+    expect($version->family->fresh()->official_version_id)->toBe($version->id);
 });
 
 // ----------------------------------------------------------------
@@ -109,6 +110,7 @@ test('create form submits successfully when version_major and version_minor are 
 
     expect(LessonPlanFamily::count())->toBe(1);
     expect(LessonPlanFamily::first()->versions()->first()->version)->toBe('1.0.0');
+    expect(LessonPlanFamily::first()->official_version_id)->toBe(LessonPlanFamily::first()->versions()->first()->id);
 });
 
 // ----------------------------------------------------------------
@@ -126,6 +128,7 @@ test('VersionService always creates first version as 1.0.0', function () {
 
     expect($version->version)->toBe('1.0.0');
     expect($version->fresh()->version)->toBe('1.0.0');
+    expect($version->family->fresh()->official_version_id)->toBe($version->id);
 });
 
 // ----------------------------------------------------------------

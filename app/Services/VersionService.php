@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class VersionService
@@ -34,6 +35,8 @@ class VersionService
             $version->contributor_id = $contributor->id;
             $version->version = '1.0.0';
             $version->save();
+            $family->official_version_id = $version->id;
+            $family->save();
 
             return $version;
         });
@@ -73,9 +76,32 @@ class VersionService
     public function setOfficialVersion(LessonPlanFamily $family, ?LessonPlanVersion $version): void
     {
         DB::transaction(function () use ($family, $version) {
-            $family->official_version_id = $version?->id;
+            $family->official_version_id = $version?->id
+                ?? $this->preferredOfficialVersion($family)?->id;
             $family->save();
         });
+    }
+
+    public function preferredOfficialVersion(LessonPlanFamily $family, ?int $excludingVersionId = null): ?LessonPlanVersion
+    {
+        /** @var Collection<int, LessonPlanVersion> $versions */
+        $versions = $family->versions()
+            ->when($excludingVersionId, fn ($query) => $query->whereKeyNot($excludingVersionId))
+            ->get();
+
+        if ($versions->isEmpty()) {
+            return null;
+        }
+
+        $firstVersion = $versions->firstWhere('version', '1.0.0');
+
+        if ($firstVersion) {
+            return $firstVersion;
+        }
+
+        return $versions
+            ->sort(fn (LessonPlanVersion $left, LessonPlanVersion $right) => version_compare($left->version, $right->version))
+            ->first();
     }
 
     /**

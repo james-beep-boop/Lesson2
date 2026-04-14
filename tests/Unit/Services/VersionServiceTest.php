@@ -16,6 +16,7 @@ test('first normal family version is 1.0.0', function () {
 
     expect($version->version)->toBe('1.0.0');
     expect($version->family)->not->toBeNull();
+    expect($version->family->fresh()->official_version_id)->toBe($version->id);
 });
 
 test('patch bump increments patch', function () {
@@ -76,7 +77,7 @@ test('official_version_id logic works atomically', function () {
     expect($family->fresh()->official_version_id)->toBe($v2->id);
 
     $service->setOfficialVersion($family, null);
-    expect($family->fresh()->official_version_id)->toBeNull();
+    expect($family->fresh()->official_version_id)->toBe($v1->id);
 });
 
 test('version numbers must be unique within a family', function () {

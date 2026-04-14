@@ -69,13 +69,27 @@ class DeletionRequestService
 
             $version = $deletionRequest->version;
             if ($version) {
-                // Clear official_version_id if this was the official version.
                 $family = $version->family;
-                if ($family && (int) $family->official_version_id === $version->id) {
-                    $family->official_version_id = null;
-                    $family->save();
-                }
                 $version->delete();
+
+                if (! $family) {
+                    return;
+                }
+
+                if ($family->versions()->doesntExist()) {
+                    $family->delete();
+
+                    return;
+                }
+
+                if ((int) $family->official_version_id === $version->id) {
+                    $versionService = app(VersionService::class);
+
+                    $versionService->setOfficialVersion(
+                        $family,
+                        $versionService->preferredOfficialVersion($family, $version->id)
+                    );
+                }
             }
         });
     }

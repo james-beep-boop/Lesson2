@@ -64,20 +64,24 @@ test('resolve marks request resolved and hard-deletes version', function () {
     expect(LessonPlanVersion::find($versionId))->toBeNull();
 });
 
-test('resolve clears official_version_id if deleted version was official', function () {
+test('resolve reassigns the official version to 1.0.0 when deleting the current official version', function () {
     $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg);
-    $family->official_version_id = $version->id;
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.1.0',
+    ]);
+    $family->official_version_id = $v2->id;
     $family->save();
 
     $subjectAdmin = makeSubjectAdmin($sg);
     $siteAdmin = makeSiteAdmin();
     $service = new DeletionRequestService;
 
-    $request = $service->request($version, $subjectAdmin);
+    $request = $service->request($v2, $subjectAdmin);
     $service->resolve($request, $siteAdmin);
 
-    expect(LessonPlanFamily::find($family->id)->official_version_id)->toBeNull();
+    expect(LessonPlanFamily::find($family->id)->official_version_id)->toBe($v1->id);
 });
 
 test('resolve does not clear official_version_id if a different version is official', function () {
