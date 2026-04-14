@@ -236,15 +236,7 @@
                         </x-filament::button>
                     @endif
 
-                    @if($compareMode)
-                        <x-filament::button
-                            wire:click="$set('compareMode', false)"
-                            color="gray"
-                            icon="heroicon-o-x-mark"
-                        >
-                            Exit Compare
-                        </x-filament::button>
-                    @elseif($record->versions->count() > 1)
+                    @if($record->versions->count() > 1)
                         <x-filament::button
                             @click="openPanel = openPanel === 'compare' ? null : 'compare'"
                             color="gray"
