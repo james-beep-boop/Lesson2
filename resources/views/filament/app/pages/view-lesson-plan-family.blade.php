@@ -34,6 +34,24 @@
             gap: 1rem;
             margin-bottom: 0.5rem;
         }
+        .ares-compare-actions {
+            margin-bottom: 2rem;
+        }
+        .ares-compare-labels {
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+        }
+        .ares-compare-meta-label {
+            font-size: 1.5rem;
+            line-height: 1.2;
+            font-weight: 800;
+        }
+        .ares-compare-meta-select {
+            font-size: 1.375rem;
+            line-height: 1.2;
+            font-weight: 800;
+            padding: 0.9rem 1rem;
+        }
         @media (max-width: 639px) {
             .ares-compare-panes { grid-template-columns: 1fr; }
             .ares-compare-labels { display: none; }
@@ -486,7 +504,7 @@
                                 x-data="toastCompareViewers({{ Js::from($selectedVersion->content) }}, {{ Js::from($compareVersion->content) }})"
                                 x-on:compare-right-updated.window="updateRight($event.detail.content)"
                             >
-                                <div class="mb-8 flex flex-wrap items-center justify-between gap-3" data-noprint>
+                                <div class="ares-compare-actions flex flex-wrap items-center justify-between gap-3" data-noprint>
                                     <div class="flex gap-2">
                                         <x-filament::button
                                             x-on:click="toggleHighlights()"
@@ -509,18 +527,18 @@
                                     </div>
                                 </div>
 
-                                <div class="ares-compare-labels mt-2 mb-6" data-noprint>
-                                    <div class="text-center text-xl font-extrabold text-gray-700 dark:text-gray-200">
+                                <div class="ares-compare-labels" data-noprint>
+                                    <div class="ares-compare-meta-label text-center text-gray-700 dark:text-gray-200">
                                         Version {{ $selectedVersion->version }}
                                     </div>
                                     <div class="flex flex-col items-center gap-2">
-                                        <label for="compare-version-select" class="text-xl font-extrabold text-gray-700 dark:text-gray-200">
+                                        <label for="compare-version-select" class="ares-compare-meta-label text-gray-700 dark:text-gray-200">
                                             Compare to
                                         </label>
                                         <select
                                             id="compare-version-select"
                                             wire:change="selectCompareVersion($event.target.value)"
-                                            class="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-3 text-center text-xl font-extrabold text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                            class="ares-compare-meta-select w-full max-w-xs rounded-lg border border-gray-300 bg-white text-center text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                         >
                                             @foreach($record->versions->sortByDesc('created_at') as $v)
                                                 <option value="{{ $v->id }}" @selected($compareVersion->id === $v->id)>

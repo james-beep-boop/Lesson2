@@ -243,7 +243,9 @@ test('rendered compare view shows the fixed left version label and right version
         ->assertSee("Version {$v2->version}")
         ->assertSee('Compare to')
         ->assertSee('compare-version-select')
-        ->assertSeeHtml('text-xl font-extrabold')
+        ->assertSeeHtml('ares-compare-actions')
+        ->assertSeeHtml('ares-compare-meta-label')
+        ->assertSeeHtml('ares-compare-meta-select')
         ->assertSee('data-toast-viewer-left', false)
         ->assertSee('data-toast-viewer-right', false);
 });
