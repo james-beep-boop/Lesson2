@@ -128,7 +128,7 @@ class ViewLessonPlanFamily extends Page
         if ($this->compareMode) {
             $subjectGrade = $this->record->subjectGrade;
 
-            return 'Compare Two Versions: '
+            return 'Compare Versions: '
                 .$subjectGrade->subject->name
                 .' Grade '
                 .$subjectGrade->grade
@@ -347,8 +347,24 @@ class ViewLessonPlanFamily extends Page
 
         $this->selectedVersion = $version;
         $this->versionId = $version->id;
-        $this->compareVersion = $version;
+        $this->compareVersion = $this->defaultCompareVersionFor($version) ?? $version;
         $this->compareMode = true;
+    }
+
+    private function defaultCompareVersionFor(LessonPlanVersion $selectedVersion): ?LessonPlanVersion
+    {
+        /** @var \Illuminate\Support\Collection<int, LessonPlanVersion> $orderedVersions */
+        $orderedVersions = $this->record->versions
+            ->sort(fn (LessonPlanVersion $left, LessonPlanVersion $right) => version_compare($left->version, $right->version))
+            ->values();
+
+        $selectedIndex = $orderedVersions->search(fn (LessonPlanVersion $version): bool => $version->id === $selectedVersion->id);
+
+        if ($selectedIndex === false) {
+            return null;
+        }
+
+        return $orderedVersions->get($selectedIndex - 1) ?? $orderedVersions->get($selectedIndex + 1);
     }
 
     public function selectCompareVersion(int $versionId): void

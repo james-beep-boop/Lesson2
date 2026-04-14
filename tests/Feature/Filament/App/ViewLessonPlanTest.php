@@ -188,7 +188,7 @@ test('select version switches the displayed version', function () {
 // Rendered compare view
 // ---------------------------------------------------------------------------
 
-test('enterCompareMode sets compareMode true and seeds the right pane with the current version', function () {
+test('enterCompareMode sets compareMode true and seeds the right pane with an adjacent version', function () {
     $sg = makeSubjectGrade();
     [$family, $v1] = makeFamilyWithVersion($sg);
     $v2 = LessonPlanVersion::factory()->create([
@@ -204,7 +204,7 @@ test('enterCompareMode sets compareMode true and seeds the right pane with the c
         ->assertSet('compareMode', true);
 
     expect($component->get('selectedVersion')->id)->toBe($v2->id);
-    expect($component->get('compareVersion')->id)->toBe($v2->id);
+    expect($component->get('compareVersion')->id)->toBe($v1->id);
 });
 
 test('rendered compare view shows the new compare heading and return action', function () {
@@ -220,7 +220,7 @@ test('rendered compare view shows the new compare heading and return action', fu
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('selectVersion', $v2->id)
         ->call('enterCompareMode', $v2->id)
-        ->assertSee("Compare Two Versions: {$sg->subject->name} Grade {$sg->grade} Day {$family->day}")
+        ->assertSee("Compare Versions: {$sg->subject->name} Grade {$sg->grade} Day {$family->day}")
         ->assertSee('Return to View / Edit')
         ->assertDontSee('Source Diff');
 });
@@ -702,7 +702,7 @@ test('selectCompareVersion allows the same version on both panels', function () 
         ->call('enterCompareMode', $v1->id);
 
     expect($component->get('selectedVersion')->id)->toBe($v1->id);
-    expect($component->get('compareVersion')->id)->toBe($v1->id);
+    expect($component->get('compareVersion')->id)->toBe($v2->id);
 
     $component->call('selectCompareVersion', $v1->id);
 

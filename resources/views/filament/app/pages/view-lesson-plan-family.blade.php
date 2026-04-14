@@ -510,17 +510,17 @@
                                 </div>
 
                                 <div class="ares-compare-labels mb-3" data-noprint>
-                                    <div class="text-center text-base font-bold text-gray-700 dark:text-gray-200">
+                                    <div class="text-center text-lg font-bold text-gray-700 dark:text-gray-200">
                                         Version {{ $selectedVersion->version }}
                                     </div>
                                     <div class="flex flex-col items-center gap-2">
-                                        <label for="compare-version-select" class="text-base font-bold text-gray-700 dark:text-gray-200">
+                                        <label for="compare-version-select" class="text-lg font-bold text-gray-700 dark:text-gray-200">
                                             Compare to
                                         </label>
                                         <select
                                             id="compare-version-select"
                                             wire:change="selectCompareVersion($event.target.value)"
-                                            class="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-base font-bold text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                            class="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-lg font-bold text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
                                         >
                                             @foreach($record->versions->sortByDesc('created_at') as $v)
                                                 <option value="{{ $v->id }}" @selected($compareVersion->id === $v->id)>
