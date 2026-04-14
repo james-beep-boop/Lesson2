@@ -241,6 +241,7 @@ test('rendered compare view shows the fixed left version label and right version
         ->assertSee('1.0.0')
         ->assertSee('1.0.1')
         ->assertSee("Version {$v2->version}")
+        ->assertSee('Compare to')
         ->assertSee('compare-version-select')
         ->assertSee('data-toast-viewer-left', false)
         ->assertSee('data-toast-viewer-right', false);

@@ -125,6 +125,17 @@ class ViewLessonPlanFamily extends Page
 
     public function getTitle(): string
     {
+        if ($this->compareMode) {
+            $subjectGrade = $this->record->subjectGrade;
+
+            return 'Compare Two Versions: '
+                .$subjectGrade->subject->name
+                .' Grade '
+                .$subjectGrade->grade
+                .' Day '
+                .$this->record->day;
+        }
+
         return 'View / Edit Lesson Plan';
     }
 
