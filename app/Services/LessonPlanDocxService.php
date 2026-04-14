@@ -22,6 +22,12 @@ class LessonPlanDocxService
         $sg = $family->subjectGrade;
 
         $phpWord = new PhpWord();
+
+        // Register Heading1 style so addTitle() emits a proper <w:pStyle w:val="Heading1"/> element.
+        // Without this call, PhpWord cannot find "Heading_1" in its style registry and silently drops
+        // the style reference, rendering the title as a plain Normal paragraph.
+        $phpWord->addTitleStyle(1, ['bold' => true, 'size' => 16, 'color' => '1e40af'], ['spaceAfter' => 80]);
+
         $section = $phpWord->addSection();
 
         // Title
@@ -47,18 +53,56 @@ class LessonPlanDocxService
 
         $section->addTextBreak();
 
-        // Convert markdown content to HTML then inject into the DOCX section.
-        // html_input => 'allow' matches the PDF export path (pdf/lesson-plan.blade.php line 94).
-        $converter = new GithubFlavoredMarkdownConverter(['html_input' => 'allow']);
+        // Convert markdown to HTML.
+        // Use html_input => 'strip' for DOCX: raw HTML pass-through (html_input => 'allow') can produce
+        // non-self-closing void elements such as <br> that are invalid XML and crash PhpWord's XML parser.
+        $converter = new GithubFlavoredMarkdownConverter(['html_input' => 'strip']);
         $html = (string) $converter->convert($version->content);
 
-        Html::addHtml($section, $html, false, false);
+        // Add visible grid borders and cell padding to all tables so the DOCX matches the PDF style.
+        // PhpWord reads the HTML border attribute in parseTable() and sets all six border edges.
+        $html = $this->styleTablesForDocx($html);
+
+        // Suppress E_DEPRECATED notices emitted by PhpWord (null array-offset in Style::getStyle).
+        // If display_errors is On on the host, those notices would be written to the output stream
+        // before the response headers are sent, prepending text to the binary DOCX and corrupting it.
+        $previousErrorLevel = error_reporting(error_reporting() & ~E_DEPRECATED);
+        $previousLibxmlErrors = libxml_use_internal_errors(true);
+
+        try {
+            Html::addHtml($section, $html, false, false);
+        } finally {
+            error_reporting($previousErrorLevel);
+            libxml_use_internal_errors($previousLibxmlErrors);
+            libxml_clear_errors();
+        }
 
         // Export footer — mirrors PDF footer
         $section->addTextBreak();
         $section->addText('Exported '.now()->format('d M Y H:i').' · ARES Kenya Lesson Repository');
 
         return $this->phpWordToBytes($phpWord);
+    }
+
+    /**
+     * Inject HTML attributes onto table/th/td elements so PhpWord generates a bordered grid.
+     *
+     * PhpWord's HTML parser reads the `border` attribute on <table> and calls setBorderSize() which
+     * sets all six OOXML table border edges (top, left, right, bottom, insideH, insideV).
+     * Cell padding is added via inline CSS that the parser maps to cell margin properties.
+     * Header cells receive a light-blue background matching the PDF export style.
+     */
+    private function styleTablesForDocx(string $html): string
+    {
+        return str_replace(
+            ['<table>', '<th>', '<td>'],
+            [
+                '<table border="1" width="100%">',
+                '<th style="font-weight: bold; background-color: #dbeafe; padding: 4px 8px;">',
+                '<td style="padding: 4px 8px;">',
+            ],
+            $html
+        );
     }
 
     /**

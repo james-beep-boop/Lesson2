@@ -64,6 +64,25 @@
         font-size: 10px;
         overflow: auto;
     }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+        font-size: 11px;
+    }
+    th {
+        background-color: #dbeafe;
+        color: #1e40af;
+        font-weight: bold;
+        border: 1px solid #93c5fd;
+        padding: 5px 8px;
+        text-align: left;
+    }
+    td {
+        border: 1px solid #d1d5db;
+        padding: 5px 8px;
+        vertical-align: top;
+    }
     .footer {
         margin-top: 24px;
         border-top: 1px solid #e5e7eb;
