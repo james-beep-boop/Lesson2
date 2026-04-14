@@ -451,26 +451,10 @@ class ViewLessonPlanFamily extends Page
         $this->translationComplete = false;
 
         try {
-            $accumulated = '';
-
-            foreach ($translationService->streamTranslation($this->selectedVersion->content) as $event) {
-                if ($event instanceof TextDelta) {
-                    $accumulated .= $event->delta;
-                    $this->stream($event->delta, false, 'translatedContent');
-                }
-            }
-
-            $this->translatedContent = $accumulated;
+            $this->translatedContent = $translationService->translatePreservingMarkdown($this->selectedVersion->content);
             $this->translationComplete = true;
         } catch (\Throwable $exception) {
-            report($exception);
-
-            Log::warning('Swahili translation failed.', [
-                'lesson_plan_version_id' => $this->selectedVersion->id,
-                'lesson_plan_family_id' => $this->record->id,
-                'provider' => config('ai.default'),
-                'message' => $exception->getMessage(),
-            ]);
+            $this->logAiFailure('Swahili translation failed.', $exception);
 
             $this->translationPanelOpen = false;
             $this->translatedContent = '';
@@ -576,14 +560,7 @@ class ViewLessonPlanFamily extends Page
             $this->aiResponse = $accumulated;
             $this->aiResponseComplete = true;
         } catch (\Throwable $exception) {
-            report($exception);
-
-            Log::warning('Lesson plan AI advice failed.', [
-                'lesson_plan_version_id' => $this->selectedVersion->id,
-                'lesson_plan_family_id' => $this->record->id,
-                'provider' => config('ai.default'),
-                'message' => $exception->getMessage(),
-            ]);
+            $this->logAiFailure('Lesson plan AI advice failed.', $exception);
 
             $this->aiResponse = '';
             $this->aiResponseComplete = false;
@@ -594,6 +571,51 @@ class ViewLessonPlanFamily extends Page
                 ->danger()
                 ->send();
         }
+    }
+
+    protected function logAiFailure(string $message, \Throwable $exception): void
+    {
+        report($exception);
+
+        $previous = $exception->getPrevious();
+
+        Log::warning($message, [
+            'lesson_plan_version_id' => $this->selectedVersion?->id,
+            'lesson_plan_family_id' => $this->record->id,
+            'provider' => config('ai.default'),
+            'exception_class' => $exception::class,
+            'exception_code' => $exception->getCode(),
+            'message' => $exception->getMessage(),
+            'previous_exception_class' => $previous ? $previous::class : null,
+            'previous_exception_code' => $previous?->getCode(),
+            'previous_exception_message' => $previous?->getMessage(),
+            'response_body' => $this->extractExceptionResponseBody($exception),
+        ]);
+    }
+
+    protected function extractExceptionResponseBody(\Throwable $exception): mixed
+    {
+        foreach (['response', 'getResponse', 'body', 'getBody'] as $method) {
+            if (! method_exists($exception, $method)) {
+                continue;
+            }
+
+            try {
+                $value = $exception->{$method}();
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if (is_scalar($value) || is_array($value)) {
+                return $value;
+            }
+
+            if (is_object($value) && method_exists($value, '__toString')) {
+                return (string) $value;
+            }
+        }
+
+        return null;
     }
 
     // -------------------------------------------------------------------------

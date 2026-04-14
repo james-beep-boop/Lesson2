@@ -1,7 +1,7 @@
 <?php
 
 use App\Ai\Agents\LessonPlanAdvisor;
-use App\Ai\Agents\LessonPlanTranslator;
+use App\Ai\Agents\MarkdownSegmentTranslator;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFamily;
 use App\Models\DeletionRequest;
 use App\Models\Favorite;
@@ -15,6 +15,23 @@ beforeEach(function () {
     Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
     Filament::setCurrentPanel(Filament::getPanel('app'));
 });
+
+function fakeMarkdownSegmentTranslation(string $translatedText = 'Mpango wa Somo'): void
+{
+    MarkdownSegmentTranslator::fake(function ($prompt) use ($translatedText) {
+        $promptText = is_object($prompt) && property_exists($prompt, 'prompt')
+            ? $prompt->prompt
+            : (string) $prompt;
+
+        preg_match('/\[\s*(.*)\s*\]\s*$/s', $promptText, $matches);
+
+        $segments = json_decode('['.($matches[1] ?? '').']', true, 512, JSON_THROW_ON_ERROR);
+
+        return [
+            'translations' => array_map(fn () => $translatedText, $segments),
+        ];
+    });
+}
 
 test('view page loads for authenticated user', function () {
     $sg = makeSubjectGrade();
@@ -389,7 +406,7 @@ test('openTranslationPanel is forbidden for plain teacher', function () {
 
 test('translatePreview sets translatedContent and keeps panel open', function () {
     config(['features.ai_suggestions' => true]);
-    LessonPlanTranslator::fake(['Mpango wa Somo']);
+    fakeMarkdownSegmentTranslation();
 
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
@@ -400,7 +417,7 @@ test('translatePreview sets translatedContent and keeps panel open', function ()
         ->set('translationPanelOpen', true)
         ->call('translatePreview')
         ->assertSet('translationPanelOpen', true)
-        ->assertSet('translatedContent', 'Mpango wa Somo');
+        ->assertSet('translatedContent', fn (string $content): bool => str_contains($content, 'Mpango wa Somo'));
 });
 
 test('translatePreview is forbidden for plain teacher', function () {
@@ -417,7 +434,7 @@ test('translatePreview is forbidden for plain teacher', function () {
 
 test('translatePreview writes nothing to the database', function () {
     config(['features.ai_suggestions' => true]);
-    LessonPlanTranslator::fake(['Mpango wa Somo']);
+    fakeMarkdownSegmentTranslation();
 
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
@@ -438,7 +455,7 @@ test('translatePreview writes nothing to the database', function () {
 
 test('translatePreview shows danger notification and closes panel when translation fails', function () {
     config(['features.ai_suggestions' => true]);
-    LessonPlanTranslator::fake(fn () => throw new RuntimeException('API unavailable'));
+    MarkdownSegmentTranslator::fake(fn () => throw new RuntimeException('API unavailable'));
 
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
@@ -544,7 +561,7 @@ test('openTranslationPanel resets translationComplete to false', function () {
 
 test('translatePreview sets translationComplete true after successful completion', function () {
     config(['features.ai_suggestions' => true]);
-    LessonPlanTranslator::fake(['Mpango wa Somo']);
+    fakeMarkdownSegmentTranslation();
 
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
@@ -554,14 +571,14 @@ test('translatePreview sets translationComplete true after successful completion
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->set('translationPanelOpen', true)
         ->call('translatePreview')
-        ->assertSet('translatedContent', 'Mpango wa Somo')
+        ->assertSet('translatedContent', fn (string $content): bool => str_contains($content, 'Mpango wa Somo'))
         ->assertSet('translationComplete', true)
         ->assertSet('translationPanelOpen', true);
 });
 
 test('translatePreview does not set translationComplete true when translation fails', function () {
     config(['features.ai_suggestions' => true]);
-    LessonPlanTranslator::fake(fn () => throw new RuntimeException('API unavailable'));
+    MarkdownSegmentTranslator::fake(fn () => throw new RuntimeException('API unavailable'));
 
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
