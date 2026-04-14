@@ -16,6 +16,73 @@ beforeEach(function () {
 });
 
 // ----------------------------------------------------------------
+// Page title
+// ----------------------------------------------------------------
+
+test('create page heading is "Add Lesson Plan"', function () {
+    $sg = SubjectGrade::factory()->create(['grade' => 10]);
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->assertSee('Add Lesson Plan');
+});
+
+// ----------------------------------------------------------------
+// Preview panel wiring
+// ----------------------------------------------------------------
+
+test('create page includes the Toast UI live preview component', function () {
+    $sg = SubjectGrade::factory()->create(['grade' => 10]);
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->assertSee('toastLiveViewer', escape: false)
+        ->assertSee('data-toast-viewer', escape: false)
+        ->assertSee('wire:ignore', escape: false);
+});
+
+test('create page preview watches the content Livewire property', function () {
+    $sg = SubjectGrade::factory()->create(['grade' => 10]);
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->assertSee('data.content', escape: false);
+});
+
+// ----------------------------------------------------------------
+// Markdown table preservation through create
+// ----------------------------------------------------------------
+
+test('creating a lesson plan preserves markdown table structure in the saved version', function () {
+    $sg = SubjectGrade::factory()->create(['grade' => 10]);
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    $content = <<<'MD'
+# Enzyme Lesson
+
+| Factor | Effect |
+| --- | --- |
+| Temperature | Increases then stops |
+| pH | Decreases at extremes |
+MD;
+
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->fillForm([
+            'subject_id' => $sg->subject_id,
+            'grade'      => 10,
+            'day'        => 5,
+            'content'    => $content,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $version = LessonPlanVersion::latest('id')->first();
+    expect($version->content)->toContain('| Factor | Effect |');
+    expect($version->content)->toContain('| --- | --- |');
+    expect($version->content)->toContain('| Temperature | Increases then stops |');
+});
+
+// ----------------------------------------------------------------
 // allMetadataFilled — zero-value version fields
 // ----------------------------------------------------------------
 

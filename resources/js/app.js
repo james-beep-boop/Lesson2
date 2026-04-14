@@ -158,30 +158,63 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
     },
 });
 
+// Shared base for single-pane read-only Toast UI Viewer Alpine components.
+// trackMounted: true causes `mounted` to flip after the viewer is ready —
+// used by callers whose template hides a server-rendered fallback until then.
+// _unwatchContent: blade callers may set this to the handle returned by
+// $wire.watch(...) so destroy() can unsubscribe and prevent stale callbacks.
+function makeSingleViewerBase(initialContent, { trackMounted = false } = {}) {
+    return {
+        _viewer: null,
+        _last: initialContent || '',
+        _pending: null,       // latest content buffered before the viewer finished mounting
+        _unwatchContent: null,
+        mounted: false,
+
+        async init() {
+            const mount = this.$el.querySelector('[data-toast-viewer]');
+            if (!mount) { console.error('[toastViewer] mount element not found'); return; }
+            try {
+                this._viewer = await createViewer(mount, initialContent || '');
+                if (trackMounted) this.mounted = true;
+                // Flush any content that arrived while the viewer was still loading
+                // (e.g. $wire.watch firing immediately after a file-upload conversion).
+                if (this._pending !== null) {
+                    const queued = this._pending;
+                    this._pending = null;
+                    this.update(queued);
+                }
+            } catch (err) {
+                console.error('[toastViewer] init failed', err);
+            }
+        },
+
+        // Guards against no-op re-renders: both the markdown-input event and the
+        // $wire.watch roundtrip fire for the same keystroke; skip if unchanged.
+        // If the viewer isn't ready yet, buffer the latest value for init() to flush.
+        update(markdown) {
+            const val = markdown ?? '';
+            if (!this._viewer) {
+                if (val !== this._last) this._pending = val;
+                return;
+            }
+            if (val === this._last) return;
+            this._last = val;
+            this._viewer.setMarkdown(val);
+        },
+
+        destroy() {
+            if (this._unwatchContent) { this._unwatchContent(); this._unwatchContent = null; }
+            if (this._viewer) { this._viewer.destroy(); this._viewer = null; }
+        },
+    };
+}
+
+// Alpine data factory for a live-updating read-only Toast UI Viewer.
+// Exposes update(markdown) to push new content without re-mounting the viewer.
+// Usage: x-data="toastLiveViewer({{ Js::from($initial) }})"
+window.toastLiveViewer = (initialContent) => makeSingleViewerBase(initialContent);
+
 // Alpine data factory shared by all read-only Toast UI Viewer instances.
 // Usage: x-data="toastViewer({{ Js::from($content) }})"
-window.toastViewer = (content) => ({
-    _viewer: null,
-    mounted: false,
-
-    async init() {
-        const mount = this.$el.querySelector('[data-toast-viewer]');
-        if (!mount) {
-            console.error('[toastViewer] mount element not found');
-            return;
-        }
-        try {
-            this._viewer = await createViewer(mount, content);
-            this.mounted = true;
-        } catch (err) {
-            console.error('[toastViewer] init failed', err);
-        }
-    },
-
-    destroy() {
-        if (this._viewer) {
-            this._viewer.destroy();
-            this._viewer = null;
-        }
-    },
-});
+window.toastViewer = (content) => makeSingleViewerBase(content, { trackMounted: true });

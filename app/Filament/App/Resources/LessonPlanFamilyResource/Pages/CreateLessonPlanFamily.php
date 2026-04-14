@@ -31,6 +31,8 @@ class CreateLessonPlanFamily extends CreateRecord
 
     protected static bool $canCreateAnother = false;
 
+    protected static ?string $title = 'Add Lesson Plan';
+
     public function form(Schema $schema): Schema
     {
         $user = auth()->user();
