@@ -12,7 +12,6 @@ use App\Models\LessonPlanVersion;
 use App\Models\Message;
 use App\Models\User;
 use App\Services\DeletionRequestService;
-use App\Services\DiffService;
 use App\Services\FavoriteService;
 use App\Services\LessonPlanDocxService;
 use App\Services\LessonPlanPdfService;
@@ -42,14 +41,6 @@ class ViewLessonPlanFamily extends Page
     public ?LessonPlanVersion $compareVersion = null;
 
     public bool $compareMode = false;
-
-    public string $compareView = 'rendered';
-
-    public string $diffLayout = 'side-by-side';
-
-    public string $diffHtml = '';
-
-    public string $diffCss = '';
 
     public bool $editMode = false;
 
@@ -185,7 +176,6 @@ class ViewLessonPlanFamily extends Page
         $this->selectedVersion = $version;
         $this->compareMode = false;
         $this->compareVersion = null;
-        $this->diffHtml = '';
         $this->syncPendingDeletion();
     }
 
@@ -338,134 +328,35 @@ class ViewLessonPlanFamily extends Page
 
     public function enterCompareMode(int $versionId): void
     {
-        $other = $this->record->versions->find($versionId);
+        $version = $this->record->versions->find($versionId);
 
-        if (! $other) {
+        if (! $version) {
             return;
         }
 
-        $this->compareVersion = $other;
+        $this->selectedVersion = $version;
+        $this->versionId = $version->id;
+        $this->compareVersion = $version;
         $this->compareMode = true;
-        $this->compareView = 'rendered';
     }
 
-    public function runCompare(int $leftVersionId, int $rightVersionId): void
+    public function selectCompareVersion(int $versionId): void
     {
-        $left = $this->record->versions->find($leftVersionId);
-        $right = $this->record->versions->find($rightVersionId);
+        $version = $this->record->versions->find($versionId);
 
-        if (! $left || ! $right || $left->id === $right->id) {
+        if (! $version || ! $this->compareMode) {
             return;
         }
 
-        $this->selectedVersion = $left;
-        $this->versionId = $left->id;
-        $this->compareVersion = $right;
-        $this->compareMode = true;
-        $this->compareView = 'rendered';
-        $this->diffHtml = '';
-        $this->syncPendingDeletion();
+        $this->compareVersion = $version;
+        // Push new content to the right viewer without remounting both panes.
+        $this->dispatch('compare-right-updated', content: $version->content);
     }
 
     public function cancelCompare(): void
     {
         $this->compareMode = false;
         $this->compareVersion = null;
-        $this->diffHtml = '';
-        $this->diffCss = '';
-        $this->compareView = 'rendered';
-    }
-
-    public function toggleCompareView(): void
-    {
-        $this->compareView = $this->compareView === 'rendered' ? 'source' : 'rendered';
-        if ($this->compareView === 'source') {
-            $this->computeDiff();
-        }
-    }
-
-    public function compareToPreviousVersion(VersionService $versionService): void
-    {
-        if (! $this->selectedVersion) {
-            return;
-        }
-
-        $currentVersion = $this->selectedVersion->version;
-
-        $previous = $this->record->versions
-            ->filter(fn (LessonPlanVersion $v) => $v->id !== $this->selectedVersion->id
-                && $versionService->compareVersions($v->version, $currentVersion) < 0
-            )
-            ->sortByDesc(fn (LessonPlanVersion $v) => $v->version)
-            ->first();
-
-        if (! $previous) {
-            Notification::make('no-previous-version')
-                ->title('No previous version exists for this lesson.')
-                ->warning()
-                ->send();
-
-            return;
-        }
-
-        $this->compareVersion = $previous;
-        $this->compareMode = true;
-        $this->compareView = 'rendered';
-    }
-
-    public function compareToOfficialVersion(): void
-    {
-        if (! $this->selectedVersion || ! $this->record->officialVersion) {
-            Notification::make('no-official-version')
-                ->title('No official version is set for this lesson.')
-                ->warning()
-                ->send();
-
-            return;
-        }
-
-        if ($this->record->officialVersion->id === $this->selectedVersion->id) {
-            Notification::make('already-official')
-                ->title('The selected version is already the official version.')
-                ->info()
-                ->send();
-
-            return;
-        }
-
-        $this->compareVersion = $this->record->officialVersion;
-        $this->compareMode = true;
-        $this->compareView = 'rendered';
-    }
-
-    public function toggleDiffLayout(): void
-    {
-        $this->diffLayout = $this->diffLayout === 'side-by-side' ? 'stacked' : 'side-by-side';
-        $this->computeDiff();
-    }
-
-    private function computeDiff(): void
-    {
-        if (! $this->selectedVersion || ! $this->compareVersion) {
-            return;
-        }
-
-        // Always diff from the lower version to the higher version
-        [$fromVersion, $toVersion] = version_compare(
-            $this->compareVersion->version,
-            $this->selectedVersion->version
-        ) <= 0
-            ? [$this->compareVersion, $this->selectedVersion]
-            : [$this->selectedVersion, $this->compareVersion];
-
-        $diffService = app(DiffService::class);
-
-        $result = $this->diffLayout === 'side-by-side'
-            ? $diffService->sideBySide($fromVersion->content ?? '', $toVersion->content ?? '')
-            : $diffService->unified($fromVersion->content ?? '', $toVersion->content ?? '');
-
-        $this->diffHtml = $result['html'];
-        $this->diffCss = $result['css'];
     }
 
     // -------------------------------------------------------------------------

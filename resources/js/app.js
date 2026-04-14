@@ -36,6 +36,7 @@ async function createViewer(el, content) {
 window.toastCompareViewers = (leftContent, rightContent) => ({
     _leftViewer: null,
     _rightViewer: null,
+    _pendingRight: null,
     _syncing: false,
     _leftScrollHandler: null,
     _rightScrollHandler: null,
@@ -58,6 +59,11 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
             this._rightViewer = await createViewer(rightEl, rightContent);
             this.mounted = true;
             this._setupScrollSync();
+            if (this._pendingRight !== null) {
+                const queued = this._pendingRight;
+                this._pendingRight = null;
+                this.updateRight(queued);
+            }
         } catch (err) {
             console.error('[toastCompareViewers] init failed', err);
         }
@@ -80,6 +86,20 @@ window.toastCompareViewers = (leftContent, rightContent) => ({
         this._rightScrollHandler = () => sync(this._rightPane, this._leftPane);
         this._leftPane.addEventListener('scroll', this._leftScrollHandler, { passive: true });
         this._rightPane.addEventListener('scroll', this._rightScrollHandler, { passive: true });
+    },
+
+    // Replace right-panel content without re-mounting either viewer.
+    // Resets highlights because the old comparison is now stale.
+    updateRight(content) {
+        if (!this._rightViewer) {
+            this._pendingRight = content ?? '';
+            return;
+        }
+        if (this.highlightsEnabled) {
+            this._clearHighlights();
+            this.highlightsEnabled = false;
+        }
+        this._rightViewer.setMarkdown(content ?? '');
     },
 
     toggleHighlights() {

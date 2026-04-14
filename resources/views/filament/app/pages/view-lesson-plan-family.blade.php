@@ -15,13 +15,6 @@
         $differsFromOfficial = $favorite && $record->official_version_id && $favorite->lesson_plan_version_id !== $record->official_version_id;
     @endphp
 
-    {{-- Diff CSS injected once --}}
-    @if($diffCss)
-        @once
-        <style id="diff-css">{!! $diffCss !!}</style>
-        @endonce
-    @endif
-
     @once
     <style>
         .ares-compare-viewer {
@@ -87,7 +80,11 @@
     {{-- Header info --}}
     <div class="mb-4" data-noprint>
         <h1 class="text-xl font-bold">
-            {{ $sg->subject->name }} — Grade {{ $sg->grade }} · Day {{ $record->day }}
+            @if($compareMode)
+                Compare Two Versions: {{ $sg->subject->name }} Grade {{ $sg->grade }} Day {{ $record->day }}
+            @else
+                {{ $sg->subject->name }} — Grade {{ $sg->grade }} · Day {{ $record->day }}
+            @endif
         </h1>
 
         @if($differsFromOfficial)
@@ -222,8 +219,7 @@
         {{-- ── Action button panel ─────────────────────────────────────────── --}}
         <div
             x-data="{
-                openPanel: null,
-                compareVersionId: {{ $record->versions->where('id', '!=', $selectedVersion->id)->sortByDesc('created_at')->first()?->id ?? 'null' }}
+                openPanel: null
             }"
             class="mb-4"
             data-noprint
@@ -238,12 +234,25 @@
 
                     @if($record->versions->count() > 1)
                         <x-filament::button
-                            @click="openPanel = openPanel === 'compare' ? null : 'compare'"
+                            wire:click="enterCompareMode({{ $selectedVersion->id }})"
                             color="gray"
                             icon="heroicon-o-arrows-right-left"
                         >
                             Compare Two Plans
                         </x-filament::button>
+                    @else
+                        <div class="flex items-center gap-2">
+                            <x-filament::button
+                                color="gray"
+                                icon="heroicon-o-arrows-right-left"
+                                disabled
+                            >
+                                Compare Two Plans
+                            </x-filament::button>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                Need at least 2 versions to compare
+                            </span>
+                        </div>
                     @endif
 
                     @if($canAskAi)
@@ -285,52 +294,6 @@
                             Request Deletion
                         </x-filament::button>
                     @endif
-                </div>
-            </div>
-
-            {{-- Compare picker — slides open below the button panel --}}
-            <div
-                x-show="openPanel === 'compare'"
-                x-transition:enter="transition ease-out duration-150"
-                x-transition:enter-start="opacity-0 -translate-y-1"
-                x-transition:enter-end="opacity-100 translate-y-0"
-                x-transition:leave="transition ease-in duration-100"
-                x-transition:leave-start="opacity-100 translate-y-0"
-                x-transition:leave-end="opacity-0 -translate-y-1"
-                class="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-                style="display: none;"
-            >
-                <div class="flex flex-wrap items-center gap-3">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">
-                        Compare version <strong>{{ $selectedVersion->version }}</strong> with version
-                    </span>
-                    <select
-                        x-model="compareVersionId"
-                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                    >
-                        @foreach($record->versions->sortByDesc('created_at') as $v)
-                            @if($v->id !== $selectedVersion->id)
-                                <option value="{{ $v->id }}">
-                                    v{{ $v->version }}
-                                    @if($record->official_version_id === $v->id) (Official) @endif
-                                </option>
-                            @endif
-                        @endforeach
-                    </select>
-                    <x-filament::button
-                        @click="$wire.enterCompareMode(compareVersionId); openPanel = null"
-                        size="sm"
-                        icon="heroicon-o-arrows-right-left"
-                    >
-                        Compare
-                    </x-filament::button>
-                    <x-filament::button
-                        @click="openPanel = null"
-                        color="gray"
-                        size="sm"
-                    >
-                        Cancel
-                    </x-filament::button>
                 </div>
             </div>
 
@@ -461,65 +424,6 @@
         </div>
         @endif
 
-        {{-- ── Compare control panel (replaces action bar + version panel in compare mode) ─── --}}
-        @if($compareMode && $compareVersion)
-        <div
-            x-data="{
-                leftId: {{ $selectedVersion?->id ?? 'null' }},
-                rightId: {{ $compareVersion->id }},
-            }"
-            class="mb-4"
-            data-noprint
-        >
-            <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
-                <div class="flex flex-wrap items-center gap-3">
-                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Left Panel v{{ $selectedVersion?->version }}
-                    </label>
-                    <select
-                        x-model="leftId"
-                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                    >
-                        @foreach($record->versions->sortByDesc('created_at') as $v)
-                            <option value="{{ $v->id }}" @selected($selectedVersion?->id === $v->id)>
-                                v{{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}
-                            </option>
-                        @endforeach
-                    </select>
-
-                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Right Panel v{{ $compareVersion->version }}
-                    </label>
-                    <select
-                        x-model="rightId"
-                        class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                    >
-                        @foreach($record->versions->sortByDesc('created_at') as $v)
-                            <option value="{{ $v->id }}" @selected($compareVersion->id === $v->id)>
-                                v{{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}
-                            </option>
-                        @endforeach
-                    </select>
-
-                    <x-filament::button
-                        @click="$wire.runCompare(Number(leftId), Number(rightId))"
-                        icon="heroicon-o-arrows-right-left"
-                    >
-                        Compare
-                    </x-filament::button>
-
-                    <x-filament::button
-                        wire:click="cancelCompare"
-                        color="gray"
-                        icon="heroicon-o-x-mark"
-                    >
-                        Cancel Compare
-                    </x-filament::button>
-                </div>
-            </div>
-        </div>
-        @endif
-
         {{-- Versions panel (hidden in compare mode) --}}
         @if(!$compareMode)
         @php
@@ -577,131 +481,85 @@
         <div id="print-area">
                 @if($selectedVersion)
                     @if($compareMode && $compareVersion)
-                        @php
-                            // Honour the user's chosen dropdown order: selected = left pane, compare = right pane.
-                            // computeDiff() independently reorders to older→newer for correct diff direction.
-                            $leftVersion  = $selectedVersion;
-                            $rightVersion = $compareVersion;
-                        @endphp
                         {{-- Compare mode --}}
                         <x-filament::section>
-                            {{-- Header: version info + mode toggle + (in source mode) layout toggle --}}
-                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2" data-noprint>
-                                <div>
-                                    <span class="font-semibold">
-                                        v{{ $leftVersion->version }}
-                                        <span class="text-gray-400 mx-1">→</span>
-                                        v{{ $rightVersion->version }}
-                                    </span>
-                                    <span class="ml-3 text-xs text-gray-500">
-                                        ({{ $leftVersion->contributor->username ?? '?' }} → {{ $rightVersion->contributor->username ?? '?' }})
-                                    </span>
-                                </div>
-                                <div class="flex gap-2">
-                                    <x-filament::button
-                                        wire:click="toggleCompareView"
-                                        color="gray"
-                                        size="sm"
-                                        :icon="$compareView === 'rendered' ? 'heroicon-o-code-bracket' : 'heroicon-o-eye'"
-                                    >
-                                        {{ $compareView === 'rendered' ? 'Source Diff' : 'Rendered View' }}
-                                    </x-filament::button>
-                                    @if($compareView === 'source')
-                                        <x-filament::button
-                                            wire:click="toggleDiffLayout"
-                                            color="gray"
-                                            size="sm"
-                                            icon="heroicon-o-arrows-right-left"
-                                        >
-                                            {{ $diffLayout === 'side-by-side' ? 'Stacked' : 'Side-by-Side' }}
-                                        </x-filament::button>
-                                    @endif
-                                </div>
-                            </div>
-
-                            @if($compareView === 'rendered')
-                                <div
-                                    wire:key="compare-rendered-{{ $leftVersion->id }}-{{ $rightVersion->id }}"
-                                    x-data="toastCompareViewers({{ Js::from($leftVersion->content) }}, {{ Js::from($rightVersion->content) }})"
-                                >
-                                    {{-- Version labels --}}
-                                    <div class="ares-compare-labels" data-noprint>
-                                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $leftVersion->version }} — Left
-                                        </div>
-                                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $rightVersion->version }} — Right
-                                        </div>
-                                    </div>
-
-                                    {{-- Highlight toggle --}}
-                                    <div class="mb-2 flex justify-end" data-noprint>
+                            <div
+                                wire:key="compare-rendered-{{ $selectedVersion->id }}"
+                                x-data="toastCompareViewers({{ Js::from($selectedVersion->content) }}, {{ Js::from($compareVersion->content) }})"
+                                x-on:compare-right-updated.window="updateRight($event.detail.content)"
+                            >
+                                <div class="mb-4 flex flex-wrap items-center justify-between gap-3" data-noprint>
+                                    <div class="flex gap-2">
                                         <x-filament::button
                                             x-on:click="toggleHighlights()"
                                             color="gray"
                                             size="sm"
                                             icon="heroicon-o-eye"
                                         >
-                                            <span x-show="!highlightsEnabled">Highlight changes</span><span x-show="highlightsEnabled" style="display:none">Hide highlights</span>
+                                            <span x-show="!highlightsEnabled">Highlight Changes</span><span x-show="highlightsEnabled" style="display:none">Hide Highlights</span>
                                         </x-filament::button>
                                     </div>
-
-                                    {{-- Panes --}}
-                                    <div class="ares-compare-panes">
-                                        {{-- wire:ignore on the pane containers protects the entire Toast UI subtree --}}
-                                        <div
-                                            data-compare-pane-left
-                                            wire:ignore
-                                            class="ares-toast-viewer rounded border border-gray-200"
-                                            style="overflow-y:auto; max-height:70vh"
+                                    <div class="flex gap-2">
+                                        <x-filament::button
+                                            wire:click="cancelCompare"
+                                            color="gray"
+                                            size="sm"
+                                            icon="heroicon-o-arrow-uturn-left"
                                         >
-                                            <div data-toast-viewer-left></div>
-                                        </div>
-                                        <div
-                                            data-compare-pane-right
-                                            wire:ignore
-                                            class="ares-toast-viewer rounded border border-gray-200"
-                                            style="overflow-y:auto; max-height:70vh"
-                                        >
-                                            <div data-toast-viewer-right></div>
-                                        </div>
-                                    </div>
-
-                                    {{-- Screen: two-column grid until viewers mount (:style > CSS); print !important overrides :style --}}
-                                    <div class="ares-print-compare"
-                                         :style="mounted ? 'display:none' : 'display:grid;grid-template-columns:1fr 1fr;gap:1rem'">
-                                        <div class="prose max-w-none">
-                                            @markdown($leftVersion->content)
-                                        </div>
-                                        <div class="prose max-w-none">
-                                            @markdown($rightVersion->content)
-                                        </div>
+                                            Return to View / Edit
+                                        </x-filament::button>
                                     </div>
                                 </div>
 
-                            @else
-                                {{-- Source diff (existing raw-diff output) --}}
-                                @if($diffLayout === 'side-by-side')
-                                    <div class="mb-2 grid grid-cols-2 gap-4">
-                                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $leftVersion->version }} — Left
-                                        </div>
-                                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                            v{{ $rightVersion->version }} — Right
-                                        </div>
+                                <div class="ares-compare-labels mb-3" data-noprint>
+                                    <div class="text-center text-sm font-semibold text-gray-700 dark:text-gray-200">
+                                        Version {{ $selectedVersion->version }}
                                     </div>
-                                @else
-                                    <div class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                        v{{ $leftVersion->version }} → v{{ $rightVersion->version }}
+                                    <div class="flex justify-center">
+                                        <label class="sr-only" for="compare-version-select">Right panel version</label>
+                                        <select
+                                            id="compare-version-select"
+                                            wire:change="selectCompareVersion($event.target.value)"
+                                            class="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-sm font-semibold text-gray-900 shadow-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                        >
+                                            @foreach($record->versions->sortByDesc('created_at') as $v)
+                                                <option value="{{ $v->id }}" @selected($compareVersion->id === $v->id)>
+                                                    Version {{ $v->version }}{{ $record->official_version_id === $v->id ? ' (Official)' : '' }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
-                                @endif
+                                </div>
 
-                                @if($diffHtml)
-                                    <div class="diff-wrapper overflow-x-auto rounded border border-gray-200 text-sm">
-                                        {!! $diffHtml !!}
+                                <div class="ares-compare-panes">
+                                    <div
+                                        data-compare-pane-left
+                                        wire:ignore
+                                        class="ares-toast-viewer rounded border border-gray-200"
+                                        style="overflow-y:auto; max-height:70vh"
+                                    >
+                                        <div data-toast-viewer-left></div>
                                     </div>
-                                @endif
-                            @endif
+                                    <div
+                                        data-compare-pane-right
+                                        wire:ignore
+                                        class="ares-toast-viewer rounded border border-gray-200"
+                                        style="overflow-y:auto; max-height:70vh"
+                                    >
+                                        <div data-toast-viewer-right></div>
+                                    </div>
+                                </div>
+
+                                <div class="ares-print-compare"
+                                     :style="mounted ? 'display:none' : 'display:grid;grid-template-columns:1fr 1fr;gap:1rem'">
+                                    <div class="prose max-w-none">
+                                        @markdown($selectedVersion->content)
+                                    </div>
+                                    <div class="prose max-w-none">
+                                        @markdown($compareVersion->content)
+                                    </div>
+                                </div>
+                            </div>
                         </x-filament::section>
 
                     @else
