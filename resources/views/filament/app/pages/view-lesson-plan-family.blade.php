@@ -404,7 +404,7 @@
         {{-- Request Deletion panel --}}
         @if($showDeletionForm && $selectedVersion)
         <div class="mt-4" data-noprint>
-            @if($isOfficialSelected)
+            @if($isOfficialSelected && !($user && $user->isSiteAdmin()))
                 <x-filament::section heading="Cannot Delete Official Version">
                     <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
                         The official version of a lesson plan cannot be deleted. To delete this version, first mark a different version as official.
@@ -415,6 +415,11 @@
                 </x-filament::section>
             @else
                 <x-filament::section heading="Request Deletion of Version {{ $selectedVersion->version }}">
+                    @if($isOfficialSelected)
+                        <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+                            <p class="text-sm font-medium text-amber-800 dark:text-amber-300">⚠ This is the official version. Deleting it will remove the official designation from this lesson plan.</p>
+                        </div>
+                    @endif
                     <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
                         This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
                     </p>

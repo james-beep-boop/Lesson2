@@ -133,6 +133,42 @@ HTML);
                 }
             )
             ->renderHook(
+                PanelsRenderHook::USER_MENU_BEFORE,
+                function (): HtmlString {
+                    if (! auth()->check()) {
+                        return new HtmlString('');
+                    }
+                    $userId = auth()->id();
+                    $hasUnread = Cache::remember(
+                        "user.{$userId}.has_unread",
+                        30,
+                        fn () => Message::where('to_user_id', $userId)->whereNull('read_at')->exists()
+                    );
+                    if (! $hasUnread) {
+                        return new HtmlString('');
+                    }
+
+                    return new HtmlString('
+<style>
+.fi-user-menu-trigger { position: relative; }
+.fi-user-menu-trigger::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background-color: #ef4444;
+    box-shadow: 0 0 0 2px white;
+    pointer-events: none;
+}
+.dark .fi-user-menu-trigger::after { box-shadow: 0 0 0 2px #1e293b; }
+</style>
+                    ');
+                }
+            )
+            ->renderHook(
                 PanelsRenderHook::USER_MENU_PROFILE_BEFORE,
                 fn (): HtmlString => auth()->check()
                     ? new HtmlString(
