@@ -18,6 +18,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
@@ -60,32 +61,60 @@ class CreateLessonPlanFamily extends CreateRecord
                         ->required()
                         ->live()
                         ->searchable()
-                        ->createOptionForm([
-                            TextInput::make('name')
-                                ->label('Subject name')
-                                ->required(),
-                        ])
-                        ->createOptionUsing(function (array $data): int {
-                            abort_unless(auth()->user()->isSiteAdmin(), 403, 'Only site administrators can create subjects.');
-
-                            return Subject::create(['name' => $data['name']])->id;
-                        })
+                        ->preload()
+                        ->when(
+                            $user->isSiteAdmin(),
+                            fn (Select $select) => $select
+                                ->createOptionForm([
+                                    TextInput::make('name')
+                                        ->label('Subject name')
+                                        ->required(),
+                                ])
+                                ->createOptionUsing(function (array $data): int {
+                                    return Subject::create(['name' => $data['name']])->id;
+                                })
+                        )
                         ->afterStateUpdated(fn (Set $set) => $set('grade', null)),
 
                     Select::make('grade')
                         ->label('Grade')
-                        ->options([10 => 'Grade 10', 11 => 'Grade 11', 12 => 'Grade 12'])
-                        ->default(10)
+                        ->options(function (Get $get) use ($user): array {
+                            if ($user->isSiteAdmin()) {
+                                return [10 => 'Grade 10', 11 => 'Grade 11', 12 => 'Grade 12'];
+                            }
+
+                            $subjectId = $get('subject_id');
+
+                            return SubjectGrade::where('subject_admin_user_id', $user->id)
+                                ->when($subjectId, fn ($q) => $q->where('subject_id', (int) $subjectId))
+                                ->orderBy('grade')
+                                ->pluck('grade')
+                                ->mapWithKeys(fn (int $g) => [$g => 'Grade '.$g])
+                                ->all();
+                        })
+                        ->default(function () use ($user): ?int {
+                            if ($user->isSiteAdmin()) {
+                                return 10;
+                            }
+
+                            return SubjectGrade::where('subject_admin_user_id', $user->id)
+                                ->orderBy('grade')
+                                ->value('grade');
+                        })
                         ->required()
                         ->live()
-                        ->createOptionForm([
-                            TextInput::make('grade')
-                                ->label('Grade number')
-                                ->numeric()
-                                ->minValue(1)
-                                ->required(),
-                        ])
-                        ->createOptionUsing(fn (array $data): int => (int) $data['grade']),
+                        ->when(
+                            $user->isSiteAdmin(),
+                            fn (Select $select) => $select
+                                ->createOptionForm([
+                                    TextInput::make('grade')
+                                        ->label('Grade number')
+                                        ->numeric()
+                                        ->minValue(1)
+                                        ->required(),
+                                ])
+                                ->createOptionUsing(fn (array $data): int => (int) $data['grade'])
+                        ),
 
                     Select::make('day')
                         ->label('Day')

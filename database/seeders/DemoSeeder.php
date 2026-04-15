@@ -136,7 +136,7 @@ class DemoSeeder extends Seeder
 
     private function makeUser(string $name, string $username, string $email): User
     {
-        return User::firstOrCreate(
+        return User::updateOrCreate(
             ['email' => $email],
             [
                 'username' => $username,
