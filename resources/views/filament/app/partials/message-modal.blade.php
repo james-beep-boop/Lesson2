@@ -18,7 +18,7 @@
             </x-filament::button>
 
             @php $subjectAdmin = $record->subjectGrade->subjectAdmin; @endphp
-            @if($subjectAdmin)
+            @if($subjectAdmin && $subjectAdmin->id !== ($user?->id))
                 <x-filament::button
                     wire:click="openMessageModal('subject_admin')"
                     :color="$messageRecipientType === 'subject_admin' ? 'primary' : 'gray'"
@@ -26,7 +26,7 @@
                 >
                     Subject Administrator
                 </x-filament::button>
-            @else
+            @elseif(!$subjectAdmin)
                 <x-filament::button color="gray" size="sm" disabled>
                     Subject Administrator (none assigned)
                 </x-filament::button>

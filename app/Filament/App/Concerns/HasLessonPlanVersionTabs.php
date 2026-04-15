@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Concerns;
 
+use App\Models\User;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,26 @@ trait HasLessonPlanVersionTabs
 {
     public function getTabs(): array
     {
-        return [
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        // "Mine" tab: visible only to Editors and Subject Admins, not plain Teachers or Site Admins.
+        // Fetch the admin grade once so we don't issue a second query when building $subjectGradeIds.
+        $adminGrade = ($user && ! $user->isSiteAdmin())
+            ? $user->subjectGradeAsAdmin()->first(['id'])
+            : null;
+
+        $showMineTab = $adminGrade !== null
+            || ($user && ! $user->isSiteAdmin() && $user->subjectGrades()->wherePivot('role', 'editor')->exists());
+
+        $subjectGradeIds = $showMineTab
+            ? $user->subjectGrades()->pluck('subject_grades.id')
+                ->push($adminGrade?->id)
+                ->filter()
+                ->unique()
+            : collect();
+
+        $tabs = [
             'all' => Tab::make('All'),
 
             'official' => Tab::make('Official')
@@ -40,5 +60,15 @@ trait HasLessonPlanVersionTabs
                     fn (Builder $fq) => $fq->where('user_id', auth()->id())
                 )),
         ];
+
+        if ($showMineTab) {
+            $tabs['mine'] = Tab::make('My Subject-Grades')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
+                    'family',
+                    fn (Builder $fq) => $fq->whereIn('subject_grade_id', $subjectGradeIds)
+                ));
+        }
+
+        return $tabs;
     }
 }
