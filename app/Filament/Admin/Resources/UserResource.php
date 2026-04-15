@@ -5,7 +5,6 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -83,6 +82,26 @@ class UserResource extends Resource
                     ->modalHeading('Revoke Site Administrator role?')
                     ->modalDescription(fn (User $record) => "This will remove {$record->name}'s administrative access.")
                     ->action(function (User $record): void {
+                        // Self-revoke guard: admins cannot revoke their own role here.
+                        if ($record->id === auth()->id()) {
+                            Notification::make('self-revoke-blocked')
+                                ->title('You cannot revoke your own Site Admin role.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        // Last-admin guard: refuse if this would leave zero admins.
+                        if (User::isLastSiteAdmin($record)) {
+                            Notification::make('last-admin-revoke-blocked')
+                                ->title('Cannot remove the last Site Administrator.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
                         $record->removeRole('site_administrator');
                         Notification::make('site-admin-revoked')
                             ->title('Site Admin role revoked.')
@@ -90,7 +109,41 @@ class UserResource extends Resource
                             ->send();
                     })
                     ->visible(fn (User $record): bool => $record->isSiteAdmin()),
-                DeleteAction::make(),
+                Action::make('deleteUser')
+                    ->label('Delete')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Delete user?')
+                    ->modalDescription(fn (User $record) => "This will permanently delete {$record->name}. This cannot be undone.")
+                    ->action(function (User $record): void {
+                        // Self-delete guard.
+                        if ($record->id === auth()->id()) {
+                            Notification::make('self-delete-blocked')
+                                ->title('You cannot delete your own account.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        // Last-admin guard: deleting the last admin locks everyone out.
+                        if ($record->isSiteAdmin() && User::isLastSiteAdmin($record)) {
+                            Notification::make('last-admin-delete-blocked')
+                                ->title('Cannot delete the last Site Administrator.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        $record->delete();
+
+                        Notification::make('user-deleted')
+                            ->title('User deleted.')
+                            ->success()
+                            ->send();
+                    }),
             ]);
     }
 

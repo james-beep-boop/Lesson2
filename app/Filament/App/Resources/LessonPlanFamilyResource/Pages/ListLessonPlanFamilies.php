@@ -5,7 +5,6 @@ namespace App\Filament\App\Resources\LessonPlanFamilyResource\Pages;
 use App\Filament\App\Concerns\HasLessonPlanVersionTabs;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\LessonPlanVersion;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -15,15 +14,13 @@ class ListLessonPlanFamilies extends ListRecords
 
     protected static string $resource = LessonPlanFamilyResource::class;
 
-    public ?string $activeTab = 'official';
+    // Defaults to null so Filament's loadDefaultActiveTab() picks the first tab key ('all').
+    public ?string $activeTab = null;
 
     protected function getHeaderActions(): array
     {
-        if (! LessonPlanFamilyResource::canCreate()) {
-            return [];
-        }
-
-        return [CreateAction::make()];
+        // Creation was moved to the admin dashboard; no create button on the list page.
+        return [];
     }
 
     /**

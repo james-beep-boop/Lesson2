@@ -43,6 +43,9 @@ class ViewLessonPlanFamily extends Page
 
     public bool $compareMode = false;
 
+    /** Layout for the diff panes: 'side-by-side' or 'stacked'. */
+    public string $diffLayout = 'side-by-side';
+
     public bool $editMode = false;
 
     public string $editContent = '';
@@ -338,6 +341,11 @@ class ViewLessonPlanFamily extends Page
     // Compare / visual diff
     // -------------------------------------------------------------------------
 
+    /**
+     * Enter compare mode, setting $versionId as the comparison target.
+     * The selected version becomes the base (left pane) and we preselect
+     * an adjacent version for the comparison target (right pane).
+     */
     public function enterCompareMode(int $versionId): void
     {
         $version = $this->record->versions->find($versionId);
@@ -354,18 +362,73 @@ class ViewLessonPlanFamily extends Page
 
     private function defaultCompareVersionFor(LessonPlanVersion $selectedVersion): ?LessonPlanVersion
     {
-        /** @var \Illuminate\Support\Collection<int, LessonPlanVersion> $orderedVersions */
         $orderedVersions = $this->record->versions
             ->sort(fn (LessonPlanVersion $left, LessonPlanVersion $right) => version_compare($left->version, $right->version))
             ->values();
 
-        $selectedIndex = $orderedVersions->search(fn (LessonPlanVersion $version): bool => $version->id === $selectedVersion->id);
+        $selectedIndex = $orderedVersions->search(
+            fn (LessonPlanVersion $version): bool => $version->id === $selectedVersion->id
+        );
 
         if ($selectedIndex === false) {
             return null;
         }
 
         return $orderedVersions->get($selectedIndex - 1) ?? $orderedVersions->get($selectedIndex + 1);
+    }
+
+    /**
+     * Compare the currently viewed version against the version immediately
+     * before it in semver order. Shows a warning if no previous version exists.
+     */
+    public function compareToPreviousVersion(): void
+    {
+        $orderedVersions = $this->record->versions
+            ->sort(fn (LessonPlanVersion $left, LessonPlanVersion $right) => version_compare($left->version, $right->version))
+            ->values();
+
+        $selectedIndex = $orderedVersions->search(
+            fn (LessonPlanVersion $version): bool => $version->id === $this->selectedVersion->id
+        );
+
+        $previousVersion = ($selectedIndex !== false && $selectedIndex > 0)
+            ? $orderedVersions->get($selectedIndex - 1)
+            : null;
+
+        if (! $previousVersion) {
+            Notification::make('no-previous-version')
+                ->title('No previous version to compare.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $this->compareVersion = $previousVersion;
+        $this->compareMode = true;
+    }
+
+    /**
+     * Compare the currently viewed version against the official version.
+     * Shows a warning if no official version is set.
+     */
+    public function compareToOfficialVersion(): void
+    {
+        $officialVersion = $this->record->official_version_id
+            ? $this->record->versions->find($this->record->official_version_id)
+            : null;
+
+        if (! $officialVersion) {
+            Notification::make('no-official-version')
+                ->title('No official version is set for this lesson plan.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $this->compareVersion = $officialVersion;
+        $this->compareMode = true;
     }
 
     public function selectCompareVersion(int $versionId): void
@@ -385,6 +448,15 @@ class ViewLessonPlanFamily extends Page
     {
         $this->compareMode = false;
         $this->compareVersion = null;
+    }
+
+    /**
+     * Toggle the diff pane layout between 'side-by-side' and 'stacked'.
+     * Note: scroll-sync between panes is only active in side-by-side mode.
+     */
+    public function toggleDiffLayout(): void
+    {
+        $this->diffLayout = $this->diffLayout === 'side-by-side' ? 'stacked' : 'side-by-side';
     }
 
     // -------------------------------------------------------------------------

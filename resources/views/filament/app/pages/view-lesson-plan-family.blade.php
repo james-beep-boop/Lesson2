@@ -52,10 +52,20 @@
             font-weight: 800;
             padding: 0.9rem 1rem;
         }
+        /* Stacked layout toggle */
+        .ares-compare-panes--stacked {
+            grid-template-columns: 1fr !important;
+        }
+        .ares-compare-panes--stacked + * .ares-compare-labels,
+        .ares-compare-labels--stacked {
+            grid-template-columns: 1fr;
+        }
         @media (max-width: 639px) {
             .ares-compare-panes { grid-template-columns: 1fr; }
             .ares-compare-labels { display: none; }
         }
+        /* Hide Toast UI's native bottom-right mode switcher — we provide our own tab buttons */
+        .toastui-editor-mode-switch { display: none !important; }
         /* Block-level diff highlights */
         .ares-diff-deleted {
             background-color: #fee2e2;
@@ -130,6 +140,7 @@
                 editor: null,
                 saving: false,
                 initialMarkdown: '',
+                editorMode: 'wysiwyg',
                 baseLatestVersionId: {{ Js::from($baseLatestVersionId) }},
 
                 async init() {
@@ -139,8 +150,7 @@
                     this.editor = new window.ToastUIEditor({
                         el: document.getElementById('toast-editor-mount-{{ $record->id }}'),
                         initialValue: {{ Js::from($editContent) }},
-                        previewStyle: 'tab',
-                        initialEditType: 'markdown',
+                        initialEditType: 'wysiwyg',
                         language: 'en',
                         height: '600px',
                         minHeight: '300px',
@@ -152,6 +162,8 @@
                         ],
                     });
                     this.initialMarkdown = this.editor.getMarkdown();
+                    // Keep editorMode in sync when mode changes via any means.
+                    this.editor.on('changeMode', (mode) => { this.editorMode = mode; });
 
                     this._beforeUnload = (e) => {
                         if (this.editor && this.editor.getMarkdown() !== this.initialMarkdown) {
@@ -225,6 +237,25 @@
             {{-- Toast UI editor mount point --}}
             <div class="ares-editor-wrap">
                 <x-filament::section>
+                    {{-- Mode tab bar: WYSIWYG (default) | Markdown --}}
+                    <div class="flex border-b border-gray-200 dark:border-gray-700 mb-1" data-noprint>
+                        <button
+                            type="button"
+                            x-on:click="editor && editor.changeMode('wysiwyg')"
+                            :class="editorMode === 'wysiwyg'
+                                ? 'border-b-2 border-primary-600 text-primary-600 font-semibold'
+                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                            class="px-4 py-2 text-sm transition-colors"
+                        >WYSIWYG</button>
+                        <button
+                            type="button"
+                            x-on:click="editor && editor.changeMode('markdown')"
+                            :class="editorMode === 'markdown'
+                                ? 'border-b-2 border-primary-600 text-primary-600 font-semibold'
+                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                            class="px-4 py-2 text-sm transition-colors"
+                        >Markdown</button>
+                    </div>
                     <div wire:ignore id="toast-editor-mount-{{ $record->id }}"></div>
                 </x-filament::section>
             </div>
@@ -510,7 +541,7 @@
                                 x-on:compare-right-updated.window="updateRight($event.detail.content)"
                             >
                                 <div class="ares-compare-actions flex flex-wrap items-center justify-between gap-3" data-noprint>
-                                    <div class="flex gap-2">
+                                    <div class="flex flex-wrap gap-2">
                                         <x-filament::button
                                             x-on:click="toggleHighlights()"
                                             color="primary"
@@ -518,6 +549,14 @@
                                             icon="heroicon-o-eye"
                                         >
                                             <span x-show="!highlightsEnabled">Highlight Changes</span><span x-show="highlightsEnabled" style="display:none">Hide Highlights</span>
+                                        </x-filament::button>
+                                        <x-filament::button
+                                            wire:click="toggleDiffLayout"
+                                            color="gray"
+                                            size="sm"
+                                            icon="heroicon-o-view-columns"
+                                        >
+                                            {{ $diffLayout === 'side-by-side' ? 'Switch to Stacked' : 'Switch to Side-by-Side' }}
                                         </x-filament::button>
                                     </div>
                                     <div class="flex gap-2">
@@ -554,7 +593,7 @@
                                     </div>
                                 </div>
 
-                                <div class="ares-compare-panes">
+                                <div @class(['ares-compare-panes', 'ares-compare-panes--stacked' => $diffLayout === 'stacked'])>
                                     <div
                                         data-compare-pane-left
                                         wire:ignore
@@ -604,6 +643,20 @@
                                     <x-filament::button wire:click="markOfficial" color="gray" size="sm" class="mt-2">
                                         Mark as Official
                                     </x-filament::button>
+                                @endif
+
+                                {{-- Compare shortcuts --}}
+                                @if($record->versions->count() > 1)
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <x-filament::button wire:click="compareToPreviousVersion" color="gray" size="sm" icon="heroicon-o-arrows-right-left">
+                                            Compare to Previous Version
+                                        </x-filament::button>
+                                        @if($record->official_version_id)
+                                            <x-filament::button wire:click="compareToOfficialVersion" color="gray" size="sm" icon="heroicon-o-check-badge">
+                                                Compare to Official Version
+                                            </x-filament::button>
+                                        @endif
+                                    </div>
                                 @endif
                             </div>
 

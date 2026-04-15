@@ -101,6 +101,19 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasRole('site_administrator');
     }
 
+    /**
+     * Returns true if removing this user as site admin would leave zero
+     * non-system site administrators. Used to guard against lockout in both
+     * UserResource (admin panel) and UsersWidget (app panel).
+     */
+    public static function isLastSiteAdmin(self $user): bool
+    {
+        return ! static::role('site_administrator')
+            ->where('is_system', false)
+            ->where('id', '!=', $user->id)
+            ->exists();
+    }
+
     public function isSubjectAdminFor(SubjectGrade $subjectGrade): bool
     {
         return (int) $subjectGrade->subject_admin_user_id === $this->id;

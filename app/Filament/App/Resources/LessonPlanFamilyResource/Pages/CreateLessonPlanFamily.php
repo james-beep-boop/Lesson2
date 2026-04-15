@@ -128,8 +128,8 @@ class CreateLessonPlanFamily extends CreateRecord
 
             // ── Content ───────────────────────────────────────────────────────
             FileUpload::make('lesson_file')
-                ->label('Upload file (optional)')
-                ->helperText('Upload a .md or .txt file to populate the editor below, or a .docx Word document to convert to Markdown. You can edit the result before saving.')
+                ->label('Upload lesson plan file')
+                ->helperText('Upload a .md, .txt, or .docx file to import the lesson plan. You can review and edit the Markdown before saving.')
                 ->placeholder('Drag & Drop your file or Browse')
                 ->acceptedFileTypes([
                     'text/plain',
@@ -138,6 +138,7 @@ class CreateLessonPlanFamily extends CreateRecord
                     'application/octet-stream',
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 ])
+                ->required()
                 ->maxSize(32768)
                 ->maxFiles(1)
                 ->dehydrated(false)
@@ -207,7 +208,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         ->label('Lesson Plan Content (Markdown)')
                         ->rows(20)
                         ->required()
-                        ->placeholder('Write or paste your lesson plan in Markdown, or upload a file above...')
+                        ->placeholder('Review and edit the imported Markdown before saving...')
                         ->extraAttributes([
                             'x-on:input.debounce.300ms' => '$dispatch("markdown-input", {value: $event.target.value})',
                         ]),
@@ -262,10 +263,10 @@ class CreateLessonPlanFamily extends CreateRecord
     {
         // Use ->action() not ->submit() so the button works outside the <form> element.
         return parent::getCreateFormAction()
-            ->label('Upload Lesson Plan')
+            ->label('Add to Repository')
             ->submit(null)
             ->action('create')
-            ->disabled(fn (): bool => ! $this->allMetadataFilled());
+            ->disabled(fn (): bool => ! $this->allMetadataFilled() || blank($this->data['lesson_file'] ?? null));
     }
 
     protected function handleRecordCreation(array $data): Model
@@ -329,8 +330,10 @@ class CreateLessonPlanFamily extends CreateRecord
                     ->persistent()
                     ->send();
 
-                // halt() aborts the Filament create flow without calling getRedirectUrl(),
-                // avoiding a null $this->record fatal error. The redirect fires from halt().
+                // Redirect to the existing family: prefer the official version, fall
+                // back to the latest. halt() then aborts the Filament create flow.
+                $targetVersion = $existing->officialVersion ?? $existing->latestVersion;
+                $this->redirect(LessonPlanFamilyResource::viewUrl($existing, $targetVersion));
                 $this->halt();
             }
 

@@ -11,7 +11,7 @@ beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('app'));
 });
 
-test('entering compare mode sets compareVersion and compareMode', function () {
+test('entering compare mode picks an adjacent compare version and enables compare mode', function () {
     $sg = makeSubjectGrade();
     [$family, $v1] = makeFamilyWithVersion($sg);
     $v2 = LessonPlanVersion::factory()->create([
@@ -25,7 +25,8 @@ test('entering compare mode sets compareVersion and compareMode', function () {
         ->call('enterCompareMode', $v2->id);
 
     expect($component->get('compareMode'))->toBeTrue();
-    expect($component->get('compareVersion')->id)->toBe($v2->id);
+    expect($component->get('selectedVersion')->id)->toBe($v2->id);
+    expect($component->get('compareVersion')->id)->toBe($v1->id);
 });
 
 test('compare mode only allows versions from the same family', function () {

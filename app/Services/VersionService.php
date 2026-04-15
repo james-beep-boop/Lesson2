@@ -54,10 +54,15 @@ class VersionService
         User $contributor
     ): LessonPlanVersion {
         return DB::transaction(function () use ($family, $content, $bump, $revisionNote, $contributor) {
-            $nextVersion = $this->computeNextVersion($family, $bump);
+            // Lock the family row so concurrent addVersion calls for the same family
+            // are serialized. Without this, two simultaneous saves can both read the
+            // same max version and collide on the unique constraint.
+            $lockedFamily = LessonPlanFamily::where('id', $family->id)->lockForUpdate()->firstOrFail();
+
+            $nextVersion = $this->computeNextVersion($lockedFamily, $bump);
 
             $version = new LessonPlanVersion([
-                'lesson_plan_family_id' => $family->id,
+                'lesson_plan_family_id' => $lockedFamily->id,
                 'content' => $content,
                 'revision_note' => $revisionNote,
             ]);

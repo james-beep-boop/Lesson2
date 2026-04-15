@@ -21,6 +21,7 @@ use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Foundation\Vite;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Cache;
@@ -44,7 +45,7 @@ class AppPanelProvider extends PanelProvider
             ->brandName('Kenya Lesson Plans')
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn () => app(\Illuminate\Foundation\Vite::class)(['resources/css/toast-ui.css', 'resources/js/app.js'])
+                fn () => app(Vite::class)(['resources/css/toast-ui.css', 'resources/js/app.js'])
             )
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
@@ -175,7 +176,7 @@ HTML);
                         '<div class="fi-dropdown-list">'
                         .'<div style="padding:0.625rem 0.875rem 0.5rem;">'
                         .'<table style="border-collapse:collapse;font-size:0.8125rem;line-height:1.6;">'
-                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Username:</td><td>'.e(auth()->user()->name).'</td></tr>'
+                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Username:</td><td>'.e(auth()->user()->username).'</td></tr>'
                         .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Role:</td><td>'.e(auth()->user()->role_label).'</td></tr>'
                         .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Email:</td><td>'.e(auth()->user()->email).'</td></tr>'
                         .'</table>'

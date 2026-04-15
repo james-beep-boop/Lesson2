@@ -24,7 +24,7 @@ class AbsoluteSessionTimeout
 
             if (! $startedAt) {
                 $request->session()->put('_absolute_started_at', now()->timestamp);
-            } elseif (now()->timestamp - $startedAt > (int) env('SESSION_ABSOLUTE_LIFETIME', 480) * 60) {
+            } elseif (now()->timestamp - $startedAt > config('session.absolute_lifetime', 480) * 60) {
                 auth()->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();

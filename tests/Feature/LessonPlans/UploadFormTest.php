@@ -7,6 +7,7 @@ use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Services\VersionService;
 use Filament\Facades\Filament;
+use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
@@ -14,6 +15,11 @@ beforeEach(function () {
     Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
     Filament::setCurrentPanel(Filament::getPanel('app'));
 });
+
+function fakeLessonPlanUpload(string $content = '# Lesson Plan', string $name = 'lesson-plan.md'): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent($name, $content);
+}
 
 // ----------------------------------------------------------------
 // Page title
@@ -73,6 +79,7 @@ MD;
             'day' => 5,
             'content' => $content,
         ])
+        ->set('data.lesson_file', fakeLessonPlanUpload($content))
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -104,6 +111,7 @@ test('create form submits successfully when version_major and version_minor are 
             'version_minor' => 0,
             'content' => '# Lesson Plan',
         ])
+        ->set('data.lesson_file', fakeLessonPlanUpload())
         ->call('create')
         ->assertHasNoFormErrors()
         ->assertRedirectContains('version=');
@@ -162,8 +170,55 @@ test('creating a duplicate family shows warning notification and does not fatal'
             'version_minor' => 0,
             'content' => '# Duplicate',
         ])
+        ->set('data.lesson_file', fakeLessonPlanUpload('# Duplicate'))
         ->call('create')
         ->assertNotified('A lesson plan already exists for this subject grade and day.');
+});
+
+test('creating a duplicate family redirects to the existing family view URL', function () {
+    $sg = SubjectGrade::factory()->create(['grade' => 10]);
+    $subjectAdmin = makeSubjectAdmin($sg);
+
+    $family = LessonPlanFamily::factory()->create([
+        'subject_grade_id' => $sg->id,
+        'day' => '4',
+    ]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
+    ]);
+    // Set official version so we can assert it's preferred as the redirect target.
+    $family->official_version_id = $version->id;
+    $family->save();
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->fillForm([
+            'subject_id' => $sg->subject_id,
+            'grade' => 10,
+            'day' => 4,
+            'content' => '# Duplicate',
+        ])
+        ->set('data.lesson_file', fakeLessonPlanUpload('# Duplicate'))
+        ->call('create')
+        ->assertRedirectContains((string) $family->id)
+        ->assertRedirectContains('version='.$version->id);
+});
+
+test('creating a lesson plan requires an uploaded lesson file', function () {
+    $sg = SubjectGrade::factory()->create(['grade' => 10]);
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->fillForm([
+            'subject_id' => $sg->subject_id,
+            'grade' => 10,
+            'day' => 6,
+            'content' => '# Lesson Plan',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['lesson_file' => 'required']);
 });
 
 // ----------------------------------------------------------------

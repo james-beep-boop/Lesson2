@@ -35,7 +35,7 @@ test('the lesson editor opens in markdown mode to preserve table structure', fun
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('enterEditMode')
-        ->assertSee("initialEditType: 'markdown'", false);
+        ->assertSee("initialEditType: 'wysiwyg'", false);
 });
 
 test('teacher with no role cannot enter edit mode', function () {

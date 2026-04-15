@@ -38,6 +38,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Absolute Session Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | The maximum number of minutes a session may exist regardless of activity.
+    | This enforces a hard expiry even when Safari's "Restore Previous Session"
+    | keeps session cookies alive across browser restarts. Default: 480 (8 hours).
+    |
+    */
+
+    'absolute_lifetime' => (int) env('SESSION_ABSOLUTE_LIFETIME', 480),
+
+    /*
+    |--------------------------------------------------------------------------
     | Session Encryption
     |--------------------------------------------------------------------------
     |

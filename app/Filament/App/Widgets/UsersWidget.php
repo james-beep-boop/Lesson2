@@ -47,7 +47,7 @@ class UsersWidget extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn () => User::where('is_system', false)->orderBy('name'))
+            ->query(fn () => User::where('is_system', false)->with(['roles', 'subjectGradeAsAdmin', 'subjectGrades'])->orderBy('name'))
             ->queryStringIdentifier('users')
             ->columns([
                 TextColumn::make('name')
@@ -203,20 +203,13 @@ class UsersWidget extends TableWidget
     private function demoteToUser(User $record): void
     {
         // Last-admin guard: refuse if this would remove the only site admin.
-        if ($record->isSiteAdmin()) {
-            $remainingAdmins = User::role('site_administrator')
-                ->where('is_system', false)
-                ->where('id', '!=', $record->id)
-                ->exists();
+        if ($record->isSiteAdmin() && User::isLastSiteAdmin($record)) {
+            Notification::make('last-admin')
+                ->title('Cannot remove the last Site Administrator.')
+                ->danger()
+                ->send();
 
-            if (! $remainingAdmins) {
-                Notification::make('last-admin')
-                    ->title('Cannot remove the last Site Administrator.')
-                    ->danger()
-                    ->send();
-
-                return;
-            }
+            return;
         }
 
         // Single transaction: remove Spatie role + all subject-grade pivot entries
