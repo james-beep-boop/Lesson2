@@ -28,6 +28,11 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
+    'seed_demo_qa_users' => env(
+        'SEED_DEMO_QA_USERS',
+        in_array(env('APP_ENV', 'production'), ['local', 'testing', 'demo'], true)
+    ),
+
     /*
     |--------------------------------------------------------------------------
     | Application Debug Mode

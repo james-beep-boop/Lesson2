@@ -5,6 +5,7 @@ use App\Filament\App\Resources\MessageResource\Pages\ComposeMessage;
 use App\Filament\App\Resources\MessageResource\Pages\ListMessages;
 use App\Filament\App\Resources\MessageResource\Pages\ViewMessage;
 use App\Models\Message;
+use App\Models\User;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -72,6 +73,34 @@ test('compose message requires all fields', function () {
         ->fillForm(['to_user_id' => null, 'subject' => null, 'body' => null])
         ->call('create')
         ->assertHasFormErrors(['to_user_id' => 'required', 'subject' => 'required', 'body' => 'required']);
+});
+
+test('compose message does not list unverified users as recipients', function () {
+    $sender = makeTeacher();
+    $verifiedRecipient = makeTeacher();
+    $unverifiedRecipient = User::factory()->unverified()->create();
+
+    $this->actingAs($sender);
+
+    Livewire::test(ComposeMessage::class)
+        ->assertSee($verifiedRecipient->name)
+        ->assertDontSee($unverifiedRecipient->name);
+});
+
+test('compose message rejects unverified recipients', function () {
+    $sender = makeTeacher();
+    $unverifiedRecipient = User::factory()->unverified()->create();
+
+    $this->actingAs($sender);
+
+    Livewire::test(ComposeMessage::class)
+        ->fillForm([
+            'to_user_id' => $unverifiedRecipient->id,
+            'subject' => 'Hello there',
+            'body' => 'Test message body.',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['to_user_id']);
 });
 
 test('viewing a message marks it as read', function () {

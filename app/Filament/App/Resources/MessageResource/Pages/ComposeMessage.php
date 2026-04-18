@@ -11,6 +11,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rule;
 
 class ComposeMessage extends CreateRecord
 {
@@ -28,13 +29,20 @@ class ComposeMessage extends CreateRecord
             Select::make('to_user_id')
                 ->label('To')
                 ->options(fn () => User::where('is_system', false)
+                    ->whereNotNull('email_verified_at')
                     ->where('id', '!=', auth()->id())
                     ->orderBy('name')
                     ->pluck('name', 'id')
                 )
                 ->default($defaultTo ? (int) $defaultTo : null)
                 ->searchable()
-                ->required(),
+                ->required()
+                ->rule(
+                    Rule::exists('users', 'id')
+                        ->where(fn ($query) => $query
+                            ->where('is_system', false)
+                            ->whereNotNull('email_verified_at'))
+                ),
             TextInput::make('subject')
                 ->label('Subject')
                 ->default($defaultSubject)
@@ -49,8 +57,12 @@ class ComposeMessage extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
+        $recipient = User::where('is_system', false)
+            ->whereNotNull('email_verified_at')
+            ->findOrFail($data['to_user_id']);
+
         $message = new Message([
-            'to_user_id' => $data['to_user_id'],
+            'to_user_id' => $recipient->id,
             'subject' => $data['subject'],
             'body' => $data['body'],
         ]);

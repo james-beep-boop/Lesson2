@@ -57,6 +57,9 @@ class CreateLessonPlanFamily extends CreateRecord
 
                             return $query->pluck('name', 'id');
                         })
+                        ->getOptionLabelUsing(fn ($value): ?string => filled($value)
+                            ? Subject::find($value)?->name
+                            : null)
                         ->default($englishId)
                         ->required()
                         ->live()

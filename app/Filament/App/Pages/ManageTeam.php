@@ -11,6 +11,7 @@ use Filament\Pages\Page;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 
 class ManageTeam extends Page implements Tables\Contracts\HasTable
 {
@@ -74,6 +75,7 @@ class ManageTeam extends Page implements Tables\Contracts\HasTable
             ->all();
 
         return User::where('is_system', false)
+            ->whereNotNull('email_verified_at')
             ->whereNotIn('id', $excludeIds)
             ->orderBy('name')
             ->get();
@@ -128,9 +130,19 @@ class ManageTeam extends Page implements Tables\Contracts\HasTable
 
         abort_unless(auth()->user()->isSubjectAdminFor($sg), 403);
 
-        $this->validate(['addUserId' => 'required|exists:users,id']);
+        $this->validate([
+            'addUserId' => [
+                'required',
+                Rule::exists('users', 'id')
+                    ->where(fn ($query) => $query
+                        ->where('is_system', false)
+                        ->whereNotNull('email_verified_at')),
+            ],
+        ]);
 
-        $user = User::findOrFail($this->addUserId);
+        $user = User::where('is_system', false)
+            ->whereNotNull('email_verified_at')
+            ->findOrFail($this->addUserId);
         app(SubjectAdminService::class)->assignEditor($user, $sg);
 
         $this->addUserId = null;

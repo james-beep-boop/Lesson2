@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\App\Pages\ManageTeam;
+use App\Models\User;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -153,4 +154,30 @@ test('subject admin cannot add editor to another subject grade', function () {
             ->where('user_id', $userToAdd->id)
             ->exists()
     )->toBeFalse();
+});
+
+test('manage team does not list unverified users as available editors', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $verifiedUser = makeTeacher();
+    $unverifiedUser = User::factory()->unverified()->create();
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ManageTeam::class)
+        ->assertSee($verifiedUser->name)
+        ->assertDontSee($unverifiedUser->name);
+});
+
+test('manage team rejects adding an unverified editor', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $unverifiedUser = User::factory()->unverified()->create();
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ManageTeam::class)
+        ->set('addUserId', $unverifiedUser->id)
+        ->call('addEditor')
+        ->assertHasErrors(['addUserId']);
 });
