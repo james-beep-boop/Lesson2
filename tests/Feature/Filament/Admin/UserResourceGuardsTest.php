@@ -66,6 +66,17 @@ test('deleting a user is blocked when the actor is the target (self-delete)', fu
     expect(User::where('id', $admin->id)->exists())->toBeTrue();
 });
 
+test('deleting a user is blocked when the target is the last admin', function () {
+    $onlyAdmin = makeSiteAdmin();
+    $this->actingAs($onlyAdmin);
+
+    Livewire::test(ListUsers::class)
+        ->callTableAction('deleteUser', $onlyAdmin)
+        ->assertNotified();
+
+    expect(User::where('id', $onlyAdmin->id)->exists())->toBeTrue();
+});
+
 test('User::isLastSiteAdmin returns true when no other non-system admins exist', function () {
     $admin = makeSiteAdmin();
 

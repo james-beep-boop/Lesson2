@@ -17,7 +17,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
-use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -204,7 +203,6 @@ HTML);
             ])
             ->authMiddleware([
                 Authenticate::class,
-                EnsureEmailIsVerified::class,
                 AbsoluteSessionTimeout::class,
             ]);
     }

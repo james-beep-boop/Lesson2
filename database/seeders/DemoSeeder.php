@@ -19,23 +19,23 @@ class DemoSeeder extends Seeder
         Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
 
         // --- Subjects ---
-        $maths   = Subject::firstOrCreate(['name' => 'Mathematics']);
+        $maths = Subject::firstOrCreate(['name' => 'Mathematics']);
         $english = Subject::firstOrCreate(['name' => 'English']);
         $science = Subject::firstOrCreate(['name' => 'Science']);
         Subject::firstOrCreate(['name' => 'Kiswahili']);
 
         // --- Subject Grades ---
-        $mathG10  = SubjectGrade::firstOrCreate(['subject_id' => $maths->id, 'grade' => 10]);
-        $mathG11  = SubjectGrade::firstOrCreate(['subject_id' => $maths->id, 'grade' => 11]);
-        $englG10  = SubjectGrade::firstOrCreate(['subject_id' => $english->id, 'grade' => 10]);
-        $sciG10   = SubjectGrade::firstOrCreate(['subject_id' => $science->id, 'grade' => 10]);
+        $mathG10 = SubjectGrade::firstOrCreate(['subject_id' => $maths->id, 'grade' => 10]);
+        $mathG11 = SubjectGrade::firstOrCreate(['subject_id' => $maths->id, 'grade' => 11]);
+        $englG10 = SubjectGrade::firstOrCreate(['subject_id' => $english->id, 'grade' => 10]);
+        $sciG10 = SubjectGrade::firstOrCreate(['subject_id' => $science->id, 'grade' => 10]);
 
         // --- Demo Users ---
         $alice = $this->makeUser('Alice Kamau', 'alice', 'alice@demo.test');
-        $bob   = $this->makeUser('Bob Ochieng', 'bob', 'bob@demo.test');
+        $bob = $this->makeUser('Bob Ochieng', 'bob', 'bob@demo.test');
         $carol = $this->makeUser('Carol Mwangi', 'carol', 'carol@demo.test');
         $david = $this->makeUser('David Njoroge', 'david', 'david@demo.test');
-        $eve   = $this->makeUser('Eve Wanjiku', 'eve', 'eve@demo.test');
+        $eve = $this->makeUser('Eve Wanjiku', 'eve', 'eve@demo.test');
 
         // Alice — Subject Admin for Mathematics Grade 10
         $mathG10->update(['subject_admin_user_id' => $alice->id]);
@@ -58,10 +58,10 @@ class DemoSeeder extends Seeder
         $sciG10->update(['subject_admin_user_id' => $eve->id]);
 
         // --- Named test accounts (fixed credentials for manual QA) ---
-        $testUser         = $this->makeUser('Test User',         'user',          'user@demo.test');
-        $testEditor       = $this->makeUser('Test Editor',       'editor',        'editor@demo.test');
+        $testUser = $this->makeUser('Test User', 'user', 'user@demo.test');
+        $testEditor = $this->makeUser('Test Editor', 'editor', 'editor@demo.test');
         $testSubjectAdmin = $this->makeUser('Test SubjectAdmin', 'subject_admin', 'subject_admin@demo.test');
-        $testSiteAdmin    = $this->makeUser('Test SiteAdmin',    'site_admin',    'site_admin@demo.test');
+        $testSiteAdmin = $this->makeUser('Test SiteAdmin', 'site_admin', 'site_admin@demo.test', 'Site_Admin123!');
 
         // testUser — no role assignment (view only)
 
@@ -134,14 +134,14 @@ class DemoSeeder extends Seeder
         // No official version set — exercises the no-official-version fallback.
     }
 
-    private function makeUser(string $name, string $username, string $email): User
+    private function makeUser(string $name, string $username, string $email, string $password = 'password'): User
     {
         return User::updateOrCreate(
             ['email' => $email],
             [
                 'username' => $username,
                 'name' => $name,
-                'password' => 'password',
+                'password' => $password,
                 'email_verified_at' => now(),
             ]
         );

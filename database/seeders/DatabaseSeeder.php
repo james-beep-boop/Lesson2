@@ -42,5 +42,9 @@ class DatabaseSeeder extends Seeder
         );
 
         $admin->syncRoles(['site_administrator']);
+
+        if (app()->environment(['local', 'testing', 'demo'])) {
+            $this->call(DemoSeeder::class);
+        }
     }
 }

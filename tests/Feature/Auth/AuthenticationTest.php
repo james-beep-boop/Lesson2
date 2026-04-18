@@ -3,6 +3,7 @@
 use App\Filament\App\Pages\Register;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Http\Responses\LoginResponse;
+use App\Http\Responses\RegistrationResponse;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Panel;
@@ -25,11 +26,11 @@ test('registered users start with unverified email', function () {
     expect($user->hasVerifiedEmail())->toBeFalse();
 });
 
-test('unverified users cannot access app panel', function () {
+test('unverified users can access the app panel auth flow', function () {
     $user = User::factory()->unverified()->create();
 
     $panel = Panel::make()->id('app')->default();
-    expect($user->canAccessPanel($panel))->toBeFalse();
+    expect($user->canAccessPanel($panel))->toBeTrue();
 });
 
 test('verified users can access app panel', function () {
@@ -54,6 +55,37 @@ test('registration form creates user with unverified email', function () {
 
     expect($user->email_verified_at)->toBeNull()
         ->and($user->hasVerifiedEmail())->toBeFalse();
+});
+
+test('registration response redirects unverified users to the app panel email verification prompt', function () {
+    $user = User::factory()->unverified()->create();
+
+    Filament::setCurrentPanel(Filament::getPanel('app'));
+    $this->actingAs($user);
+
+    $response = (new RegistrationResponse)->toResponse(Request::create('/register'));
+
+    expect($response->getTargetUrl())->toBe(Filament::getPanel('app')->getEmailVerificationPromptUrl());
+});
+
+test('unverified users can reach the app panel email verification prompt', function () {
+    $user = User::factory()->unverified()->create();
+
+    Filament::setCurrentPanel(Filament::getPanel('app'));
+
+    $this->actingAs($user)
+        ->get(Filament::getPanel('app')->getEmailVerificationPromptUrl())
+        ->assertOk();
+});
+
+test('unverified users are redirected from protected app pages to the email verification prompt', function () {
+    $user = User::factory()->unverified()->create();
+
+    Filament::setCurrentPanel(Filament::getPanel('app'));
+
+    $this->actingAs($user)
+        ->get(LessonPlanFamilyResource::getUrl('index'))
+        ->assertRedirect(Filament::getPanel('app')->getEmailVerificationPromptUrl());
 });
 
 // ----------------------------------------------------------------

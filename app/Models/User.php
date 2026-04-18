@@ -46,8 +46,9 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             return $this->hasRole('site_administrator') && $this->hasVerifiedEmail();
         }
 
-        // app panel — all non-system verified users
-        return ! $this->is_system && $this->hasVerifiedEmail();
+        // app panel — all non-system users may access the auth / verification flow.
+        // Protected panel pages are still gated by EnsureEmailIsVerified middleware.
+        return ! $this->is_system;
     }
 
     public function subjectGrades(): BelongsToMany

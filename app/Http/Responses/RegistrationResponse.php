@@ -10,16 +10,15 @@ use Livewire\Features\SupportRedirects\Redirector;
 
 class RegistrationResponse implements Responsable
 {
-    public function toResponse($request): RedirectResponse | Redirector
+    public function toResponse($request): RedirectResponse|Redirector
     {
         $user = Filament::auth()->user();
+        $panel = Filament::getCurrentPanel() ?? Filament::getPanel('app');
 
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
-            return redirect()->to(
-                Filament::getEmailVerificationPromptUrl() ?? Filament::getUrl()
-            );
+            return redirect()->to($panel?->getEmailVerificationPromptUrl() ?? $panel?->getLoginUrl() ?? url('/'));
         }
 
-        return redirect()->intended(Filament::getUrl());
+        return redirect()->intended($panel?->getUrl() ?? Filament::getUrl());
     }
 }
