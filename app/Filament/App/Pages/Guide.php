@@ -67,10 +67,10 @@ class Guide extends Page
     {
         // role_label is a cached Eloquent attribute — no extra DB queries after the first call.
         return match (auth()->user()?->role_label) {
-            'Administrator' => 'You are a **Site Administrator**. You can manage all lesson plans, users, and subject-grade assignments across the entire system.',
-            'Subject Admin' => 'You are a **Subject Administrator**. You can create, edit, and publish official lesson plans for your assigned subject-grades.',
-            'Editor'        => 'You are an **Editor**. You can create and submit new lesson plan versions for your assigned subject-grades.',
-            default         => 'You are a **Teacher**. You can browse, favourite, and comment on lesson plans.',
+            'Site Administrator' => 'You are a **Site Administrator**. You can manage all lesson plans, users, and subject-grade assignments across the entire system.',
+            'Subject Administrator' => 'You are a **Subject Administrator**. You can create, edit, and publish official lesson plans for your assigned subject-grades.',
+            'Editor' => 'You are an **Editor**. You can create and submit new lesson plan versions for your assigned subject-grades.',
+            default => 'You are a **Teacher**. You can browse, favourite, and comment on lesson plans.',
         };
     }
 

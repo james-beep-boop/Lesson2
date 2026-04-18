@@ -75,6 +75,15 @@ test('site administrator sees admin-only sections', function () {
     expect($titles)->toContain('Administration');
 });
 
+test('site administrator sees the canonical orientation text', function () {
+    $admin = makeSiteAdmin();
+    $this->actingAs($admin);
+
+    $component = Livewire::test(Guide::class);
+
+    expect($component->instance()->orientationText())->toContain('Site Administrator');
+});
+
 test('editor sees editing sections', function () {
     $sg = makeSubjectGrade();
     $editor = makeEditor($sg);

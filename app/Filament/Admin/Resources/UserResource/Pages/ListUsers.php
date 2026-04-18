@@ -42,11 +42,11 @@ class ListUsers extends ListRecords
             fn (Builder $r) => $r->where('subject_grade_user.role', 'editor')
         );
 
-        $all           = User::where('is_system', false)->count();
-        $siteAdmins    = User::where('is_system', false)->tap($isSiteAdmin)->count();
+        $all = User::where('is_system', false)->count();
+        $siteAdmins = User::where('is_system', false)->tap($isSiteAdmin)->count();
         $subjectAdmins = User::where('is_system', false)->whereIn('id', $subjectAdminIds)->count();
-        $editors       = User::where('is_system', false)->tap($isEditor)->count();
-        $teachers      = User::where('is_system', false)
+        $editors = User::where('is_system', false)->tap($isEditor)->count();
+        $teachers = User::where('is_system', false)
             ->whereDoesntHave('roles')
             ->whereNotIn('id', $subjectAdminIds)
             ->whereDoesntHave('subjectGrades', fn (Builder $q) => $q->where('subject_grade_user.role', 'editor'))
@@ -55,13 +55,13 @@ class ListUsers extends ListRecords
         return [
             'all' => Tab::make("All ({$all})"),
 
-            'site_admins' => Tab::make("Site Admins ({$siteAdmins})")
+            'site_admins' => Tab::make("Site Administrators ({$siteAdmins})")
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
                     'roles',
                     fn (Builder $r) => $r->where('name', 'site_administrator')
                 )),
 
-            'subject_admins' => Tab::make("Subject Admins ({$subjectAdmins})")
+            'subject_admins' => Tab::make("Subject Administrators ({$subjectAdmins})")
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('id', $subjectAdminIds)),
 
             'editors' => Tab::make("Editors ({$editors})")

@@ -50,8 +50,8 @@ class UserResource extends Resource
                     ->state(fn (User $record): string => $record->role_label)
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'Administrator' => 'danger',
-                        'Subject Admin' => 'warning',
+                        'Site Administrator' => 'danger',
+                        'Subject Administrator' => 'warning',
                         'Editor' => 'info',
                         default => 'gray',
                     }),
@@ -60,7 +60,7 @@ class UserResource extends Resource
             ->actions([
                 EditAction::make(),
                 Action::make('grantSiteAdmin')
-                    ->label('Grant Site Admin')
+                    ->label('Grant Site Administrator')
                     ->icon('heroicon-o-shield-check')
                     ->color('warning')
                     ->requiresConfirmation()
@@ -69,13 +69,13 @@ class UserResource extends Resource
                     ->action(function (User $record): void {
                         $record->assignRole('site_administrator');
                         Notification::make('site-admin-granted')
-                            ->title('Site Admin role granted.')
+                            ->title('Site Administrator role granted.')
                             ->success()
                             ->send();
                     })
                     ->visible(fn (User $record): bool => ! $record->isSiteAdmin()),
                 Action::make('revokeSiteAdmin')
-                    ->label('Revoke Site Admin')
+                    ->label('Revoke Site Administrator')
                     ->icon('heroicon-o-shield-exclamation')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -85,7 +85,7 @@ class UserResource extends Resource
                         // Self-revoke guard: admins cannot revoke their own role here.
                         if ($record->id === auth()->id()) {
                             Notification::make('self-revoke-blocked')
-                                ->title('You cannot revoke your own Site Admin role.')
+                                ->title('You cannot revoke your own Site Administrator role.')
                                 ->danger()
                                 ->send();
 
@@ -104,7 +104,7 @@ class UserResource extends Resource
 
                         $record->removeRole('site_administrator');
                         Notification::make('site-admin-revoked')
-                            ->title('Site Admin role revoked.')
+                            ->title('Site Administrator role revoked.')
                             ->success()
                             ->send();
                     })

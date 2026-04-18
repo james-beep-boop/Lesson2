@@ -40,6 +40,12 @@ test('verified users can access app panel', function () {
     expect($user->canAccessPanel($panel))->toBeTrue();
 });
 
+test('site admin role label uses the canonical full term', function () {
+    $admin = makeSiteAdmin();
+
+    expect($admin->role_label)->toBe('Site Administrator');
+});
+
 test('registration form creates user with unverified email', function () {
     Livewire::test(Register::class)
         ->fillForm([

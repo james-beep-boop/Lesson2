@@ -143,8 +143,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
-     * Single-word role label for the user avatar dropdown.
-     * Priority: Site Admin → Subject Admin → Editor → Teacher (default / no role).
+     * Role label for the user avatar dropdown.
+     * Priority: Site Administrator → Subject Administrator → Editor → Teacher (default / no role).
      * Cached by Eloquent's Attribute caching (shouldCache) to avoid repeated DB hits.
      */
     protected function roleLabel(): Attribute
@@ -152,7 +152,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return Attribute::make(
             get: function () {
                 if ($this->isSiteAdmin()) {
-                    return 'Administrator';
+                    return 'Site Administrator';
                 }
 
                 $isSubjectAdmin = $this->relationLoaded('subjectGradeAsAdmin')
@@ -160,7 +160,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
                     : SubjectGrade::where('subject_admin_user_id', $this->id)->exists();
 
                 if ($isSubjectAdmin) {
-                    return 'Subject Admin';
+                    return 'Subject Administrator';
                 }
 
                 $isEditor = $this->relationLoaded('subjectGrades')

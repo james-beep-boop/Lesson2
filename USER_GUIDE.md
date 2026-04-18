@@ -73,10 +73,10 @@ Use these accounts for review and testing. Unless noted otherwise, the demo pass
 | Bob Ochieng | `bob` | `bob@demo.test` | Editor - Mathematics Grade 10 | `password` |
 | Carol Mwangi | `carol` | `carol@demo.test` | Editor - Science Grade 10 | `password` |
 | Test Editor | `editor` | `editor@demo.test` | Editor - English Grade 10 | `password` |
-| Test SubjectAdmin | `subject_admin` | `subject_admin@demo.test` | Subject Admin - English Grade 10 | `password` |
-| Alice Kamau | `alice` | `alice@demo.test` | Subject Admin - Mathematics Grade 10 | `password` |
-| Eve Wanjiku | `eve` | `eve@demo.test` | Subject Admin - Science Grade 10 | `password` |
-| Site Administrator | `admin` | `admin@sheql.com` | Site Admin | Set separately |
+| Test SubjectAdmin | `subject_admin` | `subject_admin@demo.test` | Subject Administrator - English Grade 10 | `password` |
+| Alice Kamau | `alice` | `alice@demo.test` | Subject Administrator - Mathematics Grade 10 | `password` |
+| Eve Wanjiku | `eve` | `eve@demo.test` | Subject Administrator - Science Grade 10 | `password` |
+| Site Administrator | `admin` | `admin@sheql.com` | Site Administrator | Set separately |
 
 ## Suggested First Steps
 

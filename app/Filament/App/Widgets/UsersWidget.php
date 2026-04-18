@@ -58,10 +58,10 @@ class UsersWidget extends TableWidget
                 SelectColumn::make('role_key')
                     ->label('Status')
                     ->options([
-                        'user' => 'User',
+                        'user' => 'Teacher',
                         'editor' => 'Editor',
-                        'subject_admin' => 'Subject Admin',
-                        'site_admin' => 'Site Admin',
+                        'subject_admin' => 'Subject Administrator',
+                        'site_admin' => 'Site Administrator',
                     ])
                     ->getStateUsing(fn (User $record): string => $this->pendingRoleChanges[$record->id] ?? $this->roleKey($record))
                     ->updateStateUsing(function (User $record, string $state): void {
@@ -156,8 +156,8 @@ class UsersWidget extends TableWidget
     private function roleKey(User $record): string
     {
         return match ($record->role_label) {
-            'Administrator' => 'site_admin',
-            'Subject Admin' => 'subject_admin',
+            'Site Administrator' => 'site_admin',
+            'Subject Administrator' => 'subject_admin',
             'Editor' => 'editor',
             default => 'user',
         };
@@ -176,7 +176,7 @@ class UsersWidget extends TableWidget
             'user' => $this->demoteToUser($record),
             // Editor and Subject Admin are subject-grade-scoped; assign via Team Management.
             default => Notification::make('scoped-role-required')
-                ->title(($state === 'editor' ? 'Editor' : 'Subject Admin').' is a subject-grade role. Assign it via Team Management.')
+                ->title(($state === 'editor' ? 'Editor' : 'Subject Administrator').' is a subject-grade role. Assign it via Team Management.')
                 ->warning()
                 ->send(),
         };
@@ -193,7 +193,7 @@ class UsersWidget extends TableWidget
         $record->assignRole('site_administrator');
 
         Notification::make('role-updated')
-            ->title('Status updated to Site Admin.')
+            ->title('Status updated to Site Administrator.')
             ->success()
             ->send();
 
