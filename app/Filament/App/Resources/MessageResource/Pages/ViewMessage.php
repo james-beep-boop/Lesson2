@@ -63,7 +63,7 @@ class ViewMessage extends ViewRecord
                         : MessageResource::getUrl('index');
                 }),
             Action::make('deleteThisPlan')
-                ->label('Delete This Plan')
+                ->label('Delete This Version')
                 ->icon('heroicon-o-trash')
                 ->color('danger')
                 ->requiresConfirmation()
