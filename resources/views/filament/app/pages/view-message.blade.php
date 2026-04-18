@@ -1,4 +1,8 @@
 <x-filament-panels::page>
+    @php
+        $displayBody = preg_replace('/\n*\[deletion_request:\d+\]\s*$/', '', $this->record->body);
+    @endphp
+
     <div class="max-w-3xl space-y-4">
 
         {{-- Message header card --}}
@@ -23,14 +27,17 @@
 
         {{-- Message body --}}
         <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <div class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200">
+            <div
+                class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200"
+                data-testid="message-body"
+            >
                 {!! nl2br(preg_replace_callback(
                     '~https?://[^\s<>]+~',
                     function ($m) {
                         $url = rtrim($m[0], '.,;:)!"\'');
                         return '<a href="'.$url.'" target="_blank" rel="noopener noreferrer" class="underline">'.$url.'</a>';
                     },
-                    e($this->record->body)
+                    e($displayBody)
                 )) !!}
             </div>
         </div>

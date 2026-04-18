@@ -221,6 +221,39 @@ test('creating a lesson plan requires an uploaded lesson file', function () {
         ->assertHasFormErrors(['lesson_file' => 'required']);
 });
 
+test('processed upload stays usable after later metadata changes', function () {
+    $siteAdmin = makeSiteAdmin();
+    $subjectA = Subject::factory()->create(['name' => 'Agriculture']);
+    $subjectB = Subject::factory()->create(['name' => 'Biology']);
+    SubjectGrade::factory()->create(['subject_id' => $subjectA->id, 'grade' => 10]);
+    SubjectGrade::factory()->create(['subject_id' => $subjectB->id, 'grade' => 10]);
+
+    $this->actingAs($siteAdmin);
+
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->fillForm([
+            'subject_id' => $subjectA->id,
+            'grade' => 10,
+            'day' => 6,
+        ])
+        ->set('data.lesson_file', fakeLessonPlanUpload('# Imported lesson', 'imported-plan.md'))
+        ->assertSet('processedLessonFilename', 'imported-plan.md')
+        ->fillForm([
+            'subject_id' => $subjectB->id,
+            'grade' => 10,
+            'day' => 7,
+        ])
+        ->assertSet('processedLessonFilename', 'imported-plan.md')
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $version = LessonPlanVersion::latest('id')->first();
+
+    expect($version->content)->toBe('# Imported lesson');
+    expect($version->family->day)->toBe('7');
+    expect($version->family->subjectGrade->subject_id)->toBe($subjectB->id);
+});
+
 // ----------------------------------------------------------------
 // Subject createOptionUsing — site-admin gate
 // ----------------------------------------------------------------

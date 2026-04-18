@@ -4,8 +4,11 @@ use App\Filament\App\Resources\MessageResource;
 use App\Filament\App\Resources\MessageResource\Pages\ComposeMessage;
 use App\Filament\App\Resources\MessageResource\Pages\ListMessages;
 use App\Filament\App\Resources\MessageResource\Pages\ViewMessage;
+use App\Models\DeletionRequest;
+use App\Models\LessonPlanVersion;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\DeletionRequestService;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -135,4 +138,111 @@ test('a user cannot view another users message', function () {
     $this->actingAs($intruder)
         ->get(MessageResource::getUrl('view', ['record' => $message->id]))
         ->assertNotFound();
+});
+
+test('site admin can resolve a pending deletion request from a new-format inbox message', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
+
+    $this->actingAs($subjectAdmin);
+    $request = app(DeletionRequestService::class)->request($version, $subjectAdmin, 'Superseded');
+    $message = Message::where('to_user_id', $siteAdmin->id)
+        ->where('subject', 'Deletion request: version '.$version->version)
+        ->latest('id')
+        ->firstOrFail();
+
+    $this->actingAs($siteAdmin);
+
+    Livewire::test(ViewMessage::class, ['record' => $message->id])
+        ->assertActionVisible('viewThisPlan')
+        ->assertActionVisible('deleteThisPlan')
+        ->callAction('deleteThisPlan')
+        ->assertRedirect(MessageResource::getUrl('index'));
+
+    expect(DeletionRequest::find($request->id)?->resolved_at)->not->toBeNull();
+    expect(LessonPlanVersion::find($version->id))->toBeNull();
+});
+
+test('structured deletion marker is not shown in the rendered message body', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
+
+    $this->actingAs($subjectAdmin);
+    app(DeletionRequestService::class)->request($version, $subjectAdmin, 'Superseded');
+    $message = Message::where('to_user_id', $siteAdmin->id)
+        ->where('subject', 'Deletion request: version '.$version->version)
+        ->latest('id')
+        ->firstOrFail();
+
+    $response = $this->actingAs($siteAdmin)
+        ->get(MessageResource::getUrl('view', ['record' => $message->id]))
+        ->assertOk()
+        ->assertSee('Reason: Superseded');
+
+    preg_match('/<div[^>]*data-testid="message-body"[^>]*>(?P<body>.*?)<\/div>/s', $response->getContent(), $matches);
+    $bodyText = html_entity_decode(strip_tags($matches['body'] ?? ''));
+
+    expect($matches)->toHaveKey('body');
+    expect($bodyText)->not->toContain('[deletion_request:');
+});
+
+test('deletion request parser ignores marker-like text in the reason and uses the trailing marker', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
+
+    $this->actingAs($subjectAdmin);
+    $request = app(DeletionRequestService::class)->request(
+        $version,
+        $subjectAdmin,
+        'Please review [deletion_request:999] before deleting'
+    );
+    $message = Message::where('to_user_id', $siteAdmin->id)
+        ->where('subject', 'Deletion request: version '.$version->version)
+        ->latest('id')
+        ->firstOrFail();
+
+    $this->actingAs($siteAdmin);
+
+    Livewire::test(ViewMessage::class, ['record' => $message->id])
+        ->assertActionVisible('deleteThisPlan')
+        ->callAction('deleteThisPlan')
+        ->assertRedirect(MessageResource::getUrl('index'));
+
+    expect(DeletionRequest::find($request->id)?->resolved_at)->not->toBeNull();
+});
+
+test('site admin can resolve a pending deletion request from a legacy inbox message body', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
+
+    $request = new DeletionRequest([
+        'lesson_plan_version_id' => $version->id,
+        'reason' => 'Legacy pending request',
+    ]);
+    $request->requested_by_user_id = $subjectAdmin->id;
+    $request->save();
+
+    $legacyMessage = new Message([
+        'to_user_id' => $siteAdmin->id,
+        'subject' => 'Deletion request: version '.$version->version,
+        'body' => $subjectAdmin->username.' has requested deletion of version '
+            .$version->version.' of lesson plan ID '.$version->lesson_plan_family_id.".\n\n"
+            .'Reason: Legacy pending request',
+    ]);
+    $legacyMessage->from_user_id = $subjectAdmin->id;
+    $legacyMessage->save();
+
+    $this->actingAs($siteAdmin);
+
+    Livewire::test(ViewMessage::class, ['record' => $legacyMessage->id])
+        ->assertActionVisible('viewThisPlan')
+        ->assertActionVisible('deleteThisPlan');
 });

@@ -24,6 +24,8 @@ use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\UploadedFile as HttpUploadedFile;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class CreateLessonPlanFamily extends CreateRecord
@@ -33,6 +35,8 @@ class CreateLessonPlanFamily extends CreateRecord
     protected static bool $canCreateAnother = false;
 
     protected static ?string $title = 'Add Lesson Plan';
+
+    public ?string $processedLessonFilename = null;
 
     public function form(Schema $schema): Schema
     {
@@ -132,7 +136,9 @@ class CreateLessonPlanFamily extends CreateRecord
             // ── Content ───────────────────────────────────────────────────────
             FileUpload::make('lesson_file')
                 ->label('Upload lesson plan file')
-                ->helperText('Upload a .md, .txt, or .docx file to import the lesson plan. You can review and edit the Markdown before saving.')
+                ->helperText(fn (): string => $this->processedLessonFilename
+                    ? 'Imported from: '.$this->processedLessonFilename.'. You can keep editing the Markdown before saving.'
+                    : 'Upload a .md, .txt, or .docx file to import the lesson plan. You can review and edit the Markdown before saving.')
                 ->placeholder('Drag & Drop your file or Browse')
                 ->acceptedFileTypes([
                     'text/plain',
@@ -141,7 +147,6 @@ class CreateLessonPlanFamily extends CreateRecord
                     'application/octet-stream',
                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 ])
-                ->required()
                 ->maxSize(32768)
                 ->maxFiles(1)
                 ->dehydrated(false)
@@ -149,13 +154,23 @@ class CreateLessonPlanFamily extends CreateRecord
                 ->disabled(fn (): bool => ! $this->allMetadataFilled())
                 ->columnSpanFull()
                 ->afterStateUpdated(function (mixed $state, Set $set): void {
+                    if (blank($state)) {
+                        $this->processedLessonFilename = null;
+
+                        return;
+                    }
+
                     if (is_string($state)) {
                         $state = TemporaryUploadedFile::createFromLivewire($state);
                     }
 
-                    if (! $state instanceof TemporaryUploadedFile) {
+                    if (! $state instanceof TemporaryUploadedFile && ! $state instanceof HttpUploadedFile) {
+                        $this->processedLessonFilename = null;
+
                         return;
                     }
+
+                    $this->processedLessonFilename = $state->getClientOriginalName();
 
                     // Auto-populate Day from canonical filenames:
                     // SUBJ_GRADE_DAY_REV_VER.MAJ.MIN.md  e.g. ENGL_10_1_REV_1.0.0.md
@@ -167,6 +182,7 @@ class CreateLessonPlanFamily extends CreateRecord
 
                     if (in_array($ext, ['md', 'txt'])) {
                         $set('content', $state->get());
+                        unset($this->data['lesson_file']);
 
                         return;
                     }
@@ -176,6 +192,7 @@ class CreateLessonPlanFamily extends CreateRecord
                             set_time_limit(60);
 
                             $set('content', app(DocxConversionService::class)->convert($state->getRealPath()));
+                            unset($this->data['lesson_file']);
 
                             Notification::make()
                                 ->title('Word document converted — please review')
@@ -193,6 +210,9 @@ class CreateLessonPlanFamily extends CreateRecord
                             if (ob_get_level()) {
                                 ob_end_clean();
                             }
+
+                            $this->processedLessonFilename = null;
+                            unset($this->data['lesson_file']);
 
                             Notification::make()
                                 ->title('Conversion failed')
@@ -269,7 +289,15 @@ class CreateLessonPlanFamily extends CreateRecord
             ->label('Add to Repository')
             ->submit(null)
             ->action('create')
-            ->disabled(fn (): bool => ! $this->allMetadataFilled() || blank($this->data['lesson_file'] ?? null));
+            ->disabled(fn (): bool => ! $this->allMetadataFilled() || blank($this->processedLessonFilename));
+    }
+
+    protected function beforeCreate(): void
+    {
+        Validator::make(
+            ['data' => ['lesson_file' => $this->processedLessonFilename]],
+            ['data.lesson_file' => ['required']]
+        )->validate();
     }
 
     protected function handleRecordCreation(array $data): Model

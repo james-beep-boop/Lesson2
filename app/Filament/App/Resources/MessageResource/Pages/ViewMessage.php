@@ -2,13 +2,20 @@
 
 namespace App\Filament\App\Resources\MessageResource\Pages;
 
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Resources\MessageResource;
+use App\Models\DeletionRequest;
+use App\Models\LessonPlanVersion;
+use App\Services\DeletionRequestService;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewMessage extends ViewRecord
 {
     protected static string $resource = MessageResource::class;
+
+    public ?int $deletionRequestId = null;
 
     /**
      * Custom blade view — bypasses default infolist rendering while still
@@ -29,6 +36,8 @@ class ViewMessage extends ViewRecord
             $this->record->save();
             $this->record->refresh();
         }
+
+        $this->deletionRequestId = $this->resolveDeletionRequest()?->id;
     }
 
     protected function getHeaderActions(): array
@@ -41,6 +50,45 @@ class ViewMessage extends ViewRecord
                     'to' => $this->record->from_user_id,
                     'subject' => 'Re: '.$this->record->subject,
                 ])),
+            Action::make('viewThisPlan')
+                ->label('View This Plan')
+                ->icon('heroicon-o-eye')
+                ->color('primary')
+                ->visible(fn (): bool => $this->deletionRequestVersion() !== null && auth()->user()?->isSiteAdmin())
+                ->url(function (): string {
+                    $version = $this->deletionRequestVersion();
+
+                    return $version
+                        ? LessonPlanFamilyResource::viewUrl($version->family, $version)
+                        : MessageResource::getUrl('index');
+                }),
+            Action::make('deleteThisPlan')
+                ->label('Delete This Plan')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->visible(fn (): bool => $this->deletionRequestVersion() !== null && auth()->user()?->isSiteAdmin())
+                ->action(function (): void {
+                    $deletionRequest = $this->resolveDeletionRequest();
+
+                    if (! $deletionRequest || ! $deletionRequest->version) {
+                        Notification::make()
+                            ->title('This deletion request is no longer actionable.')
+                            ->warning()
+                            ->send();
+
+                        return;
+                    }
+
+                    app(DeletionRequestService::class)->resolve($deletionRequest, auth()->user());
+
+                    Notification::make()
+                        ->title('Lesson plan deleted.')
+                        ->success()
+                        ->send();
+
+                    $this->redirect(MessageResource::getUrl('index'));
+                }),
             Action::make('back')
                 ->label('Back to Inbox')
                 ->icon('heroicon-o-arrow-left')
@@ -52,5 +100,49 @@ class ViewMessage extends ViewRecord
     public function getTitle(): string
     {
         return $this->record->subject;
+    }
+
+    private function deletionRequestVersion(): ?LessonPlanVersion
+    {
+        return $this->resolveDeletionRequest()?->version;
+    }
+
+    private function resolveDeletionRequest(): ?DeletionRequest
+    {
+        if ($this->deletionRequestId) {
+            return DeletionRequest::query()
+                ->with('version.family.subjectGrade.subject')
+                ->whereKey($this->deletionRequestId)
+                ->whereNull('resolved_at')
+                ->first();
+        }
+
+        if (preg_match('/\[deletion_request:(\d+)\]\s*$/', $this->record->body, $matches)) {
+            return DeletionRequest::query()
+                ->with('version.family.subjectGrade.subject')
+                ->whereKey((int) $matches[1])
+                ->whereNull('resolved_at')
+                ->first();
+        }
+
+        if (! preg_match('/Lesson plan ID:\s*(\d+)/i', $this->record->body, $familyMatches)) {
+            if (! preg_match('/lesson plan ID\s+(\d+)/i', $this->record->body, $familyMatches)) {
+                return null;
+            }
+        }
+
+        if (! preg_match('/Deletion request:\s+version\s+([0-9]+\.[0-9]+\.[0-9]+)/i', $this->record->subject, $versionMatches)) {
+            return null;
+        }
+
+        return DeletionRequest::query()
+            ->with('version.family.subjectGrade.subject')
+            ->whereNull('resolved_at')
+            ->whereHas('version', function ($query) use ($familyMatches, $versionMatches) {
+                $query
+                    ->where('lesson_plan_family_id', (int) $familyMatches[1])
+                    ->where('version', $versionMatches[1]);
+            })
+            ->first();
     }
 }

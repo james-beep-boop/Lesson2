@@ -34,6 +34,9 @@ test('deletion request creates messages to contributor and site admins', functio
 
     expect($messageToContributor)->not->toBeNull();
     expect($messageToAdmin)->not->toBeNull();
+    expect($messageToAdmin->body)->toContain('Grade '.$family->subjectGrade->grade);
+    expect($messageToAdmin->body)->toContain('Day '.$family->day);
+    expect($messageToAdmin->body)->toContain('[deletion_request:');
 });
 
 test('deletion request record is created', function () {
