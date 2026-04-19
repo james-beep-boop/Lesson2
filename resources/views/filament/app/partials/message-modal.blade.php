@@ -64,29 +64,24 @@
         {{-- Subject --}}
         <div>
             <p class="mb-1 text-sm font-bold text-gray-950 dark:text-white">Subject:</p>
-            <div class="fi-input-wrp">
-                <div class="fi-input-wrp-content-ctn">
-                    <x-filament::input
-                        wire:model="messageSubject"
-                        type="text"
-                    />
-                </div>
-            </div>
+            <x-filament::input.wrapper>
+                <x-filament::input
+                    wire:model="messageSubject"
+                    type="text"
+                />
+            </x-filament::input.wrapper>
         </div>
 
         {{-- Body --}}
         <div>
             <p class="mb-1 text-sm font-bold text-gray-950 dark:text-white">Message</p>
-            <div class="fi-input-wrp">
-                <div class="fi-input-wrp-content-ctn">
-                    <div class="fi-fo-textarea">
-                        <textarea
-                            wire:model="messageBody"
-                            rows="10"
-                        ></textarea>
-                    </div>
-                </div>
-            </div>
+            <x-filament::input.wrapper>
+                <textarea
+                    wire:model="messageBody"
+                    rows="10"
+                    class="block w-full border-none bg-transparent px-3 py-1.5 text-sm leading-6 text-gray-950 placeholder:text-gray-400 focus:ring-0 focus:outline-none dark:text-white"
+                ></textarea>
+            </x-filament::input.wrapper>
         </div>
 
         <div class="flex gap-2">
