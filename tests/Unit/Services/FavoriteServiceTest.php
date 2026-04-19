@@ -74,3 +74,35 @@ test('favorites are user-specific', function () {
     expect(Favorite::where('user_id', $user2->id)->count())->toBe(1);
     expect(Favorite::count())->toBe(2);
 });
+
+test('toggle on the same version removes the favorite', function () {
+    $sg = makeSubjectGrade();
+    [, $version] = makeFamilyWithVersion($sg);
+    $user = makeTeacher();
+    $service = new FavoriteService;
+
+    $service->upsert($user, $version);
+    $result = $service->toggle($user, $version);
+
+    expect($result)->toBeNull();
+    expect(Favorite::where('user_id', $user->id)->exists())->toBeFalse();
+});
+
+test('toggle on a different version of the same family switches the favorite', function () {
+    $sg = makeSubjectGrade();
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $user = makeTeacher();
+    $service = new FavoriteService;
+
+    $v2 = \App\Models\LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $service->upsert($user, $v1);
+    $result = $service->toggle($user, $v2);
+
+    expect($result)->not->toBeNull();
+    expect($result->lesson_plan_version_id)->toBe($v2->id);
+    expect(Favorite::where('user_id', $user->id)->count())->toBe(1);
+});

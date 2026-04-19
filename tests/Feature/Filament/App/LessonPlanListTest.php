@@ -2,6 +2,7 @@
 
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ListLessonPlanFamilies;
+use App\Models\Favorite;
 use App\Models\LessonPlanVersion;
 use App\Services\FavoriteService;
 use Filament\Facades\Filament;
@@ -83,6 +84,28 @@ test('favorites tab shows only versions the user has favorited', function () {
         ->set('activeTab', 'favorites')
         ->assertCanSeeTableRecords([$favored])
         ->assertCanNotSeeTableRecords([$unfavored]);
+});
+
+test('favorite action fills and unfills the star immediately', function () {
+    $sg = makeSubjectGrade();
+    [, $version] = makeFamilyWithVersion($sg);
+    $user = makeTeacher();
+
+    $this->actingAs($user);
+
+    Livewire::test(ListLessonPlanFamilies::class)
+        ->assertTableActionHasIcon('favorite', 'heroicon-o-star', $version)
+        ->callTableAction('favorite', $version)
+        ->assertNotified()
+        ->assertTableActionHasIcon('favorite', 'heroicon-s-star', $version)
+        ->callTableAction('favorite', $version)
+        ->assertNotified()
+        ->assertTableActionHasIcon('favorite', 'heroicon-o-star', $version);
+
+    expect(Favorite::where('user_id', $user->id)
+        ->where('lesson_plan_family_id', $version->lesson_plan_family_id)
+        ->exists()
+    )->toBeFalse();
 });
 
 test('no role sees a create button on the list page', function () {

@@ -290,9 +290,12 @@ class ViewLessonPlanFamily extends Page
     {
         abort_unless(auth()->check(), 403);
 
-        $this->userFavorite = $favoriteService->upsert(auth()->user(), $this->selectedVersion);
+        $this->userFavorite = $favoriteService->toggle(auth()->user(), $this->selectedVersion);
 
-        Notification::make('favorited')->title('Added to favorites.')->success()->send();
+        Notification::make('favorited')
+            ->title($this->userFavorite ? 'Added to favorites.' : 'Removed from favorites.')
+            ->success()
+            ->send();
     }
 
     /** Returns ['major' => '2.0.0', 'minor' => '1.1.0', 'patch' => '1.0.1'] based on current versions. */

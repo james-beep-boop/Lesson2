@@ -16,6 +16,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -150,17 +151,24 @@ class LessonPlanFamilyResource extends Resource
                             : 'heroicon-o-star'
                     )
                     ->label('')
-                    ->tooltip('Favorite this version')
-                    ->action(function (LessonPlanVersion $record) {
+                    ->tooltip(fn (LessonPlanVersion $record): string => $favorites->get($record->lesson_plan_family_id) === $record->id
+                            ? 'Remove from favorites'
+                            : 'Favorite this version'
+                    )
+                    ->action(function (HasTable $livewire, LessonPlanVersion $record): void {
                         $user = auth()->user();
                         if (! $user) {
                             return;
                         }
-                        app(FavoriteService::class)->upsert($user, $record);
+
+                        $favorite = app(FavoriteService::class)->toggle($user, $record);
+
                         Notification::make()
-                            ->title('Favorited')
+                            ->title($favorite ? 'Added to favorites.' : 'Removed from favorites.')
                             ->success()
                             ->send();
+
+                        $livewire->resetTable();
                     }),
             ])
             ->recordUrl(fn (LessonPlanVersion $record): string => static::versionUrl($record))
