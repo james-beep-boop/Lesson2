@@ -110,6 +110,7 @@ class CreateLessonPlanFamily extends CreateRecord
                         })
                         ->required()
                         ->live()
+                        ->native(false)
                         ->when(
                             $user->isSiteAdmin(),
                             fn (Select $select) => $select
