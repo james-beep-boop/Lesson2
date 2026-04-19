@@ -20,7 +20,6 @@ use App\Services\TranslationService;
 use App\Services\VersionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Ai\Streaming\Events\TextDelta;
@@ -92,16 +91,12 @@ class ViewLessonPlanFamily extends Page
 
     public bool $showMessageModal = false;
 
-    /** author | subject_admin | site_admin | any_user */
+    /** author | subject_admin | site_admin */
     public string $messageRecipientType = 'author';
-
-    public ?int $messageToUserId = null;
 
     public string $messageSubject = '';
 
     public string $messageBody = '';
-
-    public string $userSearchQuery = '';
 
     // -------------------------------------------------------------------------
     // Email PDF state
@@ -699,49 +694,21 @@ class ViewLessonPlanFamily extends Page
 
     /**
      * Open the message modal, pre-filling subject/body for the given recipient type.
-     * Allowed types: author | subject_admin | site_admin | any_user
+     * Allowed types: author | subject_admin | site_admin
      */
     public function openMessageModal(string $recipientType): void
     {
         abort_unless(auth()->check() && ! auth()->user()->is_system, 403);
 
-        $allowed = ['author', 'subject_admin', 'site_admin', 'any_user'];
+        $allowed = ['author', 'subject_admin', 'site_admin'];
         if (! in_array($recipientType, $allowed)) {
             return;
         }
 
         $this->messageRecipientType = $recipientType;
         $this->showMessageModal = true;
-        $this->messageToUserId = null;
-        $this->userSearchQuery = '';
         $this->messageSubject = $this->buildMessageSubject();
         $this->messageBody = $this->buildMessageBody();
-    }
-
-    public function selectMessageUser(int $userId): void
-    {
-        $user = User::where('id', $userId)->where('is_system', false)->first();
-        if ($user) {
-            $this->messageToUserId = $user->id;
-            $this->userSearchQuery = '';
-        }
-    }
-
-    public function getMessageUserSearchResults(): Collection
-    {
-        if (strlen($this->userSearchQuery) < 1) {
-            return collect();
-        }
-
-        return User::where('is_system', false)
-            ->where('id', '!=', auth()->id())
-            ->where(fn ($q) => $q
-                ->where('name', 'like', '%'.$this->userSearchQuery.'%')
-                ->orWhere('email', 'like', '%'.$this->userSearchQuery.'%')
-            )
-            ->orderBy('name')
-            ->limit(10)
-            ->get();
     }
 
     public function sendLessonMessage(): void
@@ -802,10 +769,6 @@ class ViewLessonPlanFamily extends Page
 
             'site_admin' => User::role('site_administrator')->where('is_system', false)->get()->all(),
 
-            'any_user' => $this->messageToUserId
-                ? User::where('id', $this->messageToUserId)->where('is_system', false)->get()->all()
-                : [],
-
             default => [],
         };
     }
@@ -824,18 +787,12 @@ class ViewLessonPlanFamily extends Page
     {
         $sg = $this->record->subjectGrade;
         $version = $this->selectedVersion;
-        $url = LessonPlanFamilyResource::viewUrl($this->record, $version);
 
-        $context = "--- Lesson Context ---\n"
-            ."Subject:     {$sg->subject->name}\n"
-            ."Grade:       Grade {$sg->grade}\n"
-            ."Day:         {$this->record->day}\n"
-            .'Version:     v'.($version?->version ?? '?')."\n"
-            .'Contributor: '.($version?->contributor?->name ?? '—')."\n"
-            ."Link:        {$url}\n"
-            ."----------------------\n\n";
-
-        return $context;
+        return 'Subject: '.$sg->subject->name
+            .' Grade '.$sg->grade
+            .' Day '.$this->record->day
+            .' Version v'.($version?->version ?? '?')."\n"
+            .'Contributor: '.($version?->contributor?->name ?? '—')."\n\n";
     }
 
     // -------------------------------------------------------------------------
