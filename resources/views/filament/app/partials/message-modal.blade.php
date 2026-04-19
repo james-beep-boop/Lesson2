@@ -24,7 +24,6 @@
                 <x-filament::button
                     wire:click="openMessageModal('author')"
                     :color="$messageRecipientType === 'author' ? 'primary' : 'gray'"
-                    size="sm"
                 >
                     Message Author
                 </x-filament::button>
@@ -33,12 +32,11 @@
                     <x-filament::button
                         wire:click="openMessageModal('subject_admin')"
                         :color="$messageRecipientType === 'subject_admin' ? 'primary' : 'gray'"
-                        size="sm"
                     >
                         Message Subject Admin
                     </x-filament::button>
                 @elseif(!$subjectAdmin)
-                    <x-filament::button color="gray" size="sm" disabled>
+                    <x-filament::button color="gray" disabled>
                         Message Subject Admin (none assigned)
                     </x-filament::button>
                 @endif
@@ -46,7 +44,6 @@
                 <x-filament::button
                     wire:click="openMessageModal('site_admin')"
                     :color="$messageRecipientType === 'site_admin' ? 'primary' : 'gray'"
-                    size="sm"
                 >
                     Message Site Admin
                 </x-filament::button>
@@ -66,30 +63,30 @@
 
         {{-- Subject --}}
         <div class="w-full">
-            <x-filament::input.wrapper
-                class="w-full"
-                label="Subject:"
-            >
-                <x-filament::input
-                    wire:model="messageSubject"
-                    type="text"
-                    class="w-full max-w-none"
-                />
-            </x-filament::input.wrapper>
+            <p class="mb-1 text-sm font-bold text-gray-950 dark:text-white">Subject:</p>
+            <div class="fi-input-wrp">
+                <div class="fi-input-wrp-content-ctn">
+                    <x-filament::input
+                        wire:model="messageSubject"
+                        type="text"
+                    />
+                </div>
+            </div>
         </div>
 
         {{-- Body --}}
         <div class="w-full">
-            <x-filament::input.wrapper
-                class="w-full"
-                label="Message"
-            >
-                <textarea
-                    wire:model="messageBody"
-                    rows="10"
-                    class="block min-w-0 flex-1 resize-y border-0 bg-transparent px-3 py-2 font-mono text-sm text-gray-950 shadow-none outline-none focus:outline-none focus:ring-0 dark:bg-transparent dark:text-gray-100"
-                ></textarea>
-            </x-filament::input.wrapper>
+            <p class="mb-1 text-sm font-bold text-gray-950 dark:text-white">Message</p>
+            <div class="fi-input-wrp">
+                <div class="fi-input-wrp-content-ctn">
+                    <div class="fi-fo-textarea">
+                        <textarea
+                            wire:model="messageBody"
+                            rows="10"
+                        ></textarea>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="flex gap-2">
