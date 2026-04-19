@@ -1,11 +1,11 @@
 @if($showMessageModal && $selectedVersion)
 @php $subjectAdmin = $record->subjectGrade->subjectAdmin; @endphp
 <div
-    class="mt-6"
+    class="mt-6 w-full"
     x-data="{}"
 >
-<x-filament::section>
-    <div class="mb-5 flex items-center gap-3">
+<x-filament::section class="w-full max-w-none">
+    <div class="mb-6 flex items-center gap-3">
         <h2 class="text-lg font-semibold text-gray-950 dark:text-white">
             Message About This Lesson
         </h2>
@@ -17,17 +17,17 @@
         </x-filament::button>
     </div>
 
-    <div class="space-y-4">
+    <div class="space-y-6">
         {{-- Recipient type selector --}}
-        <div>
+        <div class="w-full">
             <div class="flex flex-wrap gap-3">
                 <x-filament::button
                     wire:click="openMessageModal('author')"
                     :color="$messageRecipientType === 'author' ? 'primary' : 'gray'"
                     size="sm"
-                    >
-                        Message Author
-                    </x-filament::button>
+                >
+                    Message Author
+                </x-filament::button>
 
                 @if($subjectAdmin && $subjectAdmin->id !== ($user?->id))
                     <x-filament::button
@@ -54,7 +54,7 @@
         </div>
 
         {{-- Recipient information --}}
-        <div class="text-sm text-gray-900 dark:text-gray-100">
+        <div class="w-full text-sm text-gray-900 dark:text-gray-100">
             @if($messageRecipientType === 'author')
                 <strong>To:</strong> {{ $selectedVersion->contributor->name ?? '?' }}
             @elseif($messageRecipientType === 'subject_admin' && $subjectAdmin)
@@ -65,23 +65,25 @@
         </div>
 
         {{-- Subject --}}
-        <div>
-            <label class="mb-1 block text-sm font-bold text-gray-700 dark:text-gray-300">Subject:</label>
-            <input
-                wire:model="messageSubject"
-                type="text"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-            >
+        <div class="w-full">
+            <x-filament::input.wrapper label="Subject:">
+                <x-filament::input
+                    wire:model="messageSubject"
+                    type="text"
+                    class="w-full max-w-none"
+                />
+            </x-filament::input.wrapper>
         </div>
 
         {{-- Body --}}
-        <div>
-            <label class="mb-1 block text-sm font-bold text-gray-700 dark:text-gray-300">Message</label>
-            <textarea
-                wire:model="messageBody"
-                rows="10"
-                class="w-full rounded-lg border border-gray-300 p-3 font-mono text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-            ></textarea>
+        <div class="w-full">
+            <x-filament::input.wrapper label="Message">
+                <textarea
+                    wire:model="messageBody"
+                    rows="10"
+                    class="block w-full max-w-none rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-950 shadow-sm transition duration-75 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-primary-500 dark:focus:ring-primary-500"
+                ></textarea>
+            </x-filament::input.wrapper>
         </div>
 
         <div class="flex gap-2">
