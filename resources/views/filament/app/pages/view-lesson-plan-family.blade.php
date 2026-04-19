@@ -288,18 +288,13 @@
                             Compare Two Plans
                         </x-filament::button>
                     @else
-                        <div class="flex items-center gap-2">
-                            <x-filament::button
-                                color="gray"
-                                icon="heroicon-o-arrows-right-left"
-                                disabled
-                            >
-                                Compare Two Plans
-                            </x-filament::button>
-                            <span class="text-sm text-gray-500 dark:text-gray-400">
-                                Need at least 2 versions to compare
-                            </span>
-                        </div>
+                        <x-filament::button
+                            wire:click="warnCannotCompare"
+                            color="gray"
+                            icon="heroicon-o-arrows-right-left"
+                        >
+                            Compare Two Plans
+                        </x-filament::button>
                     @endif
 
                     @if($canAskAi)

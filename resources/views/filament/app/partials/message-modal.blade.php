@@ -19,8 +19,8 @@
 
     <div class="space-y-6">
         {{-- Recipient type selector --}}
-        <div class="w-full">
-            <div class="flex flex-wrap gap-3">
+        <div>
+            <div class="flex flex-wrap items-center gap-3">
                 <x-filament::button
                     wire:click="openMessageModal('author')"
                     :color="$messageRecipientType === 'author' ? 'primary' : 'gray'"
@@ -51,7 +51,7 @@
         </div>
 
         {{-- Recipient information --}}
-        <div class="w-full text-sm text-gray-900 dark:text-gray-100">
+        <div class="text-sm text-gray-900 dark:text-gray-100">
             @if($messageRecipientType === 'author')
                 <strong>To:</strong> {{ $selectedVersion->contributor->name ?? '?' }}
             @elseif($messageRecipientType === 'subject_admin' && $subjectAdmin)
@@ -62,7 +62,7 @@
         </div>
 
         {{-- Subject --}}
-        <div class="w-full">
+        <div>
             <p class="mb-1 text-sm font-bold text-gray-950 dark:text-white">Subject:</p>
             <div class="fi-input-wrp">
                 <div class="fi-input-wrp-content-ctn">
@@ -75,7 +75,7 @@
         </div>
 
         {{-- Body --}}
-        <div class="w-full">
+        <div>
             <p class="mb-1 text-sm font-bold text-gray-950 dark:text-white">Message</p>
             <div class="fi-input-wrp">
                 <div class="fi-input-wrp-content-ctn">

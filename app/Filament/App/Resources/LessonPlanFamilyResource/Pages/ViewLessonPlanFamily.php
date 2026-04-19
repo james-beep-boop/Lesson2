@@ -339,6 +339,14 @@ class ViewLessonPlanFamily extends Page
     // Compare / visual diff
     // -------------------------------------------------------------------------
 
+    public function warnCannotCompare(): void
+    {
+        Notification::make('cannot-compare')
+            ->title('At least 2 versions are needed to compare.')
+            ->warning()
+            ->send();
+    }
+
     /**
      * Enter compare mode, setting $versionId as the comparison target.
      * The selected version becomes the base (left pane) and we preselect
