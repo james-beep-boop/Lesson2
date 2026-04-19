@@ -66,7 +66,10 @@
 
         {{-- Subject --}}
         <div class="w-full">
-            <x-filament::input.wrapper label="Subject:">
+            <x-filament::input.wrapper
+                class="w-full"
+                label="Subject:"
+            >
                 <x-filament::input
                     wire:model="messageSubject"
                     type="text"
@@ -77,11 +80,14 @@
 
         {{-- Body --}}
         <div class="w-full">
-            <x-filament::input.wrapper label="Message">
+            <x-filament::input.wrapper
+                class="w-full"
+                label="Message"
+            >
                 <textarea
                     wire:model="messageBody"
                     rows="10"
-                    class="block w-full max-w-none rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm text-gray-950 shadow-sm transition duration-75 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-primary-500 dark:focus:ring-primary-500"
+                    class="block min-w-0 flex-1 resize-y border-0 bg-transparent px-3 py-2 font-mono text-sm text-gray-950 shadow-none outline-none focus:outline-none focus:ring-0 dark:bg-transparent dark:text-gray-100"
                 ></textarea>
             </x-filament::input.wrapper>
         </div>
