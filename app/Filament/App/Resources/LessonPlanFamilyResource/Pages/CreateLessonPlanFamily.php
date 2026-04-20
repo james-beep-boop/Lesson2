@@ -24,6 +24,7 @@ use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile as HttpUploadedFile;
+use Illuminate\Validation\ValidationException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class CreateLessonPlanFamily extends CreateRecord
@@ -75,9 +76,7 @@ class CreateLessonPlanFamily extends CreateRecord
                                         ->label('Subject name')
                                         ->required(),
                                 ])
-                                ->createOptionUsing(function (array $data): int {
-                                    return Subject::create(['name' => $data['name']])->id;
-                                })
+                                ->createOptionUsing(fn (array $data): int => $this->createSubjectOption($data))
                         )
                         ->afterStateUpdated(fn (Set $set) => $set('grade', null)),
 
@@ -250,6 +249,21 @@ class CreateLessonPlanFamily extends CreateRecord
         ];
     }
 
+    public function createSubjectOption(array $data): int
+    {
+        abort_unless(auth()->user()?->isSiteAdmin(), 403);
+
+        $name = trim((string) ($data['name'] ?? ''));
+
+        if ($name === '') {
+            throw ValidationException::withMessages([
+                'name' => ['Subject name is required.'],
+            ]);
+        }
+
+        return Subject::create(['name' => $name])->id;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -276,7 +290,7 @@ class CreateLessonPlanFamily extends CreateRecord
     protected function beforeCreate(): void
     {
         if (blank($this->processedLessonFilename)) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            throw ValidationException::withMessages([
                 'data.lesson_file' => ['Upload a file before submitting.'],
             ]);
         }

@@ -266,20 +266,21 @@ test('site admin can create a new subject via the inline form', function () {
     $this->actingAs(makeSiteAdmin());
     $countBefore = Subject::count();
 
-    // Directly test the service layer: site admin creates via Subject::create
-    // The UI gate abort_unless(isSiteAdmin(), 403) is exercised below via the HTTP layer.
-    $subject = Subject::create(['name' => 'NewSubjectSiteAdmin']);
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->call('createSubjectOption', [
+            'name' => 'NewSubjectSiteAdmin',
+        ]);
+
+    $subject = Subject::where('name', 'NewSubjectSiteAdmin')->firstOrFail();
+
     expect(Subject::count())->toBe($countBefore + 1);
     expect($subject->name)->toBe('NewSubjectSiteAdmin');
 });
 
-test('non-site-admin is blocked from creating subjects via abort_unless', function () {
-    $sg = makeSubjectGrade();
-    $subjectAdmin = makeSubjectAdmin($sg);
+test('site admin cannot create a blank subject via the inline form', function () {
+    $this->actingAs(makeSiteAdmin());
 
-    $this->actingAs($subjectAdmin);
-
-    // Simulate calling the createOptionUsing closure: it calls abort_unless(isSiteAdmin(), 403)
-    // We verify isSiteAdmin() returns false for a subject admin (non-global role).
-    expect($subjectAdmin->isSiteAdmin())->toBeFalse();
+    Livewire::test(CreateLessonPlanFamily::class)
+        ->call('createSubjectOption', ['name' => null])
+        ->assertHasErrors(['name']);
 });

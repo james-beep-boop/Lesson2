@@ -174,7 +174,9 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
                     ->modalHeading('Remove editors')
                     ->modalDescription("Remove the selected editors from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}?")
                     ->disabled(fn (): bool => empty($this->selectedTableRecords))
-                    ->action(fn () => $this->removeSelectedEditors()),
+                    ->action(function (): void {
+                        $this->removeSelectedEditors();
+                    }),
             ])
             ->selectable(true)
             ->heading("Current Editors of {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}")
