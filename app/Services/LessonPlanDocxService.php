@@ -47,7 +47,7 @@ class LessonPlanDocxService
 
         $sg = $family->subjectGrade;
 
-        $phpWord = new PhpWord();
+        $phpWord = new PhpWord;
 
         // Register Heading1 style so addTitle() emits a proper <w:pStyle w:val="Heading1"/> element.
         // Without this call, PhpWord cannot find "Heading_1" in its style registry and silently drops
@@ -107,7 +107,7 @@ class LessonPlanDocxService
 
         // Export footer — mirrors PDF footer
         $section->addTextBreak();
-        $section->addText('Exported '.now()->format('d M Y H:i').' · ARES Kenya Lesson Repository');
+        $section->addText('Exported '.now()->format('d M Y H:i').' · ARES Kenya Lesson Library');
 
         return $this->phpWordToBytes($phpWord);
     }

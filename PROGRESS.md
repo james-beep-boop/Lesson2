@@ -1,4 +1,4 @@
-# ARES Lesson Repository — Build Progress
+# ARES Lesson Library — Build Progress
 
 Lightweight tracker extracted from `Lesson2.md`. For requirements and behavioral rules, defer to `Lesson2.md`.
 

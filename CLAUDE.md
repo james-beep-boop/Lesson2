@@ -1,4 +1,4 @@
-# ARES Lesson Repository — AI Assistant Instructions
+# ARES Lesson Library — AI Assistant Instructions
 
 This file is loaded automatically by Claude Code at the start of every session.
 The canonical project specification is **`Lesson2.md`** in this directory. Read it before making any architectural decisions.
@@ -8,7 +8,7 @@ Repository-specific guidance lives here. Shared Laravel / Filament / Pest / Boos
 
 ## Project summary
 
-**ARES Kenya Lesson Plan Repository** — a Laravel 13 / Filament 5 / Livewire 4 web application for teachers and administrators to store, version, browse, compare, and manage lesson plans.
+**ARES Kenya Lesson Plan Library** — a Laravel 13 / Filament 5 / Livewire 4 web application for teachers and administrators to store, version, browse, compare, and manage lesson plans.
 
 **Working directory:** `/Users/jamesmcclelland/Documents/GitHub/Lesson2`
 

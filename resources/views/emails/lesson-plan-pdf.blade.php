@@ -19,7 +19,7 @@
 <p>Please find the lesson plan attached as a PDF.</p>
 
 <p style="font-size:11px;color:#6b7280;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:12px;">
-    This message was sent from the ARES Kenya Lesson Repository.
+    This message was sent from the ARES Kenya Lesson Library.
 </p>
 </body>
 </html>

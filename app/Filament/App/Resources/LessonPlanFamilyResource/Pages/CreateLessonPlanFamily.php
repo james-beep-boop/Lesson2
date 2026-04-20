@@ -281,7 +281,7 @@ class CreateLessonPlanFamily extends CreateRecord
     {
         // Use ->action() not ->submit() so the button works outside the <form> element.
         return parent::getCreateFormAction()
-            ->label('Add to Repository')
+            ->label('Add to Library')
             ->submit(null)
             ->action('create')
             ->disabled(fn (): bool => ! $this->allMetadataFilled() || blank($this->processedLessonFilename));

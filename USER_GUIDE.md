@@ -1,6 +1,6 @@
-# ARES Lesson Repository User Guide
+# ARES Lesson Library User Guide
 
-This guide is for first-time users exploring the ARES Lesson Repository. The app is used to browse, view, edit, compare, translate, print, export, and share lesson plans for ARES Kenya.
+This guide is for first-time users exploring the ARES Lesson Library. The app is used to browse, view, edit, compare, translate, print, export, and share lesson plans for ARES Kenya.
 
 ## Main Functions
 
@@ -57,7 +57,7 @@ This guide is for first-time users exploring the ARES Lesson Repository. The app
 - Has all Teacher, Editor, and Subject Administrator privileges.
 - Can manage all lesson-plan families and all subject-grades.
 - Can manage users, roles, and subject assignments.
-- Can mark official versions across the repository.
+- Can mark official versions across the library.
 - Can review and complete deletion requests.
 - Can access the admin panel.
 - Can handle all export, email, and messaging workflows across the app.

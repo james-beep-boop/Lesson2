@@ -1,4 +1,4 @@
-# ARES Lesson Repository — MVP Specification
+# ARES Lesson Library — MVP Specification
 
 > This document is the canonical reference for the build. All implementation decisions, deviations, and clarifications agreed upon during pre-build discussion are recorded here. Code and architecture must conform to this spec.
 
@@ -6,7 +6,7 @@
 
 ## 1. Project Overview
 
-Build the MVP for the **ARES Kenya Lesson Plan Repository** — a web application for teachers and administrators to store, version, browse, compare, and manage lesson plans.
+Build the MVP for the **ARES Kenya Lesson Plan Library** — a web application for teachers and administrators to store, version, browse, compare, and manage lesson plans.
 
 **Working directory:** `/Users/jamesmcclelland/Documents/GitHub/Lesson2`
 
@@ -192,12 +192,12 @@ bezhansalleh/filament-shield: 4.2.0
 ## 4. Branding and UI
 
 ### Header
-- **Top-left:** ARES Education / Kenya Lesson Plan Repository
+- **Top-left:** ARES Education / Kenya Lesson Plan Library
 - **Top-right:** Lessons | Admin *(only when authorized)* | unread message badge | account menu | sign out
 
 ### Footer
 ```
-Kenya Lesson Plan Repository © 2026 ARES Education — Lesson Plans are licensed under CC BY-SA 4.0
+Kenya Lesson Plan Library © 2026 ARES Education — Lesson Plans are licensed under CC BY-SA 4.0
 ```
 Simple licensing link/icon treatment is acceptable for MVP.
 

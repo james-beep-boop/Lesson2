@@ -29,7 +29,8 @@ test('create page heading is "Add Lesson Plan"', function () {
     $this->actingAs(makeSiteAdmin());
 
     Livewire::test(CreateLessonPlanFamily::class)
-        ->assertSee('Add Lesson Plan');
+        ->assertSee('Add Lesson Plan')
+        ->assertSee('Add to Library');
 });
 
 // ----------------------------------------------------------------

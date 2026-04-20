@@ -1,4 +1,4 @@
-# ARES Lesson Repository
+# ARES Lesson Library
 
 Laravel 13 / Filament 5 application for storing, versioning, comparing, translating, exporting, and managing lesson plans for ARES Kenya.
 

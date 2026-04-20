@@ -114,7 +114,7 @@
 </div>
 
 <div class="footer">
-    Exported {{ $exportedAt->format('d M Y H:i') }} · ARES Kenya Lesson Repository
+    Exported {{ $exportedAt->format('d M Y H:i') }} · ARES Kenya Lesson Library
 </div>
 
 </body>

@@ -1,4 +1,4 @@
-# ARES Lesson Repository — Deployment Guide
+# ARES Lesson Library — Deployment Guide
 
 This is the active deployment runbook for the current production workflow.
 

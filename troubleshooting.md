@@ -1,4 +1,4 @@
-# ARES Lesson Repository — Troubleshooting Log
+# ARES Lesson Library — Troubleshooting Log
 
 This document records problems encountered during the first production deployment to DreamHost (sheql.com) in March 2026, what they turned out to be, and how they were fixed. Future deployments should be much smoother now that these are understood.
 
