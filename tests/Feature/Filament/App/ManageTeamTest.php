@@ -153,7 +153,7 @@ test('remove selected detaches editors from the pivot', function () {
     $this->actingAs($subjectAdmin);
 
     Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
-        ->set('selectedEditorIds', [$editor->id])
+        ->set('selectedTableRecords', [$editor->id])
         ->call('removeSelectedEditors')
         ->assertNotified();
 

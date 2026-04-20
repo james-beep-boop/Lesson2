@@ -4,7 +4,9 @@
 @endphp
 
 <div class="space-y-6">
-    <div>
+    {{-- Hide the select-all checkbox; the toolbar Remove button serves that role. --}}
+    <style>.sg-team-table .fi-ta-page-checkbox { display: none; }</style>
+    <div class="sg-team-table">
         {{ $this->table }}
     </div>
 
