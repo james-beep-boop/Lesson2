@@ -658,7 +658,8 @@ test('single-version families show a disabled compare hint', function () {
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->assertSee('Compare Two Plans')
-        ->assertSee('Need at least 2 versions to compare');
+        ->call('warnCannotCompare')
+        ->assertNotified('At least 2 versions are needed to compare.');
 });
 
 test('compare mode shows a fixed left label and a right-side dropdown', function () {
