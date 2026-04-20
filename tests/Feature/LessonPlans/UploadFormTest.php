@@ -43,8 +43,7 @@ test('create page does not include the markdown editor or preview panels', funct
 
     Livewire::test(CreateLessonPlanFamily::class)
         ->assertDontSee('Lesson Plan Content (Markdown)')
-        ->assertDontSee('toastLiveViewer', escape: false)
-        ->assertDontSee('data-toast-viewer', escape: false);
+        ->assertDontSee('Review and edit');
 });
 
 // ----------------------------------------------------------------
@@ -210,7 +209,7 @@ test('creating a lesson plan requires an uploaded lesson file', function () {
             'content' => '# Lesson Plan',
         ])
         ->call('create')
-        ->assertHasFormErrors(['lesson_file' => 'required']);
+        ->assertHasFormErrors(['lesson_file']);
 });
 
 test('processed upload stays usable after later metadata changes', function () {

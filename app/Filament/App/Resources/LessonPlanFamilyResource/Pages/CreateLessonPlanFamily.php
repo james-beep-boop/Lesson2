@@ -24,7 +24,6 @@ use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile as HttpUploadedFile;
-use Illuminate\Support\Facades\Validator;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class CreateLessonPlanFamily extends CreateRecord
@@ -40,7 +39,7 @@ class CreateLessonPlanFamily extends CreateRecord
     public function form(Schema $schema): Schema
     {
         $user = auth()->user();
-        $englishId = Subject::where('name', 'English')->value('id');
+        $englishId = once(fn () => Subject::where('name', 'English')->value('id'));
 
         return $schema->schema([
 
@@ -276,10 +275,11 @@ class CreateLessonPlanFamily extends CreateRecord
 
     protected function beforeCreate(): void
     {
-        Validator::make(
-            ['data' => ['lesson_file' => $this->processedLessonFilename]],
-            ['data.lesson_file' => ['required']]
-        )->validate();
+        if (blank($this->processedLessonFilename)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'data.lesson_file' => ['Upload a file before submitting.'],
+            ]);
+        }
     }
 
     protected function handleRecordCreation(array $data): Model
