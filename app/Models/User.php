@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -58,10 +57,15 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             ->withTimestamps();
     }
 
-    /** The single SubjectGrade for which this user is Subject Admin, if any. */
-    public function subjectGradeAsAdmin(): HasOne
+    public function subjectGradesAsAdmin(): HasMany
     {
-        return $this->hasOne(SubjectGrade::class, 'subject_admin_user_id');
+        return $this->hasMany(SubjectGrade::class, 'subject_admin_user_id');
+    }
+
+    /** Backwards-compatible alias; prefer subjectGradesAsAdmin(). */
+    public function subjectGradeAsAdmin(): HasMany
+    {
+        return $this->subjectGradesAsAdmin();
     }
 
     public function sentMessages(): HasMany
@@ -155,8 +159,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
                     return 'Site Administrator';
                 }
 
-                $isSubjectAdmin = $this->relationLoaded('subjectGradeAsAdmin')
-                    ? $this->subjectGradeAsAdmin !== null
+                $isSubjectAdmin = $this->relationLoaded('subjectGradesAsAdmin')
+                    ? $this->subjectGradesAsAdmin->isNotEmpty()
                     : SubjectGrade::where('subject_admin_user_id', $this->id)->exists();
 
                 if ($isSubjectAdmin) {

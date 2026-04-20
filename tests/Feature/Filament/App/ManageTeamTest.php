@@ -1,7 +1,11 @@
 <?php
 
 use App\Filament\App\Pages\ManageTeam;
+use App\Livewire\SubjectGradeTeamManager;
+use App\Models\LessonPlanFamily;
+use App\Models\LessonPlanVersion;
 use App\Models\User;
+use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -21,31 +25,76 @@ test('manage team page loads for subject admin', function () {
         ->assertOk();
 });
 
-test('page heading includes subject name and grade', function () {
-    $sg = makeSubjectGrade();
-    $subjectAdmin = makeSubjectAdmin($sg);
+test('manage team page lists all administered subject grades and repeated editor sections', function () {
+    $sg1 = makeSubjectGrade();
+    $sg2 = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg1);
+    $sg2->subject_admin_user_id = $subjectAdmin->id;
+    $sg2->save();
+    $editorOne = makeEditor($sg1);
+    $editorTwo = makeEditor($sg2);
 
     $this->actingAs($subjectAdmin);
 
     Livewire::test(ManageTeam::class)
-        ->assertSee("Manage Team: {$sg->subject->name}, Grade {$sg->grade}");
+        ->assertSee('Manage Subject Editors')
+        ->assertSee($sg1->subject->name)
+        ->assertSee('Grade '.$sg1->grade)
+        ->assertSee($sg2->subject->name)
+        ->assertSee('Grade '.$sg2->grade)
+        ->assertSee("Current Editors of {$sg1->subject->name}, Grade {$sg1->grade}")
+        ->assertSee("Current Editors of {$sg2->subject->name}, Grade {$sg2->grade}")
+        ->assertSee("Add Editor for {$sg1->subject->name}, Grade {$sg1->grade}")
+        ->assertSee("Add Editor for {$sg2->subject->name}, Grade {$sg2->grade}")
+        ->assertSee($editorOne->name)
+        ->assertSee($editorTwo->name);
 });
 
-test('editors table renders column headers, bulk-action checkbox, and editor data', function () {
+test('subject grade team manager table renders metrics and scoped editor data', function () {
     $sg = makeSubjectGrade();
+    $otherSg = makeSubjectGrade();
     $subjectAdmin = makeSubjectAdmin($sg);
     $editor = makeEditor($sg);
+    $familyA = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id, 'day' => '1']);
+    $familyB = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id, 'day' => '2']);
+    $otherFamily = LessonPlanFamily::factory()->create(['subject_grade_id' => $otherSg->id, 'day' => '1']);
+
+    LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $familyA->id,
+        'contributor_id' => $editor->id,
+        'created_at' => Carbon::create(2026, 4, 17, 9, 0, 0, config('app.timezone')),
+        'updated_at' => Carbon::create(2026, 4, 17, 9, 0, 0, config('app.timezone')),
+    ]);
+
+    LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $familyB->id,
+        'contributor_id' => $editor->id,
+        'created_at' => Carbon::create(2026, 4, 18, 15, 30, 0, config('app.timezone')),
+        'updated_at' => Carbon::create(2026, 4, 18, 15, 30, 0, config('app.timezone')),
+    ]);
+
+    LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $otherFamily->id,
+        'contributor_id' => $editor->id,
+        'created_at' => Carbon::create(2026, 4, 19, 10, 0, 0, config('app.timezone')),
+        'updated_at' => Carbon::create(2026, 4, 19, 10, 0, 0, config('app.timezone')),
+    ]);
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
         ->assertSeeHtml('type="checkbox"')
         ->assertSee('Full name')
         ->assertSee('Username')
         ->assertSee('Email')
+        ->assertSee('Edits')
+        ->assertSee('Last Edit')
         ->assertSee($editor->name)
         ->assertSee($editor->username)
-        ->assertSee($editor->email);
+        ->assertSee($editor->email)
+        ->assertSee('2')
+        ->assertSee('Apr 18, 2026 3:30 PM')
+        ->assertDontSee('Apr 19, 2026 10:00 AM');
 });
 
 test('teacher cannot access the manage team page', function () {
@@ -63,7 +112,7 @@ test('add editor assigns editor role in the pivot', function () {
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
         ->set('addUserId', $newEditor->id)
         ->call('addEditor')
         ->assertNotified();
@@ -84,7 +133,7 @@ test('remove editor detaches the user from the pivot', function () {
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
         ->call('removeEditor', $editor->id)
         ->assertNotified();
 
@@ -103,7 +152,7 @@ test('bulk remove action detaches editors from the pivot', function () {
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
         ->callTableBulkAction('remove', [$editor])
         ->assertNotified();
 
@@ -121,26 +170,27 @@ test('add editor validates that user id is required', function () {
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
         ->set('addUserId', null)
         ->call('addEditor')
         ->assertHasErrors(['addUserId' => 'required']);
 });
 
-test('subject admin cannot add editor to another subject grade', function () {
+test('subject admin adds editors only to the scoped subject grade', function () {
     $sg1 = makeSubjectGrade();
     $sg2 = makeSubjectGrade();
-    $adminOfSg1 = makeSubjectAdmin($sg1);
+    $subjectAdmin = makeSubjectAdmin($sg1);
+    $sg2->subject_admin_user_id = $subjectAdmin->id;
+    $sg2->save();
     $userToAdd = makeTeacher();
 
-    // Admin of sg1 calls addEditor — their getSubjectGrade() returns sg1, not sg2
-    $this->actingAs($adminOfSg1);
+    $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg1->id])
         ->set('addUserId', $userToAdd->id)
-        ->call('addEditor');
+        ->call('addEditor')
+        ->assertNotified();
 
-    // User should be added to sg1 only
     expect(
         DB::table('subject_grade_user')
             ->where('subject_grade_id', $sg1->id)
@@ -164,7 +214,7 @@ test('manage team does not list unverified users as available editors', function
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
         ->assertSee($verifiedUser->name)
         ->assertDontSee($unverifiedUser->name);
 });
@@ -176,7 +226,7 @@ test('manage team rejects adding an unverified editor', function () {
 
     $this->actingAs($subjectAdmin);
 
-    Livewire::test(ManageTeam::class)
+    Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
         ->set('addUserId', $unverifiedUser->id)
         ->call('addEditor')
         ->assertHasErrors(['addUserId']);

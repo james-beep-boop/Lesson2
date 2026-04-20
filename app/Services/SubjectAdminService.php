@@ -12,25 +12,13 @@ class SubjectAdminService
      * Promote $user to Subject Admin for $subjectGrade.
      *
      * Rules (all in one transaction):
-     * 1. If $user is already Subject Admin of another subject_grade → demote them to Editor there.
-     * 2. If $subjectGrade already has a Subject Admin → demote that admin to Editor for this subject_grade.
-     * 3. Set subject_grades.subject_admin_user_id = $user->id on $subjectGrade.
+     * 1. If $subjectGrade already has a Subject Admin → demote that admin to Editor for this subject_grade.
+     * 2. Set subject_grades.subject_admin_user_id = $user->id on $subjectGrade.
      */
     public function promote(User $user, SubjectGrade $subjectGrade): void
     {
         DB::transaction(function () use ($user, $subjectGrade) {
-            // 1. If user is already Subject Admin of a different subject_grade, demote them there.
-            $previousSubjectGrade = SubjectGrade::where('subject_admin_user_id', $user->id)
-                ->where('id', '!=', $subjectGrade->id)
-                ->first();
-
-            if ($previousSubjectGrade) {
-                $previousSubjectGrade->subject_admin_user_id = null;
-                $previousSubjectGrade->save();
-                $this->upsertEditorRole($user, $previousSubjectGrade);
-            }
-
-            // 2. If subject_grade already has a Subject Admin, demote them to Editor.
+            // 1. If subject_grade already has a Subject Admin, demote them to Editor.
             if ($subjectGrade->subject_admin_user_id && $subjectGrade->subject_admin_user_id !== $user->id) {
                 $existingAdmin = User::find($subjectGrade->subject_admin_user_id);
                 if ($existingAdmin) {
@@ -38,7 +26,7 @@ class SubjectAdminService
                 }
             }
 
-            // 3. Promote the user.
+            // 2. Promote the user.
             $subjectGrade->subject_admin_user_id = $user->id;
             $subjectGrade->save();
 

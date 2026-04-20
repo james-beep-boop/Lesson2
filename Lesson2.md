@@ -243,9 +243,8 @@ There are four role levels. Three are subject_grade-scoped; one is global.
 - A Site Administrator assigns users to subject_grades and elevates roles within those subject_grades.
 - Editors and Subject Administrators are scoped to specific subject_grade records — "Math Grade 4" and "Math Grade 5" are separate assignments with independent role holders.
 - **At most one Subject Administrator per subject_grade** (zero is valid).
-- **A user may be Subject Administrator for at most one subject_grade** — never more than one simultaneously.
+- **A user may be Subject Administrator for more than one subject_grade** at the same time.
 - If a Site Administrator designates a user as Subject Administrator for a subject_grade, and a Subject Administrator already exists for that subject_grade, the existing Subject Administrator is **automatically demoted to Editor** for that subject_grade.
-- If the same user already holds a Subject Administrator role for a *different* subject_grade, that prior Subject Administrator role is **automatically demoted to Editor** before the new one is granted.
 
 ---
 

@@ -20,17 +20,16 @@ trait HasLessonPlanVersionTabs
         $user = auth()->user();
 
         // "Mine" tab: visible only to Editors and Subject Admins, not plain Teachers or Site Admins.
-        // Fetch the admin grade once so we don't issue a second query when building $subjectGradeIds.
-        $adminGrade = ($user && ! $user->isSiteAdmin())
-            ? $user->subjectGradeAsAdmin()->first(['id'])
-            : null;
+        $adminGradeIds = ($user && ! $user->isSiteAdmin())
+            ? $user->subjectGradesAsAdmin()->pluck('id')
+            : collect();
 
-        $showMineTab = $adminGrade !== null
+        $showMineTab = $adminGradeIds->isNotEmpty()
             || ($user && ! $user->isSiteAdmin() && $user->subjectGrades()->wherePivot('role', 'editor')->exists());
 
         $subjectGradeIds = $showMineTab
             ? $user->subjectGrades()->pluck('subject_grades.id')
-                ->push($adminGrade?->id)
+                ->merge($adminGradeIds)
                 ->filter()
                 ->unique()
             : collect();

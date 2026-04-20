@@ -98,11 +98,10 @@ MariaDB             — DreamHost shared hosting target
 Role scoping is **per subject_grade**, not per subject. A Math Grade 4 Subject Admin has zero authority over Math Grade 5.
 
 When promoting a user to Subject Admin, always use a **service layer transaction** that:
-1. Finds any `subject_grades` row where `subject_admin_user_id = $userId` and sets it to `NULL`
+1. Demotes the previous Subject Admin of the target `subject_grade` to Editor in the pivot
 2. Sets `subject_grades.subject_admin_user_id = $userId` on the target `subject_grade`
-3. Demotes the previous Subject Admin of the target `subject_grade` to Editor in the pivot
 
-Never update `subject_admin_user_id` directly without this full transaction. A partial update leaves ghost admins assigned to other `subject_grades`.
+Never update `subject_admin_user_id` directly without this full transaction. A partial update can leave a displaced Subject Admin without the expected fallback Editor role on the target `subject_grade`.
 
 ---
 

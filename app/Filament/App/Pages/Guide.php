@@ -46,7 +46,7 @@ class Guide extends Page
                     return true;
                 }
 
-                if ($role === 'subject_admin' && $user->subjectGradeAsAdmin()->exists()) {
+                if ($role === 'subject_admin' && $user->subjectGradesAsAdmin()->exists()) {
                     return true;
                 }
 
