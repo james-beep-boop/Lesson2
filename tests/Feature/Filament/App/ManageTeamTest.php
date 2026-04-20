@@ -7,6 +7,7 @@ use App\Models\LessonPlanVersion;
 use App\Models\User;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
@@ -134,7 +135,7 @@ test('remove editor detaches the user from the pivot', function () {
     $this->actingAs($subjectAdmin);
 
     Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
-        ->call('removeEditor', $editor->id)
+        ->callTableAction('remove', $editor)
         ->assertNotified();
 
     expect(
@@ -153,9 +154,7 @@ test('remove selected detaches editors from the pivot', function () {
     $this->actingAs($subjectAdmin);
 
     Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
-        ->set('selectedTableRecords', [$editor->id])
-        ->call('mountAction', 'removeSelected', [], ['table' => true])
-        ->call('callMountedAction')
+        ->callTableBulkAction('removeSelected', [$editor])
         ->assertNotified();
 
     expect(
@@ -164,6 +163,18 @@ test('remove selected detaches editors from the pivot', function () {
             ->where('user_id', $editor->id)
             ->exists()
     )->toBeFalse();
+});
+
+test('remove editor rejects users not assigned to the scoped subject grade', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $unassignedUser = makeTeacher();
+
+    $this->actingAs($subjectAdmin);
+
+    expect(fn () => Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
+        ->call('removeEditor', $unassignedUser->id))
+        ->toThrow(ModelNotFoundException::class);
 });
 
 test('add editor validates that user id is required', function () {

@@ -8,6 +8,7 @@ use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\SubjectAdminService;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Notifications\Notification;
@@ -105,7 +106,9 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
 
         abort_unless(auth()->user()?->isSubjectAdminFor($subjectGrade), 403);
 
-        $user = User::findOrFail($userId);
+        $user = $subjectGrade->users()
+            ->whereKey($userId)
+            ->firstOrFail();
 
         app(SubjectAdminService::class)->removeUser($user, $subjectGrade);
 
@@ -115,13 +118,11 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
             ->send();
     }
 
-    public function removeSelectedEditors(): void
+    public function removeSelectedEditors(Collection $users): void
     {
         $subjectGrade = $this->getSubjectGrade();
 
         abort_unless(auth()->user()?->isSubjectAdminFor($subjectGrade), 403);
-
-        $users = User::findMany($this->selectedTableRecords);
 
         if ($users->isEmpty()) {
             return;
@@ -134,7 +135,6 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
         }
 
         $count = $users->count();
-        $this->selectedTableRecords = [];
 
         Notification::make('editors-removed')
             ->title($count === 1
@@ -165,20 +165,32 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
                     ->dateTime('M j, Y g:i A')
                     ->placeholder('Never'),
             ])
-            ->toolbarActions([
-                Action::make('removeSelected')
+            ->recordActions([
+                Action::make('remove')
                     ->label('Remove')
+                    ->color('danger')
+                    ->icon('heroicon-o-user-minus')
+                    ->requiresConfirmation()
+                    ->modalHeading('Remove editor')
+                    ->modalDescription(fn (User $record): string => "Remove {$record->name} from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}?")
+                    ->action(function (User $record): void {
+                        $this->removeEditor($record->id);
+                    }),
+            ])
+            ->toolbarActions([
+                BulkAction::make('removeSelected')
+                    ->label('Remove Selected')
                     ->color('danger')
                     ->icon('heroicon-o-user-minus')
                     ->requiresConfirmation()
                     ->modalHeading('Remove editors')
                     ->modalDescription("Remove the selected editors from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}?")
-                    ->disabled(fn (): bool => empty($this->selectedTableRecords))
-                    ->action(function (): void {
-                        $this->removeSelectedEditors();
-                    }),
+                    ->modalSubmitActionLabel('Remove Selected')
+                    ->action(function (Collection $records): void {
+                        $this->removeSelectedEditors($records);
+                    })
+                    ->deselectRecordsAfterCompletion(),
             ])
-            ->selectable(true)
             ->heading("Current Editors of {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}")
             ->emptyStateHeading('No editors assigned yet.')
             ->emptyStateIcon('heroicon-o-user-group')
