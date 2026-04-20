@@ -26,6 +26,7 @@ REMOTE_APP_DIR="${REMOTE_APP_DIR:-~/Lesson2}"
 REMOTE_SCRIPT="${REMOTE_SCRIPT:-UPDATE_SITE.sh}"
 ALLOW_DIRTY="${ALLOW_DIRTY:-0}"
 SSH_OPTS="${SSH_OPTS:--o ServerAliveInterval=30 -o ServerAliveCountMax=6}"
+SSH_CONTROL_PATH=""
 
 if [ -z "${PHP_BIN:-}" ]; then
     for candidate in /opt/homebrew/bin/php /usr/local/bin/php php84 php8.4 php8.3 php; do
@@ -99,6 +100,19 @@ cp composer.json composer.lock "$_BUNDLE/"
 
 RELEASE_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
 
+cleanup() {
+    if [ -n "$SSH_CONTROL_PATH" ] && [ -S "$SSH_CONTROL_PATH" ]; then
+        ssh -O exit -o ControlPath="$SSH_CONTROL_PATH" $SSH_OPTS "$REMOTE_HOST" >/dev/null 2>&1 || true
+    fi
+
+    rm -rf "$_BUNDLE"
+}
+
+trap cleanup EXIT
+
+SSH_CONTROL_PATH="$(mktemp -u /tmp/lesson2-deploy-ssh-XXXXXX)"
+SSH_SHARED_OPTS="-o ControlMaster=auto -o ControlPersist=10m -o ControlPath=$SSH_CONTROL_PATH $SSH_OPTS"
+
 echo ""
 echo "==> Deploying Lesson2 to DreamHost via rsync"
 echo "    Host:    $REMOTE_HOST"
@@ -109,13 +123,16 @@ echo "    rsync:   $($RSYNC_BIN --version | head -n 1)"
 echo "    ssh:     $SSH_OPTS"
 echo ""
 
+echo "  [auth] Opening shared SSH session (enter password once)..."
+ssh -MNf $SSH_SHARED_OPTS "$REMOTE_HOST"
+
 # KNOWN RISK: maintenance mode is not enabled until UPDATE_SITE.sh runs (after all rsync
 # phases complete). A request arriving between Phase 1 (app code) and Phase 2 (vendor)
 # can encounter new app code against old vendor — a fatal error window of seconds.
 # This is acceptable at current traffic levels. A future atomic symlink-based deploy
 # would eliminate this window, but is not worth the complexity on DreamHost shared hosting.
 echo "  [1/4] Uploading app code..."
-"$RSYNC_BIN" -az -e "ssh $SSH_OPTS" --delete --delete-delay --force \
+"$RSYNC_BIN" -az -e "ssh $SSH_SHARED_OPTS" --delete --delete-delay --force \
     --exclude '.git/' \
     --exclude '.DS_Store' \
     --exclude '.env' \
@@ -143,15 +160,15 @@ echo "  [1/4] Uploading app code..."
     ./ "$REMOTE_HOST:$REMOTE_APP_DIR/"
 
 echo "  [2/4] Uploading Composer dependencies (production only, no dev packages)..."
-"$RSYNC_BIN" -az -e "ssh $SSH_OPTS" --delete --delete-delay --force \
+"$RSYNC_BIN" -az -e "ssh $SSH_SHARED_OPTS" --delete --delete-delay --force \
     "$_BUNDLE/vendor/" "$REMOTE_HOST:$REMOTE_APP_DIR/vendor/"
 
 echo "  [3/4] Uploading built frontend assets..."
-"$RSYNC_BIN" -az -e "ssh $SSH_OPTS" --delete --delete-delay --force \
+"$RSYNC_BIN" -az -e "ssh $SSH_SHARED_OPTS" --delete --delete-delay --force \
     public/build/ "$REMOTE_HOST:$REMOTE_APP_DIR/public/build/"
 
 echo "  [4/4] Finalizing deploy on DreamHost..."
-ssh -tt $SSH_OPTS "$REMOTE_HOST" "cd $REMOTE_APP_DIR && RELEASE_COMMIT=$RELEASE_COMMIT bash ./$REMOTE_SCRIPT"
+ssh -tt $SSH_SHARED_OPTS "$REMOTE_HOST" "cd $REMOTE_APP_DIR && RELEASE_COMMIT=$RELEASE_COMMIT bash ./$REMOTE_SCRIPT"
 
 echo ""
 echo "Deployment complete."
