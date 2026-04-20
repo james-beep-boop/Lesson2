@@ -46,7 +46,6 @@ class ManageTeam extends Page
         return $this->cachedSubjectGrades ??= SubjectGrade::query()
             ->with('subject')
             ->where('subject_admin_user_id', auth()->id())
-            ->orderBy('grade')
             ->get()
             ->sortBy(fn (SubjectGrade $subjectGrade): string => sprintf(
                 '%s-%04d',

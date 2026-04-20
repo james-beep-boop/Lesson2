@@ -40,7 +40,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->where('is_system', false)->with(['roles', 'subjectGradeAsAdmin', 'subjectGrades']))
+            ->modifyQueryUsing(fn ($query) => $query->where('is_system', false)->with(['roles', 'subjectGradesAsAdmin', 'subjectGrades']))
             ->columns([
                 TextColumn::make('username')->searchable()->sortable(),
                 TextColumn::make('name')->searchable()->sortable(),

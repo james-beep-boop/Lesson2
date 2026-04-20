@@ -47,7 +47,7 @@ class UsersWidget extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn () => User::where('is_system', false)->with(['roles', 'subjectGradeAsAdmin', 'subjectGrades'])->orderBy('name'))
+            ->query(fn () => User::where('is_system', false)->with(['roles', 'subjectGradesAsAdmin', 'subjectGrades'])->orderBy('name'))
             ->queryStringIdentifier('users')
             ->columns([
                 TextColumn::make('name')
