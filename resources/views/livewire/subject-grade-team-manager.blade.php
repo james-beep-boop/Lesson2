@@ -4,7 +4,11 @@
 @endphp
 
 <div class="space-y-6">
-    {{ $this->table }}
+    {{-- Hide the select-all checkbox; the toolbar Remove button serves that role. --}}
+    <style>.sg-team-table .fi-ta-page-checkbox { display: none; }</style>
+    <div class="sg-team-table">
+        {{ $this->table }}
+    </div>
 
     <x-filament::section :heading="'Add Editor for '.$subjectGrade->subject->name.', Grade '.$subjectGrade->grade">
         @if ($availableUsers->isEmpty())

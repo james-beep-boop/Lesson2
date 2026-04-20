@@ -8,7 +8,6 @@ use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\SubjectAdminService;
 use Filament\Actions\Action;
-use Filament\Actions\BulkAction;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Notifications\Notification;
@@ -116,6 +115,35 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
             ->send();
     }
 
+    public function removeSelectedEditors(): void
+    {
+        $subjectGrade = $this->getSubjectGrade();
+
+        abort_unless(auth()->user()?->isSubjectAdminFor($subjectGrade), 403);
+
+        $users = User::findMany($this->selectedTableRecords);
+
+        if ($users->isEmpty()) {
+            return;
+        }
+
+        $service = app(SubjectAdminService::class);
+
+        foreach ($users as $user) {
+            $service->removeUser($user, $subjectGrade);
+        }
+
+        $count = $users->count();
+        $this->selectedTableRecords = [];
+
+        Notification::make('editors-removed')
+            ->title($count === 1
+                ? "{$users->first()->name} removed from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}."
+                : "{$count} editors removed from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}.")
+            ->success()
+            ->send();
+    }
+
     public function table(Table $table): Table
     {
         $subjectGrade = $this->getSubjectGrade();
@@ -137,46 +165,18 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
                     ->dateTime('M j, Y g:i A')
                     ->placeholder('Never'),
             ])
-            ->recordActions([
-                Action::make('removeEditor')
-                    ->label('Remove')
-                    ->color('danger')
-                    ->icon('heroicon-o-user-minus')
-                    ->requiresConfirmation()
-                    ->modalHeading('Remove editor')
-                    ->modalDescription("Remove this editor from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}?")
-                    ->action(function (User $record): void {
-                        $this->removeEditor($record->id);
-                    }),
-            ])
             ->toolbarActions([
-                BulkAction::make('remove')
-                    ->label('Remove Selected')
+                Action::make('removeSelected')
+                    ->label('Remove')
                     ->color('danger')
                     ->icon('heroicon-o-user-minus')
                     ->requiresConfirmation()
                     ->modalHeading('Remove editors')
                     ->modalDescription("Remove the selected editors from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}?")
-                    ->action(function (Collection $records) use ($subjectGrade): void {
-                        abort_unless(auth()->user()?->isSubjectAdminFor($subjectGrade), 403);
-
-                        $service = app(SubjectAdminService::class);
-
-                        foreach ($records as $user) {
-                            $service->removeUser($user, $subjectGrade);
-                        }
-
-                        $count = $records->count();
-
-                        Notification::make('editors-removed')
-                            ->title($count === 1
-                                ? "{$records->first()->name} removed from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}."
-                                : "{$count} editors removed from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}.")
-                            ->success()
-                            ->send();
-                    })
-                    ->deselectRecordsAfterCompletion(),
+                    ->disabled(fn (): bool => empty($this->selectedTableRecords))
+                    ->action(fn (): void => $this->removeSelectedEditors()),
             ])
+            ->selectable(true)
             ->heading("Current Editors of {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}")
             ->emptyStateHeading('No editors assigned yet.')
             ->emptyStateIcon('heroicon-o-user-group')

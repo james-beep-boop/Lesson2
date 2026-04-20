@@ -145,7 +145,7 @@ test('remove editor detaches the user from the pivot', function () {
     )->toBeFalse();
 });
 
-test('bulk remove action detaches editors from the pivot', function () {
+test('remove selected detaches editors from the pivot', function () {
     $sg = makeSubjectGrade();
     $subjectAdmin = makeSubjectAdmin($sg);
     $editor = makeEditor($sg);
@@ -153,7 +153,8 @@ test('bulk remove action detaches editors from the pivot', function () {
     $this->actingAs($subjectAdmin);
 
     Livewire::test(SubjectGradeTeamManager::class, ['subjectGradeId' => $sg->id])
-        ->callTableBulkAction('remove', [$editor])
+        ->set('selectedTableRecords', [$editor->id])
+        ->call('removeSelectedEditors')
         ->assertNotified();
 
     expect(
