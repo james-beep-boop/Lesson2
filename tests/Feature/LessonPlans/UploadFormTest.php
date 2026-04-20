@@ -34,25 +34,17 @@ test('create page heading is "Add Lesson Plan"', function () {
 });
 
 // ----------------------------------------------------------------
-// Preview panel wiring
+// Content editor and preview panels are not present
 // ----------------------------------------------------------------
 
-test('create page includes the Toast UI live preview component', function () {
+test('create page does not include the markdown editor or preview panels', function () {
     $sg = SubjectGrade::factory()->create(['grade' => 10]);
     $this->actingAs(makeSubjectAdmin($sg));
 
     Livewire::test(CreateLessonPlanFamily::class)
-        ->assertSee('toastLiveViewer', escape: false)
-        ->assertSee('data-toast-viewer', escape: false)
-        ->assertSee('wire:ignore', escape: false);
-});
-
-test('create page preview watches the content Livewire property', function () {
-    $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $this->actingAs(makeSubjectAdmin($sg));
-
-    Livewire::test(CreateLessonPlanFamily::class)
-        ->assertSee('data.content', escape: false);
+        ->assertDontSee('Lesson Plan Content (Markdown)')
+        ->assertDontSee('toastLiveViewer', escape: false)
+        ->assertDontSee('data-toast-viewer', escape: false);
 });
 
 // ----------------------------------------------------------------

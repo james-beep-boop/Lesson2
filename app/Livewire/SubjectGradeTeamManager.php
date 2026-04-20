@@ -7,7 +7,6 @@ use App\Models\LessonPlanVersion;
 use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\SubjectAdminService;
-use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Notifications\Notification;
@@ -20,6 +19,7 @@ use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -30,6 +30,8 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
     use InteractsWithTable;
 
     public ?int $addUserId = null;
+
+    public array $selectedEditorIds = [];
 
     public int $subjectGradeId;
 
@@ -121,7 +123,7 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
 
         abort_unless(auth()->user()?->isSubjectAdminFor($subjectGrade), 403);
 
-        $users = User::findMany($this->selectedTableRecords);
+        $users = User::findMany($this->selectedEditorIds);
 
         if ($users->isEmpty()) {
             return;
@@ -134,7 +136,7 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
         }
 
         $count = $users->count();
-        $this->selectedTableRecords = [];
+        $this->selectedEditorIds = [];
 
         Notification::make('editors-removed')
             ->title($count === 1
@@ -148,9 +150,25 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
     {
         $subjectGrade = $this->getSubjectGrade();
 
+        $removeLabel = new HtmlString(
+            '<button type="button"'
+            . ' wire:click="removeSelectedEditors"'
+            . ' wire:confirm="Remove selected editors from ' . e($subjectGrade->subject->name) . ', Grade ' . $subjectGrade->grade . '?"'
+            . ' class="rounded px-2 py-0.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white focus:outline-none">'
+            . 'Remove'
+            . '</button>'
+        );
+
         return $table
             ->query($this->getEditorsQuery())
             ->columns([
+                TextColumn::make('id')
+                    ->label($removeLabel)
+                    ->html()
+                    ->formatStateUsing(fn (int $state): HtmlString => new HtmlString(
+                        '<input type="checkbox" wire:model="selectedEditorIds" value="' . $state . '" class="fi-checkbox-input">'
+                    ))
+                    ->width('3rem'),
                 TextColumn::make('name')
                     ->label('Full name'),
                 TextColumn::make('username')
@@ -165,18 +183,6 @@ class SubjectGradeTeamManager extends Component implements HasActions, HasSchema
                     ->dateTime('M j, Y g:i A')
                     ->placeholder('Never'),
             ])
-            ->toolbarActions([
-                Action::make('removeSelected')
-                    ->label('Remove')
-                    ->color('danger')
-                    ->icon('heroicon-o-user-minus')
-                    ->requiresConfirmation()
-                    ->modalHeading('Remove editors')
-                    ->modalDescription("Remove the selected editors from {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}?")
-                    ->disabled(fn (): bool => empty($this->selectedTableRecords))
-                    ->action(fn () => $this->removeSelectedEditors()),
-            ])
-            ->selectable(true)
             ->heading("Current Editors of {$subjectGrade->subject->name}, Grade {$subjectGrade->grade}")
             ->emptyStateHeading('No editors assigned yet.')
             ->emptyStateIcon('heroicon-o-user-group')

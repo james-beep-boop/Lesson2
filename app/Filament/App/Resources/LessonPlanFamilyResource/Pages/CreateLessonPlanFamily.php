@@ -12,15 +12,14 @@ use App\Services\DocxConversionService;
 use App\Services\VersionService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -138,8 +137,8 @@ class CreateLessonPlanFamily extends CreateRecord
             FileUpload::make('lesson_file')
                 ->label('Upload lesson plan file')
                 ->helperText(fn (): string => $this->processedLessonFilename
-                    ? 'Imported from: '.$this->processedLessonFilename.'. You can keep editing the Markdown before saving.'
-                    : 'Upload a .md, .txt, or .docx file to import the lesson plan. You can review and edit the Markdown before saving.')
+                    ? 'Imported from: '.$this->processedLessonFilename.'.'
+                    : 'Upload a .md, .txt, or .docx file to import the lesson plan.')
                 ->placeholder('Drag & Drop your file or Browse')
                 ->acceptedFileTypes([
                     'text/plain',
@@ -196,12 +195,8 @@ class CreateLessonPlanFamily extends CreateRecord
                             unset($this->data['lesson_file']);
 
                             Notification::make()
-                                ->title('Word document converted — please review')
-                                ->body(
-                                    'This system stores lesson plans as Markdown. '
-                                    .'Complex formatting — tables, images, footnotes, and columns — may not have converted correctly. '
-                                    .'Review the content carefully before saving.'
-                                )
+                                ->title('Word document converted')
+                                ->body('Complex formatting — tables, images, footnotes, and columns — may not have converted correctly.')
                                 ->warning()
                                 ->persistent()
                                 ->send();
@@ -225,21 +220,7 @@ class CreateLessonPlanFamily extends CreateRecord
                     }
                 }),
 
-            // ── Editor + Preview side by side ─────────────────────────────────
-            Grid::make(['default' => 1, 'lg' => 2])
-                ->schema([
-                    Textarea::make('content')
-                        ->label('Lesson Plan Content (Markdown)')
-                        ->rows(20)
-                        ->required()
-                        ->placeholder('Review and edit the imported Markdown before saving...')
-                        ->extraAttributes([
-                            'x-on:input.debounce.300ms' => '$dispatch("markdown-input", {value: $event.target.value})',
-                        ]),
-
-                    View::make('filament.forms.components.markdown-preview'),
-                ])
-                ->columnSpanFull(),
+            Hidden::make('content'),
 
             TextInput::make('revision_note')
                 ->label('Revision Note (optional)')
