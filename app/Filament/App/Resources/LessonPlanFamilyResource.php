@@ -210,7 +210,6 @@ class LessonPlanFamilyResource extends Resource
             return false;
         }
 
-        return $user->isSiteAdmin()
-            || SubjectGrade::where('subject_admin_user_id', $user->id)->exists();
+        return $user->isSiteAdmin();
     }
 }

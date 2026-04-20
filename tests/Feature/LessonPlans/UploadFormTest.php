@@ -26,8 +26,7 @@ function fakeLessonPlanUpload(string $content = '# Lesson Plan', string $name = 
 // ----------------------------------------------------------------
 
 test('create page heading is "Add Lesson Plan"', function () {
-    $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $this->actingAs(makeSubjectAdmin($sg));
+    $this->actingAs(makeSiteAdmin());
 
     Livewire::test(CreateLessonPlanFamily::class)
         ->assertSee('Add Lesson Plan');
@@ -38,8 +37,7 @@ test('create page heading is "Add Lesson Plan"', function () {
 // ----------------------------------------------------------------
 
 test('create page does not include the markdown editor or preview panels', function () {
-    $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $this->actingAs(makeSubjectAdmin($sg));
+    $this->actingAs(makeSiteAdmin());
 
     Livewire::test(CreateLessonPlanFamily::class)
         ->assertDontSee('Lesson Plan Content (Markdown)')
@@ -52,7 +50,7 @@ test('create page does not include the markdown editor or preview panels', funct
 
 test('creating a lesson plan preserves markdown table structure in the saved version', function () {
     $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $this->actingAs(makeSubjectAdmin($sg));
+    $this->actingAs(makeSiteAdmin());
 
     $content = <<<'MD'
 # Enzyme Lesson
@@ -88,9 +86,9 @@ MD;
 test('create form submits successfully when version_major and version_minor are zero', function () {
     // Grade must be 10/11/12 to match the Select options in the form.
     $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
 
-    $this->actingAs($subjectAdmin);
+    $this->actingAs($siteAdmin);
 
     Livewire::test(CreateLessonPlanFamily::class)
         ->fillForm([
@@ -137,7 +135,7 @@ test('VersionService always creates first version as 1.0.0', function () {
 test('creating a duplicate family shows warning notification and does not fatal', function () {
     // Grade must be 10/11/12 to pass the Select validation.
     $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
 
     // Pre-create the family so the duplicate UniqueConstraintViolation fires.
     $family = LessonPlanFamily::factory()->create([
@@ -149,7 +147,7 @@ test('creating a duplicate family shows warning notification and does not fatal'
         'version' => '1.0.0',
     ]);
 
-    $this->actingAs($subjectAdmin);
+    $this->actingAs($siteAdmin);
 
     Livewire::test(CreateLessonPlanFamily::class)
         ->fillForm([
@@ -168,7 +166,7 @@ test('creating a duplicate family shows warning notification and does not fatal'
 
 test('creating a duplicate family redirects to the existing family view URL', function () {
     $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
 
     $family = LessonPlanFamily::factory()->create([
         'subject_grade_id' => $sg->id,
@@ -182,7 +180,7 @@ test('creating a duplicate family redirects to the existing family view URL', fu
     $family->official_version_id = $version->id;
     $family->save();
 
-    $this->actingAs($subjectAdmin);
+    $this->actingAs($siteAdmin);
 
     Livewire::test(CreateLessonPlanFamily::class)
         ->fillForm([
@@ -199,7 +197,7 @@ test('creating a duplicate family redirects to the existing family view URL', fu
 
 test('creating a lesson plan requires an uploaded lesson file', function () {
     $sg = SubjectGrade::factory()->create(['grade' => 10]);
-    $this->actingAs(makeSubjectAdmin($sg));
+    $this->actingAs(makeSiteAdmin());
 
     Livewire::test(CreateLessonPlanFamily::class)
         ->fillForm([
@@ -210,6 +208,21 @@ test('creating a lesson plan requires an uploaded lesson file', function () {
         ])
         ->call('create')
         ->assertHasFormErrors(['lesson_file']);
+});
+
+test('subject admin cannot access the create lesson plan page', function () {
+    $sg = SubjectGrade::factory()->create(['grade' => 10]);
+    $subjectAdmin = makeSubjectAdmin($sg);
+
+    $this->actingAs($subjectAdmin)
+        ->get(CreateLessonPlanFamily::getUrl())
+        ->assertForbidden();
+});
+
+test('site admin can access the create lesson plan page', function () {
+    $this->actingAs(makeSiteAdmin())
+        ->get(CreateLessonPlanFamily::getUrl())
+        ->assertOk();
 });
 
 test('processed upload stays usable after later metadata changes', function () {

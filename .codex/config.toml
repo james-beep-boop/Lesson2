@@ -1,4 +1,9 @@
+approval_policy = "never"
+sandbox_mode = "workspace-write"
 [mcp_servers.laravel-boost]
 command = "php"
 args = ["artisan", "boost:mcp"]
 cwd = "/Users/jamesmcclelland/Documents/GitHub/Lesson2"
+
+[sandbox_workspace_write]
+network_access = true
