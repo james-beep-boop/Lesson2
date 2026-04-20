@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Models\LessonPlanFamily;
-use App\Models\SubjectGrade;
 use App\Models\User;
 
 class LessonPlanFamilyPolicy
@@ -14,11 +13,10 @@ class LessonPlanFamilyPolicy
         return ! $user->is_system;
     }
 
-    /** Creating a new family requires Subject Admin (own subject_grade) or Site Admin. */
+    /** Only Site Admins may create a new lesson plan family. */
     public function create(User $user): bool
     {
-        return $user->isSiteAdmin()
-            || SubjectGrade::where('subject_admin_user_id', $user->id)->exists();
+        return $user->isSiteAdmin();
     }
 
     /** Subject Admin (own) or Site Admin may request deletion. */
