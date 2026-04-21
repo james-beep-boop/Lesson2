@@ -30,9 +30,16 @@ test('guide defaults to English language', function () {
 test('guide shows English content by default', function () {
     $this->actingAs(makeTeacher());
 
-    Livewire::test(Guide::class)
+    $component = Livewire::test(Guide::class)
         ->assertSee('Viewing Lessons')
         ->assertSeeHtml('collapsed');
+
+    $viewingLessons = collect($component->instance()->sections())
+        ->firstWhere('title', 'Viewing Lessons');
+
+    expect($viewingLessons['body'])
+        ->toContain('Browse lessons from the **Lessons** menu and click on a lesson to view it.')
+        ->toContain('green checkmark');
 });
 
 test('guide uses full content width', function () {
@@ -65,10 +72,44 @@ test('guide shows the english sections in the new order', function () {
 test('switching to Swahili shows Swahili content', function () {
     $this->actingAs(makeTeacher());
 
-    Livewire::test(Guide::class)
+    $component = Livewire::test(Guide::class)
         ->call('switchLanguage', 'sw')
         ->assertSee('Kutazama Masomo')
         ->assertSee('Aina za Watumiaji na Ruhusa');
+
+    $viewingLessons = collect($component->instance()->sections())
+        ->firstWhere('title', 'Kutazama Masomo');
+
+    expect($viewingLessons['body'])
+        ->toContain('Vinjari masomo kutoka menyu ya **Masomo** na ubofye somo ili kulifungua.')
+        ->toContain('alama ya tiki ya kijani');
+});
+
+test('guide includes the updated editing, messaging, and permissions text in English', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    $sections = collect(Livewire::test(Guide::class)->instance()->sections())->keyBy('title');
+
+    expect($sections['Editing Lessons']['body'])->toContain('Make your edits in the edit window.');
+    expect($sections['Messaging Other Users']['body'])->toContain('Messages to you appear in your **Inbox**');
+    expect($sections['User Types and Permissions']['body'])
+        ->toContain('translate to Swahili')
+        ->toContain('promote teachers to be editors');
+});
+
+test('guide includes the updated editing, messaging, and permissions text in Swahili', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    $sections = collect(Livewire::test(Guide::class)
+        ->call('switchLanguage', 'sw')
+        ->instance()
+        ->sections())->keyBy('title');
+
+    expect($sections['Kuhariri Masomo']['body'])->toContain('Fanya mabadiliko yako kwenye dirisha la kuhariri.');
+    expect($sections['Ujumbe kwa Watumiaji Wengine']['body'])->toContain('Ujumbe unaokujia unaonekana kwenye **Kisanduku cha Barua**');
+    expect($sections['Aina za Watumiaji na Ruhusa']['body'])
+        ->toContain('kutafsiri kwa Kiswahili')
+        ->toContain('kuwapa walimu jukumu la kuwa wahariri');
 });
 
 test('guide shows the swahili sections in the new order', function () {

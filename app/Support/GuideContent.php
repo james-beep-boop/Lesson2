@@ -19,17 +19,14 @@ class GuideContent
             [
                 'title' => 'Viewing Lessons',
                 'roles' => null,
-                'body' => "- Browse lessons from the **Lessons** menu.\n"
-                    ."- Open a lesson row to see the lesson family and its versions.\n"
-                    ."- The **official version** is highlighted in green — it is the school's approved edition.\n"
-                    .'- Click any version in the left sidebar to switch between versions.',
+                'body' => "- Browse lessons from the **Lessons** menu and click on a lesson to view it.\n"
+                    ."- The official version is highlighted with a green checkmark — it is the school's approved edition.",
             ],
             [
                 'title' => 'Editing Lessons',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Click **Edit This Plan** to enter edit mode.\n"
-                    ."- The editor opens in **Markdown source mode** so tables and other structure stay intact.\n"
-                    ."- Switch to **WYSIWYG mode** at any time using the mode toggle in the toolbar.\n"
+                    ."- Make your edits in the edit window.\n"
                     ."- Pasting from Word or Google Docs? Use **Paste as Plain Text** (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.\n"
                     ."- Choose a version bump: **Patch** (small fix), **Minor** (new content), or **Major** (complete rewrite).\n"
                     .'- Add an optional revision note, then click **Save Edits** to create the new version.',
@@ -46,7 +43,6 @@ class GuideContent
                 'title' => 'Official Versions',
                 'roles' => ['subject_admin', 'site_administrator'],
                 'body' => "- The official version is the school's approved edition for a lesson.\n"
-                    ."- Click **Mark as Official** on any version to promote it.\n"
                     .'- Only one version per lesson family can be official at a time.',
             ],
             [
@@ -59,9 +55,8 @@ class GuideContent
             [
                 'title' => 'Messaging Other Users',
                 'roles' => null,
-                'body' => "- Use **Message About This Lesson** to contact another user with full lesson context pre-filled.\n"
-                    ."- Choose: message the author, subject administrator, site administrator, or any user.\n"
-                    ."- Messages appear in your **Inbox** (accessible from the user menu, top right).\n"
+                'body' => "- Use **Message About This Lesson** to contact another user about a lesson.\n"
+                    ."- Messages to you appear in your **Inbox** (accessible from the user menu, top right).\n"
                     .'- Click any message row to read it; you can reply from the message view.',
             ],
             [
@@ -83,12 +78,10 @@ class GuideContent
             [
                 'title' => 'User Types and Permissions',
                 'roles' => null,
-                'body' => "- **Teachers** can browse lessons, compare versions, favorite versions, message other users, print, and export.\n"
-                    ."- **Editors** can do all of that and edit lesson plans within their assigned subject-grades.\n"
-                    ."- **Subject Administrators** can do all editor actions for their subject-grades, mark a version official, and request deletion.\n"
-                    ."- **Site Administrators** can manage subjects, grades, users, subject-grade assignments, and deletion requests from the Admin Panel.\n"
-                    ."- **Ask AI** is available to Editors, Subject Administrators, and Site Administrators when AI suggestions are enabled.\n"
-                    ."- **Translate to Swahili** is available to any authenticated non-system user when AI suggestions are enabled.\n"
+                'body' => "- **Teachers** can browse lessons, compare versions, favorite versions, message other users, translate to Swahili, print, and export.\n"
+                    ."- **Editors** can do all of that, edit lesson plans within their assigned subject and grade, and use the **Ask AI** function.\n"
+                    ."- **Subject Administrators** can do all editor actions for their subject-grades, mark a version official, request deletion, and promote teachers to be editors.\n"
+                    ."- **Site Administrators** can manage subjects, grades, users, subject-grade assignments, and deletion requests.\n"
                     .'- System users are internal accounts and do not sign in to the app panel.',
             ],
             [
@@ -107,17 +100,14 @@ class GuideContent
             [
                 'title' => 'Kutazama Masomo',
                 'roles' => null,
-                'body' => "- Tazama masomo kutoka menyu ya **Masomo**.\n"
-                    ."- Fungua mstari wa somo ili kuona familia ya somo na matoleo yake.\n"
-                    ."- **Toleo rasmi** linaonyeshwa kwa rangi ya kijani — hilo ndilo toleo lililoidhinishwa na shule.\n"
-                    .'- Bonyeza toleo lolote kwenye orodha ya kushoto kubadilisha matoleo.',
+                'body' => "- Vinjari masomo kutoka menyu ya **Masomo** na ubofye somo ili kulifungua.\n"
+                    .'- Toleo rasmi linaonyeshwa kwa alama ya tiki ya kijani — hilo ndilo toleo lililoidhinishwa na shule.',
             ],
             [
                 'title' => 'Kuhariri Masomo',
                 'roles' => ['editor', 'subject_admin', 'site_administrator'],
                 'body' => "- Bonyeza **Hariri Mpango Huu** kuingia katika hali ya kuhariri.\n"
-                    ."- Kihariri kinafunguka katika **hali ya chanzo cha Markdown** ili meza na muundo mwingine visiharibike.\n"
-                    ."- Badilisha kwenda **hali ya WYSIWYG** wakati wowote ukitumia kubadilisha hali kwenye mwambaa wa zana.\n"
+                    ."- Fanya mabadiliko yako kwenye dirisha la kuhariri.\n"
                     ."- Unapobandika kutoka Word au Google Docs? Tumia **Bandika kama Maandishi Wazi** (Ctrl+Shift+V / Cmd+Shift+V) kuepuka matatizo ya uumbizaji.\n"
                     ."- Chagua aina ya kuongeza toleo: **Kiraka** (marekebisho madogo), **Ndogo** (maudhui mapya), au **Kubwa** (uandishi upya kamili).\n"
                     .'- Ongeza dokezo la marekebisho (hiari), kisha bonyeza **Hifadhi Mabadiliko** kuunda toleo jipya.',
@@ -134,7 +124,6 @@ class GuideContent
                 'title' => 'Matoleo Rasmi',
                 'roles' => ['subject_admin', 'site_administrator'],
                 'body' => "- Toleo rasmi ni toleo lililoidhinishwa na shule kwa somo.\n"
-                    ."- Bonyeza **Fanya Rasmi** kwenye toleo lolote kulikuza.\n"
                     .'- Toleo moja tu kwa kila familia ya somo linaweza kuwa rasmi wakati mmoja.',
             ],
             [
@@ -147,9 +136,8 @@ class GuideContent
             [
                 'title' => 'Ujumbe kwa Watumiaji Wengine',
                 'roles' => null,
-                'body' => "- Tumia **Tuma Ujumbe Kuhusu Somo Hili** kuwasiliana na mtumiaji mwingine pamoja na muktadha wa somo uliojazwa mapema.\n"
-                    ."- Chagua: tuma ujumbe kwa mwandishi, msimamizi wa somo, msimamizi wa tovuti, au mtumiaji yeyote.\n"
-                    ."- Ujumbe unaonekana kwenye **Kisanduku cha Barua** chako (unaopatikana kwenye menyu ya mtumiaji, kona ya juu kulia).\n"
+                'body' => "- Tumia **Tuma Ujumbe Kuhusu Somo Hili** kuwasiliana na mtumiaji mwingine kuhusu somo.\n"
+                    ."- Ujumbe unaokujia unaonekana kwenye **Kisanduku cha Barua** chako (kinapatikana kwenye menyu ya mtumiaji, kona ya juu kulia).\n"
                     .'- Bonyeza mstari wowote wa ujumbe kuusoma; unaweza kujibu kutoka kwenye mtazamo wa ujumbe.',
             ],
             [
@@ -171,12 +159,10 @@ class GuideContent
             [
                 'title' => 'Aina za Watumiaji na Ruhusa',
                 'roles' => null,
-                'body' => "- **Walimu** wanaweza kutazama masomo, kulinganisha matoleo, kuweka vipendwa, kutuma ujumbe kwa watumiaji wengine, kuchapisha, na kuhamisha.\n"
-                    ."- **Wahariri** wanaweza kufanya yote hayo na pia kuhariri mipango ya masomo ndani ya madaraja ya somo waliyopewa.\n"
-                    ."- **Wasimamizi wa Somo** wanaweza kufanya vitendo vyote vya mhariri kwa madaraja yao, kuweka toleo kuwa rasmi, na kuomba kufutwa.\n"
-                    ."- **Wasimamizi wa Tovuti** wanaweza kusimamia masomo, madarasa, watumiaji, mgao wa somo/daraja, na maombi ya kufutwa kutoka Paneli ya Msimamizi.\n"
-                    ."- **Ask AI** inapatikana kwa Wahariri, Wasimamizi wa Somo, na Wasimamizi wa Tovuti wakati mapendekezo ya AI yamewashwa.\n"
-                    ."- **Translate to Swahili** inapatikana kwa mtumiaji yeyote aliyeingia ambaye si mtumiaji wa mfumo wakati mapendekezo ya AI yamewashwa.\n"
+                'body' => "- **Walimu** wanaweza kutazama masomo, kulinganisha matoleo, kuweka vipendwa, kutuma ujumbe kwa watumiaji wengine, kutafsiri kwa Kiswahili, kuchapisha, na kuhamisha.\n"
+                    ."- **Wahariri** wanaweza kufanya yote hayo, kuhariri mipango ya masomo ndani ya somo na darasa walilopewa, na kutumia kipengele cha **Ask AI**.\n"
+                    ."- **Wasimamizi wa Somo** wanaweza kufanya vitendo vyote vya mhariri kwa subject-grade zao, kuweka toleo kuwa rasmi, kuomba kufutwa, na kuwapa walimu jukumu la kuwa wahariri.\n"
+                    ."- **Wasimamizi wa Tovuti** wanaweza kusimamia masomo, madarasa, watumiaji, mgao wa subject-grade, na maombi ya kufutwa.\n"
                     .'- Watumiaji wa mfumo ni akaunti za ndani na hawaingii kwenye paneli ya programu.',
             ],
             [
