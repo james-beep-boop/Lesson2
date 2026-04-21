@@ -4,6 +4,7 @@ namespace App\Filament\App\Pages;
 
 use App\Support\GuideContent;
 use Filament\Pages\Page;
+use Filament\Support\Enums\Width;
 
 class Guide extends Page
 {
@@ -16,6 +17,11 @@ class Guide extends Page
     protected static ?int $navigationSort = 99;
 
     public string $language = 'en';
+
+    public function getMaxContentWidth(): Width
+    {
+        return Width::Full;
+    }
 
     public function getTitle(): string
     {
@@ -65,12 +71,11 @@ class Guide extends Page
      */
     public function orientationText(): string
     {
-        // role_label is a cached Eloquent attribute — no extra DB queries after the first call.
         return match (auth()->user()?->role_label) {
-            'Site Administrator' => 'You are a **Site Administrator**. You can manage all lesson plans, users, and subject-grade assignments across the entire system.',
-            'Subject Administrator' => 'You are a **Subject Administrator**. You can create, edit, and publish official lesson plans for your assigned subject-grades.',
+            'Site Administrator' => 'You are a **Site Administrator**. You can manage subjects, grades, users, subject-grade assignments, and deletion requests across the entire system.',
+            'Subject Administrator' => 'You are a **Subject Administrator**. You can edit lesson plans for your assigned subject-grades, mark versions official, and request deletions.',
             'Editor' => 'You are an **Editor**. You can create and submit new lesson plan versions for your assigned subject-grades.',
-            default => 'You are a **Teacher**. You can browse, favourite, and comment on lesson plans.',
+            default => 'You are a **Teacher**. You can browse, compare, favorite, message, print, export, and use the Swahili translation preview when it is enabled.',
         };
     }
 

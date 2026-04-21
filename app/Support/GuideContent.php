@@ -20,9 +20,30 @@ class GuideContent
                 'title' => 'Viewing Lessons',
                 'roles' => null,
                 'body' => "- Browse lessons from the **Lessons** menu.\n"
-                    ."- Click a lesson row to open its detail page.\n"
+                    ."- Open a lesson row to see the lesson family and its versions.\n"
                     ."- The **official version** is highlighted in green — it is the school's approved edition.\n"
                     .'- Click any version in the left sidebar to switch between versions.',
+            ],
+            [
+                'title' => 'Editing Lessons',
+                'roles' => ['editor', 'subject_admin', 'site_administrator'],
+                'body' => "- Click **Edit This Plan** to enter edit mode.\n"
+                    ."- The editor opens in **Markdown source mode** so tables and other structure stay intact.\n"
+                    ."- Switch to **WYSIWYG mode** at any time using the mode toggle in the toolbar.\n"
+                    ."- Pasting from Word or Google Docs? Use **Paste as Plain Text** (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.\n"
+                    ."- Choose a version bump: **Patch** (small fix), **Minor** (new content), or **Major** (complete rewrite).\n"
+                    .'- Add an optional revision note, then click **Save Edits** to create the new version.',
+            ],
+            [
+                'title' => 'User Types and Permissions',
+                'roles' => null,
+                'body' => "- **Teachers** can browse lessons, compare versions, favorite versions, message other users, print, and export.\n"
+                    ."- **Editors** can do all of that and edit lesson plans within their assigned subject-grades.\n"
+                    ."- **Subject Administrators** can do all editor actions for their subject-grades, mark a version official, and request deletion.\n"
+                    ."- **Site Administrators** can manage subjects, grades, users, subject-grade assignments, and deletion requests from the Admin Panel.\n"
+                    ."- **Ask AI** is available to Editors, Subject Administrators, and Site Administrators when AI suggestions are enabled.\n"
+                    ."- **Translate to Swahili** is available to any authenticated non-system user when AI suggestions are enabled.\n"
+                    .'- System users are internal accounts and do not sign in to the app panel.',
             ],
             [
                 'title' => 'Comparing Versions',
@@ -57,16 +78,6 @@ class GuideContent
                     .'- **Email .docx**: enter any email address to send the lesson plan as a .docx attachment.',
             ],
             [
-                'title' => 'Editing & Saving a New Version',
-                'roles' => ['editor', 'subject_admin', 'site_administrator'],
-                'body' => "- Click **Edit This Plan** to enter edit mode.\n"
-                    ."- The editor opens in **Markdown source mode** so tables and other structure stay intact.\n"
-                    ."- Switch to **WYSIWYG mode** at any time using the mode toggle in the toolbar.\n"
-                    ."- Pasting from Word or Google Docs? Use **Paste as Plain Text** (Ctrl+Shift+V / Cmd+Shift+V) to avoid formatting problems.\n"
-                    ."- Choose a version bump: **Patch** (small fix), **Minor** (new content), or **Major** (complete rewrite).\n"
-                    .'- Add an optional revision note, then click **Save Edits** to create the new version.',
-            ],
-            [
                 'title' => 'Official Versions',
                 'roles' => ['subject_admin', 'site_administrator'],
                 'body' => "- The official version is the school's approved edition for a lesson.\n"
@@ -97,24 +108,45 @@ class GuideContent
                 'title' => 'Kutazama Masomo',
                 'roles' => null,
                 'body' => "- Tazama masomo kutoka menyu ya **Masomo**.\n"
-                    ."- Bonyeza mstari wa somo ili kufungua ukurasa wake.\n"
+                    ."- Fungua mstari wa somo ili kuona familia ya somo na matoleo yake.\n"
                     ."- **Toleo rasmi** linaonyeshwa kwa rangi ya kijani — hilo ndilo toleo lililoidhinishwa na shule.\n"
                     .'- Bonyeza toleo lolote kwenye orodha ya kushoto kubadilisha matoleo.',
+            ],
+            [
+                'title' => 'Kuhariri Masomo',
+                'roles' => ['editor', 'subject_admin', 'site_administrator'],
+                'body' => "- Bonyeza **Hariri Mpango Huu** kuingia katika hali ya kuhariri.\n"
+                    ."- Kihariri kinafunguka katika **hali ya chanzo cha Markdown** ili meza na muundo mwingine visiharibike.\n"
+                    ."- Badilisha kwenda **hali ya WYSIWYG** wakati wowote ukitumia kubadilisha hali kwenye mwambaa wa zana.\n"
+                    ."- Unapobandika kutoka Word au Google Docs? Tumia **Bandika kama Maandishi Wazi** (Ctrl+Shift+V / Cmd+Shift+V) kuepuka matatizo ya uumbizaji.\n"
+                    ."- Chagua aina ya kuongeza toleo: **Kiraka** (marekebisho madogo), **Ndogo** (maudhui mapya), au **Kubwa** (uandishi upya kamili).\n"
+                    .'- Ongeza dokezo la marekebisho (hiari), kisha bonyeza **Hifadhi Mabadiliko** kuunda toleo jipya.',
+            ],
+            [
+                'title' => 'Aina za Watumiaji na Ruhusa',
+                'roles' => null,
+                'body' => "- **Walimu** wanaweza kutazama masomo, kulinganisha matoleo, kuweka vipendwa, kutuma ujumbe kwa wengine, kuchapisha, na kuhamisha.\n"
+                    ."- **Wahariri** wanaweza kufanya yote hayo na pia kuhariri mipango ya masomo ndani ya madaraja ya somo waliyopewa.\n"
+                    ."- **Wasimamizi wa Somo** wanaweza kufanya vitendo vyote vya mhariri kwa madaraja yao, kuweka toleo kuwa rasmi, na kuomba kufutwa.\n"
+                    ."- **Wasimamizi wa Tovuti** wanaweza kusimamia masomo, madarasa, watumiaji, mgao wa somo/daraja, na maombi ya kufutwa kutoka Paneli ya Msimamizi.\n"
+                    ."- **Ask AI** inapatikana kwa Wahariri, Wasimamizi wa Somo, na Wasimamizi wa Tovuti wakati mapendekezo ya AI yamewashwa.\n"
+                    ."- **Translate to Swahili** inapatikana kwa mtumiaji yeyote aliyeingia ambaye si mtumiaji wa mfumo wakati mapendekezo ya AI yamewashwa.\n"
+                    .'- Watumiaji wa mfumo ni akaunti za ndani na hawaingii kwenye paneli ya programu.',
             ],
             [
                 'title' => 'Kulinganisha Matoleo',
                 'roles' => null,
                 'body' => "- Kwenye ukurasa wa somo, tumia **Linganisha na Toleo la Awali** au **Linganisha na Toleo Rasmi** kwa haraka.\n"
                     ."- Au chagua toleo lolote kutoka sehemu ya Linganisha kwenye orodha ya kushoto.\n"
-                    ."- Nyongeza zinaonyeshwa kwa **kijani**, mafutio kwa **waridi**.\n"
-                    .'- Badilisha kati ya mpangilio wa **Pembeni-Kwa-Pembeni** na **Umewekwa juu ya mmoja** kwa kutumia kitufe.',
+                    ."- Nyongeza zinaonyeshwa kwa **kijani**, na yaliyofutwa kwa **waridi**.\n"
+                    .'- Badilisha kati ya mpangilio wa **Side-by-Side** na **Stacked** kwa kutumia kitufe cha hali ya kulinganisha.',
             ],
             [
                 'title' => 'Vipendwa',
                 'roles' => null,
                 'body' => "- Bonyeza **Ongeza kwenye Vipendwa** (★) kwenye toleo lolote kuihifadhi kwenye orodha yako.\n"
-                    ."- Unaweza tu kupenda toleo moja kwa kila familia ya somo.\n"
-                    .'- Onyo linaonekana ikiwa toleo unalolipenda linatofautiana na toleo rasmi la sasa.',
+                    ."- Unaweza kuhifadhi toleo moja tu kwa kila familia ya somo.\n"
+                    .'- Onyo linaonekana ikiwa toleo ulilolipenda linatofautiana na toleo rasmi la sasa.',
             ],
             [
                 'title' => 'Ujumbe',
@@ -132,16 +164,6 @@ class GuideContent
                     ."- **Tuma PDF kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha PDF.\n"
                     ."- **Hifadhi .docx**: huhifadhi toleo lililochaguliwa kama faili la Word (.docx).\n"
                     .'- **Tuma .docx kwa Barua Pepe**: ingiza anwani yoyote ya barua pepe kutuma mpango wa somo kama kiambatisho cha .docx.',
-            ],
-            [
-                'title' => 'Kuhariri na Kuhifadhi Toleo Jipya',
-                'roles' => ['editor', 'subject_admin', 'site_administrator'],
-                'body' => "- Bonyeza **Hariri Mpango Huu** kuingia katika hali ya kuhariri.\n"
-                    ."- Mhariri unafungua katika **hali ya chanzo cha Markdown** ili meza na muundo mwingine visiharibike.\n"
-                    ."- Badilisha kwenda **hali ya WYSIWYG** wakati wowote ukitumia kubadilisha hali kwenye mwambaa wa zana.\n"
-                    ."- Unapobandika kutoka Word au Google Docs? Tumia **Bandika kama Maandishi Wazi** (Ctrl+Shift+V / Cmd+Shift+V) kuepuka matatizo ya uumbizaji.\n"
-                    ."- Chagua aina ya kuongeza toleo: **Kiraka** (marekebisho madogo), **Ndogo** (maudhui mapya), au **Kubwa** (uandishi upya kamili).\n"
-                    .'- Ongeza dokezo la marekebisho (hiari), kisha bonyeza **Hifadhi Mabadiliko** kuunda toleo jipya.',
             ],
             [
                 'title' => 'Matoleo Rasmi',
