@@ -367,7 +367,7 @@ test('translate button hidden when AI flag disabled', function () {
         ->assertDontSee('Translate to Swahili');
 });
 
-test('translate button hidden from plain teacher', function () {
+test('translate button visible to plain teacher when AI flag enabled', function () {
     config(['features.ai_suggestions' => true]);
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
@@ -375,7 +375,7 @@ test('translate button hidden from plain teacher', function () {
     $this->actingAs(makeTeacher());
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->assertDontSee('Translate to Swahili');
+        ->assertSee('Translate to Swahili');
 });
 
 test('openTranslationPanel opens panel and clears previous content', function () {
@@ -392,7 +392,7 @@ test('openTranslationPanel opens panel and clears previous content', function ()
         ->assertSet('translatedContent', '');
 });
 
-test('openTranslationPanel is forbidden for plain teacher', function () {
+test('openTranslationPanel is allowed for plain teacher when AI flag enabled', function () {
     config(['features.ai_suggestions' => true]);
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
@@ -401,7 +401,7 @@ test('openTranslationPanel is forbidden for plain teacher', function () {
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('openTranslationPanel')
-        ->assertForbidden();
+        ->assertSet('translationPanelOpen', true);
 });
 
 test('translatePreview sets translatedContent and keeps panel open', function () {
@@ -420,16 +420,20 @@ test('translatePreview sets translatedContent and keeps panel open', function ()
         ->assertSet('translatedContent', fn (string $content): bool => str_contains($content, 'Mpango wa Somo'));
 });
 
-test('translatePreview is forbidden for plain teacher', function () {
+test('translatePreview is allowed for plain teacher when AI flag enabled', function () {
     config(['features.ai_suggestions' => true]);
+    fakeMarkdownSegmentTranslation();
+
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeTeacher());
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
         ->call('translatePreview')
-        ->assertForbidden();
+        ->assertSet('translationPanelOpen', true)
+        ->assertSet('translatedContent', fn (string $content): bool => str_contains($content, 'Mpango wa Somo'));
 });
 
 test('translatePreview writes nothing to the database', function () {
@@ -811,4 +815,166 @@ test('compare mode keeps the left pane fixed while the right pane changes', func
     $component
         ->assertSee("Version {$v2->version}")
         ->assertSee("Version {$v1->version}");
+});
+
+// ---------------------------------------------------------------------------
+// Translation for teachers (area 1)
+// ---------------------------------------------------------------------------
+
+test('teacher cannot use Ask AI even when AI flag enabled', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertDontSee('Ask AI');
+});
+
+test('teacher cannot call openAiPanel', function () {
+    config(['features.ai_suggestions' => true]);
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('openAiPanel')
+        ->assertForbidden();
+});
+
+// ---------------------------------------------------------------------------
+// Lesson-context message includes link (area 2)
+// ---------------------------------------------------------------------------
+
+test('message body includes human-readable lesson link with Day', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('openMessageModal', 'author');
+
+    $body = $component->get('messageBody');
+
+    expect($body)->toContain('Day '.$family->day);
+    expect($body)->toContain('version '.$version->version);
+    expect($body)->toContain($sg->subject->name.' Grade '.$sg->grade);
+    // Must contain a URL
+    expect($body)->toContain('http');
+});
+
+// ---------------------------------------------------------------------------
+// Editor deletion behavior (area 3)
+// ---------------------------------------------------------------------------
+
+test('editor who authored the version sees Delete This Version button', function () {
+    $sg = makeSubjectGrade();
+    $editor = makeEditor($sg);
+    $family = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
+        'contributor_id' => $editor->id,
+    ]);
+
+    $this->actingAs($editor);
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertSee('Delete This Version')
+        ->assertDontSee('Request Deletion');
+});
+
+test('editor who did not author the version sees Request Deletion button', function () {
+    $sg = makeSubjectGrade();
+    $editor = makeEditor($sg);
+    $otherEditor = makeEditor($sg);
+    $family = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
+        'contributor_id' => $otherEditor->id,
+    ]);
+
+    $this->actingAs($editor);
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertSee('Request Deletion')
+        ->assertDontSee('Delete This Version');
+});
+
+test('teacher outside the subject grade sees no deletion button', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertDontSee('Delete This Version')
+        ->assertDontSee('Request Deletion');
+});
+
+test('editor can directly delete own version', function () {
+    $sg = makeSubjectGrade();
+    $editor = makeEditor($sg);
+    $family = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
+        'contributor_id' => $editor->id,
+    ]);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs($editor);
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $version->id)
+        ->call('directDeleteVersion')
+        ->assertNotified();
+
+    expect(LessonPlanVersion::find($version->id))->toBeNull();
+    expect(LessonPlanFamily::find($family->id))->not->toBeNull();
+});
+
+test('editor cannot directly delete a version they did not author', function () {
+    $sg = makeSubjectGrade();
+    $editor = makeEditor($sg);
+    $other = makeEditor($sg);
+    $family = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
+        'contributor_id' => $other->id,
+    ]);
+
+    $this->actingAs($editor);
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $version->id)
+        ->call('directDeleteVersion')
+        ->assertForbidden();
+});
+
+test('editor cannot directly delete the official version', function () {
+    $sg = makeSubjectGrade();
+    $editor = makeEditor($sg);
+    $family = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
+        'contributor_id' => $editor->id,
+    ]);
+    $family->update(['official_version_id' => $version->id]);
+
+    $this->actingAs($editor);
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $version->id)
+        ->call('directDeleteVersion')
+        ->assertForbidden();
 });

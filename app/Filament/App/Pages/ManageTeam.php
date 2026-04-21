@@ -10,7 +10,7 @@ class ManageTeam extends Page
 {
     protected string $view = 'filament.app.pages.manage-team';
 
-    protected static ?string $navigationLabel = 'Manage Subject Editors';
+    protected static ?string $navigationLabel = 'Manage Subject';
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
@@ -38,7 +38,7 @@ class ManageTeam extends Page
 
     public function getHeading(): string
     {
-        return 'Manage Subject Editors';
+        return 'Manage Subject';
     }
 
     public function getSubjectGrades(): Collection

@@ -63,6 +63,8 @@ class ViewLessonPlanFamily extends Page
 
     public string $deletionReason = '';
 
+    public bool $showDirectDeleteConfirm = false;
+
     // AI panel state
     public bool $aiPanelOpen = false;
 
@@ -330,7 +332,50 @@ class ViewLessonPlanFamily extends Page
         $this->hasPendingDeletion = true;
 
         Notification::make('deletion-requested')
-            ->title('Deletion request submitted — Site Admins have been notified.')
+            ->title('Deletion request submitted — the contributor, Subject Admin (if assigned), and all Site Admins have been notified.')
+            ->success()
+            ->send();
+    }
+
+    public function directDeleteVersion(VersionService $versionService): void
+    {
+        if (! $this->selectedVersion) {
+            return;
+        }
+
+        $this->authorize('directDelete', $this->selectedVersion);
+
+        $version = $this->selectedVersion;
+        $family = $this->record;
+
+        $version->delete();
+
+        $family->refresh();
+
+        if ($family->versions()->doesntExist()) {
+            $family->delete();
+
+            $this->redirect(LessonPlanFamilyResource::getUrl('index'));
+
+            return;
+        }
+
+        // If deleted version was official, pick a new one.
+        if ((int) $family->official_version_id === $version->id) {
+            $versionService->setOfficialVersion(
+                $family,
+                $versionService->preferredOfficialVersion($family, $version->id)
+            );
+        }
+
+        $this->record = $family->load(['versions.contributor', 'officialVersion', 'latestVersion', 'subjectGrade.subject', 'subjectGrade.subjectAdmin']);
+        $this->selectedVersion = $family->officialVersion ?? $family->latestVersion;
+        $this->versionId = $this->selectedVersion?->id;
+        $this->showDirectDeleteConfirm = false;
+        $this->syncDerivedState();
+
+        Notification::make('version-deleted')
+            ->title('Version deleted.')
             ->success()
             ->send();
     }
@@ -796,11 +841,22 @@ class ViewLessonPlanFamily extends Page
         $sg = $this->record->subjectGrade;
         $version = $this->selectedVersion;
 
+        $linkLabel = $sg->subject->name
+            .' Grade '.$sg->grade
+            .' Day '.$this->record->day
+            .' version '.($version?->version ?? '?');
+
+        $url = $version
+            ? LessonPlanFamilyResource::versionUrl($version)
+            : LessonPlanFamilyResource::getUrl('view', ['record' => $this->record->id]);
+
         return 'Subject: '.$sg->subject->name
             .' Grade '.$sg->grade
             .' Day '.$this->record->day
             .' Version v'.($version?->version ?? '?')."\n"
-            .'Contributor: '.($version?->contributor?->name ?? '—')."\n\n";
+            .'Contributor: '.($version?->contributor?->name ?? '—')."\n\n"
+            .'---'."\n"
+            .'Lesson plan: ['.$linkLabel.']('.$url.')';
     }
 
     // -------------------------------------------------------------------------

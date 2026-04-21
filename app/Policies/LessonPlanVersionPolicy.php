@@ -45,7 +45,10 @@ class LessonPlanVersionPolicy
             || $user->isSubjectAdminFor($subjectGrade);
     }
 
-    /** Request deletion: Subject Admin (own) or Site Admin. */
+    /**
+     * Request deletion: Editor (own subject_grade), Subject Admin (own), or Site Admin.
+     * Editors may request deletion of any version in their subject_grade (even not their own).
+     */
     public function requestDeletion(User $user, LessonPlanVersion $version): bool
     {
         $subjectGrade = $version->family()->first()?->subjectGrade()->first();
@@ -55,7 +58,43 @@ class LessonPlanVersionPolicy
         }
 
         return $user->isSiteAdmin()
-            || $user->isSubjectAdminFor($subjectGrade);
+            || $user->isSubjectAdminFor($subjectGrade)
+            || $user->isEditorFor($subjectGrade);
+    }
+
+    /**
+     * Direct delete (no request): Editor who authored the version in own subject_grade,
+     * Subject Admin for any non-official version in own subject_grade, or Site Admin.
+     * Official versions are protected from direct deletion by Editors and Subject Admins.
+     */
+    public function directDelete(User $user, LessonPlanVersion $version): bool
+    {
+        $family = $version->family()->first();
+        $subjectGrade = $family?->subjectGrade()->first();
+
+        if (! $subjectGrade) {
+            return false;
+        }
+
+        if ($user->isSiteAdmin()) {
+            return true;
+        }
+
+        $isOfficial = $family && (int) $family->official_version_id === $version->id;
+
+        if ($isOfficial) {
+            return false;
+        }
+
+        if ($user->isSubjectAdminFor($subjectGrade)) {
+            return true;
+        }
+
+        if ($user->isEditorFor($subjectGrade)) {
+            return $version->contributor_id === $user->id;
+        }
+
+        return false;
     }
 
     /** Hard delete: Site Admin only. */
@@ -81,20 +120,13 @@ class LessonPlanVersionPolicy
             || $user->canEditSubjectGrade($subjectGrade);
     }
 
-    /** Translate to Swahili preview: Editor, Subject Admin (own), or Site Admin + AI flag. */
+    /** Translate to Swahili preview: any authenticated non-system user + AI flag. */
     public function translate(User $user, LessonPlanVersion $version): bool
     {
         if (! config('features.ai_suggestions')) {
             return false;
         }
 
-        $subjectGrade = $version->family()->first()?->subjectGrade()->first();
-
-        if (! $subjectGrade) {
-            return false;
-        }
-
-        return $user->isSiteAdmin()
-            || $user->canEditSubjectGrade($subjectGrade);
+        return ! $user->is_system;
     }
 }

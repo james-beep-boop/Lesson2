@@ -5,13 +5,17 @@
         $canEdit = $user && $user->can('create', [App\Models\LessonPlanVersion::class, $record]);
         $canTranslate = $user && $selectedVersion && $user->can('translate', $selectedVersion);
         $canMarkOfficial = $user && $selectedVersion && $user->can('markOfficial', $selectedVersion);
+        $isOfficialSelected = $selectedVersion && $record->official_version_id === $selectedVersion->id;
+        $canDirectDelete = $user && $selectedVersion && $user->can('directDelete', $selectedVersion);
+        // requestDeletion button shown when editor is authorized but is NOT the contributor (or has no direct-delete right),
+        // and there is no pending deletion already.
         $canRequestDeletion = $user && $selectedVersion
             && $user->can('requestDeletion', $selectedVersion)
+            && ! $canDirectDelete
             && ! $this->hasPendingDeletion;
         $canAskAi = $user && $selectedVersion && $user->can('askAi', $selectedVersion);
         $canMessage = $user && ! $user->is_system;
         $favorite = $this->userFavorite;
-        $isOfficialSelected = $selectedVersion && $record->official_version_id === $selectedVersion->id;
         $differsFromOfficial = $favorite && $record->official_version_id && $favorite->lesson_plan_version_id !== $record->official_version_id;
     @endphp
 
@@ -327,7 +331,15 @@
                         Save / Send Options
                     </x-filament::button>
 
-                    @if($canRequestDeletion)
+                    @if($canDirectDelete)
+                        <x-filament::button
+                            wire:click="$set('showDirectDeleteConfirm', true)"
+                            color="danger"
+                            icon="heroicon-o-trash"
+                        >
+                            Delete This Version
+                        </x-filament::button>
+                    @elseif($canRequestDeletion)
                         <x-filament::button
                             wire:click="$set('showDeletionForm', true)"
                             color="danger"
@@ -468,6 +480,25 @@
                     </div>
                 </x-filament::section>
             @endif
+        </div>
+        @endif
+
+        {{-- Direct delete confirmation --}}
+        @if($showDirectDeleteConfirm && $selectedVersion)
+        <div class="mt-4" data-noprint>
+            <x-filament::section heading="Delete Version {{ $selectedVersion->version }}">
+                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                    This will permanently delete this version. This action cannot be undone.
+                </p>
+                <div class="flex gap-2">
+                    <x-filament::button wire:click="directDeleteVersion" color="danger" icon="heroicon-o-trash">
+                        Confirm Delete
+                    </x-filament::button>
+                    <x-filament::button wire:click="$set('showDirectDeleteConfirm', false)" color="gray">
+                        Cancel
+                    </x-filament::button>
+                </div>
+            </x-filament::section>
         </div>
         @endif
 

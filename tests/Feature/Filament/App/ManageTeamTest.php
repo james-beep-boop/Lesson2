@@ -2,6 +2,7 @@
 
 use App\Filament\App\Pages\ManageTeam;
 use App\Livewire\SubjectGradeTeamManager;
+use App\Livewire\SubjectGradeVersionsManager;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\User;
@@ -38,7 +39,8 @@ test('manage team page lists all administered subject grades and repeated editor
     $this->actingAs($subjectAdmin);
 
     Livewire::test(ManageTeam::class)
-        ->assertSee('Manage Subject Editors')
+        ->assertSee('Manage Subject')
+        ->assertDontSee('Manage Subject Editors')
         ->assertSee($sg1->subject->name)
         ->assertSee('Grade '.$sg1->grade)
         ->assertSee($sg2->subject->name)
@@ -243,4 +245,112 @@ test('manage team rejects adding an unverified editor', function () {
         ->set('addUserId', $unverifiedUser->id)
         ->call('addEditor')
         ->assertHasErrors(['addUserId']);
+});
+
+// ---------------------------------------------------------------------------
+// Manage Subject label / heading rename (area 4)
+// ---------------------------------------------------------------------------
+
+test('manage team page heading is Manage Subject, not Manage Subject Editors', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ManageTeam::class)
+        ->assertSee('Manage Subject')
+        ->assertDontSee('Manage Subject Editors');
+});
+
+test('manage team navigation label is Manage Subject', function () {
+    expect(ManageTeam::getNavigationLabel())->toBe('Manage Subject');
+});
+
+// ---------------------------------------------------------------------------
+// Subject admin lesson versions table (area 4)
+// ---------------------------------------------------------------------------
+
+test('subject grade versions manager renders version table for subject admin', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(SubjectGradeVersionsManager::class, ['subjectGradeId' => $sg->id])
+        ->assertOk()
+        ->assertSee('Day')
+        ->assertSee('Version')
+        ->assertSee('By')
+        ->assertSee('Date');
+});
+
+test('subject admin can bulk delete non-official versions via versions manager', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    [$family, $v1] = makeFamilyWithVersion($sg);
+    $v2 = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.1',
+    ]);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(SubjectGradeVersionsManager::class, ['subjectGradeId' => $sg->id])
+        ->callTableBulkAction('deleteVersions', [$v1])
+        ->assertNotified();
+
+    expect(LessonPlanVersion::find($v1->id))->toBeNull();
+    expect(LessonPlanFamily::find($family->id))->not->toBeNull();
+});
+
+test('subject admin cannot bulk delete official versions via versions manager', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $family->update(['official_version_id' => $version->id]);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(SubjectGradeVersionsManager::class, ['subjectGradeId' => $sg->id])
+        ->callTableBulkAction('deleteVersions', [$version])
+        ->assertNotified();
+
+    // Official version must be preserved.
+    expect(LessonPlanVersion::find($version->id))->not->toBeNull();
+});
+
+test('subject admin can set official version via versions manager', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(SubjectGradeVersionsManager::class, ['subjectGradeId' => $sg->id])
+        ->callTableAction('toggleOfficial', $version)
+        ->assertNotified();
+
+    expect($family->fresh()->official_version_id)->toBe($version->id);
+});
+
+test('non-subject-admin cannot mount versions manager', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(SubjectGradeVersionsManager::class, ['subjectGradeId' => $sg->id])
+        ->assertForbidden();
+});
+
+test('manage subject page shows versions table sections alongside editor sections', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ManageTeam::class)
+        ->assertSee($sg->subject->name.', Grade '.$sg->grade.' — Lesson Plan Versions');
 });

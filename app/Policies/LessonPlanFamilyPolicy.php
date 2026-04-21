@@ -19,14 +19,17 @@ class LessonPlanFamilyPolicy
         return $user->isSiteAdmin();
     }
 
-    /** Subject Admin (own) or Site Admin may request deletion. */
+    /**
+     * There is no user-facing "delete family" action.
+     * Families are deleted automatically when their last version is removed.
+     * These methods exist for completeness but are not called by any controller or page.
+     */
     public function requestDeletion(User $user, LessonPlanFamily $family): bool
     {
         return $user->isSiteAdmin()
             || $user->isSubjectAdminFor($family->subjectGrade);
     }
 
-    /** Only Site Admin may hard-delete. */
     public function forceDelete(User $user, LessonPlanFamily $family): bool
     {
         return $user->isSiteAdmin();

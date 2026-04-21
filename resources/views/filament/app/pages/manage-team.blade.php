@@ -25,6 +25,11 @@
                 :subject-grade-id="$subjectGrade->id"
                 :key="'subject-grade-team-manager-'.$subjectGrade->id"
             />
+
+            <livewire:subject-grade-versions-manager
+                :subject-grade-id="$subjectGrade->id"
+                :key="'subject-grade-versions-manager-'.$subjectGrade->id"
+            />
         @endforeach
     </div>
 </x-filament-panels::page>

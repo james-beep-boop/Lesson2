@@ -450,13 +450,13 @@ Both packages are required in `composer.json`. Fidelity limits apply at each ste
 | Favorite a specific version / change favorite | ✓ | ✓ | ✓ | ✓ |
 | Use inbox / send messages | ✓ | ✓ | ✓ | ✓ |
 | Use "Ask AI" in editor | — | ✓ | ✓ | ✓ |
-| Use "Translate to Swahili" preview | — | own subject_grades | own subject_grade | ✓ |
+| Use "Translate to Swahili" preview | ✓ | ✓ | ✓ | ✓ |
 | Create new lesson plan (new family) | — | — | own subject_grade | ✓ |
 | Add new version to existing family (edit) | — | own subject_grades | own subject_grades | ✓ |
 | Mark version official | — | — | own subject_grades | ✓ |
 | Promote/demote Teacher ↔ Editor | — | — | own subject_grades | ✓ |
-| Request deletion of version | — | — | own subject_grades | ✓ |
-| Hard-delete version directly | — | — | — | ✓ |
+| Request deletion of version | — | own subject_grades | own subject_grades | ✓ |
+| Delete non-official version directly | — | own contributed versions in own subject_grades | own subject_grades | ✓ |
 | Manage users | — | — | — | ✓ |
 | Assign subject_grades to users | — | — | — | ✓ |
 | Assign / change Subject Administrators | — | — | — | ✓ |
@@ -469,6 +469,8 @@ Both packages are required in `composer.json`. Fidelity limits apply at each ste
 ### Overview
 
 Editors, Subject Administrators, and Site Administrators see an **"Ask AI"** button on the lesson-plan edit panel. Teachers (read-only users) do not see this button.
+
+The **"Translate to Swahili"** preview is broader: any logged-in non-system user may use it when the global AI feature flag is on.
 
 ### UX flow
 
@@ -566,14 +568,14 @@ class LessonPlanTranslator implements Agent {
 
 ### Translation feature (English → Swahili)
 
-Current implemented behavior: Editors, Subject Administrators, and Site Administrators can open an AI-powered Swahili **preview** for lesson plans they are allowed to edit when `AI_SUGGESTIONS_ENABLED` is on.
+Current implemented behavior: any logged-in non-system user can open an AI-powered Swahili **preview** for a lesson-plan version when `AI_SUGGESTIONS_ENABLED` is on.
 
 Planned persisted translation behavior remains more restrictive: if or when the app saves a translated lesson plan as a new Swahili family/version, that write path should remain Subject Admin or Site Admin only because it can create new families.
 
 **UX flow:**
 
 1. User views a lesson-plan version (language = English).
-2. A **"Translate to Swahili"** button is visible to authorized users.
+2. A **"Translate to Swahili"** button is visible to any logged-in non-system user while the feature flag is on.
 3. User clicks the button. The current version's Markdown content is sent to `LessonPlanTranslator`.
 4. The translated content appears in a **review panel**.
 5. The user may review, print/save as PDF, or email the translation preview.
@@ -585,15 +587,16 @@ Persisted translation save flow is a later step, not the current implemented beh
 
 - Preview translation never modifies the English source version.
 - Preview translation does not create or update database records.
-- The "Translate to Swahili" preview button requires `config('features.ai_suggestions') === true` and an edit-capable role in the relevant `subject_grade`.
-- Teacher-only users do not see the button.
+- The "Translate to Swahili" preview button requires `config('features.ai_suggestions') === true`.
+- Any authenticated non-system user who can view lesson plans may use the preview.
+- "Ask AI" remains restricted to Editors, Subject Admins, and Site Admins with edit rights for the relevant `subject_grade`.
 - If persisted translation save is implemented later, the version inheritance rule remains: the first saved Swahili version should inherit the English source version number, with fallback to a normal bump only on conflict.
 
 **Testing:**
 
 - Translation preview writes nothing to the database
 - Source English version is unchanged after translation preview
-- Button is hidden from Teachers
+- Button is visible to Teachers when the feature flag is on
 - Button is hidden when `config('features.ai_suggestions')` is false
 - Use `LessonPlanTranslator::fake()` in tests
 
@@ -601,13 +604,18 @@ Persisted translation save flow is a later step, not the current implemented beh
 
 ## 13. Deletion Workflow
 
-1. A **Subject Administrator** may request deletion of a lesson-plan version within their subject_grade.
-2. The deletion request creates an **in-app message** from the requesting Subject Administrator to:
-   - The version's contributor
-   - All Site Administrators
-3. A **Site Administrator** reviews and may **hard-delete** directly from the admin panel.
-4. Editors do not request or perform deletion.
-5. A `deletion_requests` record is created and linked to the relevant version.
+1. An **Editor** may directly delete a lesson-plan version only when all of the following are true:
+   - the version is in a `subject_grade` the editor is currently authorized to edit
+   - the editor is the version's contributor
+   - the version is **not** the official version
+2. An **Editor** who is authorized for the relevant `subject_grade` but is not the contributor may submit a **deletion request** instead of deleting directly.
+3. A **Subject Administrator** may directly delete any **non-official** lesson-plan version within subject_grades they manage.
+4. Official versions are protected from direct deletion by Editors and Subject Administrators. A **Site Administrator** remains the only role that may directly remove an official version.
+5. Every deletion request creates an **in-app message** from the requesting user to:
+   - the version's contributor, unless the contributor made the request
+   - the relevant Subject Administrator, if one exists and is not the requester
+   - all Site Administrators, even when a Subject Administrator exists, excluding the requester
+6. A `deletion_requests` record is created and linked to the relevant version.
 
 ---
 
@@ -617,6 +625,7 @@ Persisted translation save flow is a later step, not the current implemented beh
 - Every message has a `from_user_id` and `to_user_id`.
 - Admin-initiated messages (e.g., deletion requests) appear to come **from the admin who took the action** — not from System.
 - System-generated messages (errors, duplicate alerts, etc.) use `from_user_id` = the seeded System user.
+- Lesson-context messages generated from a lesson-plan view include a clickable, human-readable lesson link at the bottom using the visible label format **"Subject Grade Day version x.y.z"**.
 - **Unread message count** appears in the top navigation as a badge/indicator, updated in real time or on page load.
 - No threading for MVP.
 - The System user never appears as a selectable recipient in the compose UI.
@@ -750,8 +759,8 @@ Required test coverage:
 **AI suggestions and translation**
 - "Ask AI" button and "Translate to Swahili" button do not render when `config('features.ai_suggestions')` is false
 - When the flag is on: "Ask AI" is visible to Editors, Subject Admins, and Site Admins with edit rights for the relevant `subject_grade`
-- When the flag is on: translation preview is visible to Editors, Subject Admins, and Site Admins with edit rights for the relevant `subject_grade`
-- Teachers see neither button regardless of flag state
+- When the flag is on: translation preview is visible to all logged-in non-system users
+- Teachers do not see "Ask AI", but they do see translation preview when the flag is on
 - Submitting a prompt returns a suggestion response (use `LessonPlanAdvisor::fake()` in tests; assert with `LessonPlanAdvisor::assertPrompted(...)` — never make real API calls in tests)
 - Translation preview writes nothing to the database unless a future persisted-save workflow is explicitly added
 - AI response does not auto-modify the document content

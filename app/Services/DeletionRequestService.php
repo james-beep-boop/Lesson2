@@ -32,33 +32,44 @@ class DeletionRequestService
                 .($reason ? "\n".'Reason: '.$reason."\n" : '')
                 ."\n".'[deletion_request:'.$deletionRequest->id.']';
 
+            // Collect recipient IDs to avoid sending duplicate messages.
+            $notifiedIds = [];
+
             // Notify contributor (if different from requestedBy).
-            if ($version->contributor_id !== $requestedBy->id) {
-                $message = new Message([
-                    'to_user_id' => $version->contributor_id,
-                    'subject' => $subject,
-                    'body' => $body,
-                ]);
-                $message->from_user_id = $requestedBy->id;
-                $message->save();
+            if ($version->contributor_id && $version->contributor_id !== $requestedBy->id) {
+                $this->sendMessage($version->contributor_id, $requestedBy->id, $subject, $body);
+                $notifiedIds[] = $version->contributor_id;
             }
 
-            // Notify all Site Admins.
+            // Notify Subject Admin (if exists, not the requester, and not already notified).
+            $subjectAdminId = $version->family?->subjectGrade?->subject_admin_user_id;
+            if ($subjectAdminId && $subjectAdminId !== $requestedBy->id && ! in_array($subjectAdminId, $notifiedIds)) {
+                $this->sendMessage($subjectAdminId, $requestedBy->id, $subject, $body);
+                $notifiedIds[] = $subjectAdminId;
+            }
+
+            // Notify all Site Admins (always, even when Subject Admin exists).
             $siteAdmins = User::role('site_administrator')->get();
             foreach ($siteAdmins as $admin) {
-                if ($admin->id !== $requestedBy->id) {
-                    $message = new Message([
-                        'to_user_id' => $admin->id,
-                        'subject' => $subject,
-                        'body' => $body,
-                    ]);
-                    $message->from_user_id = $requestedBy->id;
-                    $message->save();
+                if ($admin->id !== $requestedBy->id && ! in_array($admin->id, $notifiedIds)) {
+                    $this->sendMessage($admin->id, $requestedBy->id, $subject, $body);
+                    $notifiedIds[] = $admin->id;
                 }
             }
 
             return $deletionRequest;
         });
+    }
+
+    private function sendMessage(int $toId, int $fromId, string $subject, string $body): void
+    {
+        $message = new Message([
+            'to_user_id' => $toId,
+            'subject' => $subject,
+            'body' => $body,
+        ]);
+        $message->from_user_id = $fromId;
+        $message->save();
     }
 
     private function planLabel(LessonPlanVersion $version): string
