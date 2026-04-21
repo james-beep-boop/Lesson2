@@ -2,52 +2,75 @@
 
 use App\Services\GuideManualService;
 use Illuminate\Support\Facades\File;
+use Spatie\Permission\Models\Role;
+
+beforeEach(function () {
+    Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
+});
 
 test('manual download route returns 403 for unauthenticated requests', function () {
     $this->get(route('guide.manual.download', ['lang' => 'en']))
         ->assertForbidden();
 });
 
-test('english manual download saves markdown and pdf files and returns a download', function () {
+test('english manual download returns a download with only the sections visible to the user', function () {
     $this->actingAs(makeTeacher());
 
     $manuals = app(GuideManualService::class);
 
-    File::delete([
-        $manuals->markdownPath('en'),
-        $manuals->pdfPath('en'),
-    ]);
-
-    $this->get(route('guide.manual.download', ['lang' => 'en']))
+    $response = $this->get(route('guide.manual.download', ['lang' => 'en']))
         ->assertOk()
         ->assertDownload($manuals->pdfFilename('en'));
 
-    expect(File::exists($manuals->markdownPath('en')))->toBeTrue();
-    expect(File::exists($manuals->pdfPath('en')))->toBeTrue();
-    expect(File::get($manuals->markdownPath('en')))
+    $teacherMarkdown = $manuals->markdown('en');
+
+    expect($teacherMarkdown)
         ->toContain('# Kenya Lesson Plan Manual')
-        ->toContain('## Viewing Lessons');
+        ->toContain('## Viewing Lessons')
+        ->toContain('## Editing Lessons')
+        ->toContain('## Official Versions')
+        ->toContain('## Deletion Requests')
+        ->toContain('## Administration');
+
+    expect($response->headers->get('content-type'))->toContain('application/pdf');
 });
 
-test('swahili manual download saves markdown and pdf files and returns a download', function () {
+test('swahili manual download returns the full manual for all users', function () {
     $this->actingAs(makeTeacher());
 
     $manuals = app(GuideManualService::class);
-
-    File::delete([
-        $manuals->markdownPath('sw'),
-        $manuals->pdfPath('sw'),
-    ]);
 
     $this->get(route('guide.manual.download', ['lang' => 'sw']))
         ->assertOk()
         ->assertDownload($manuals->pdfFilename('sw'));
 
+    expect($manuals->markdown('sw'))
+        ->toContain('# Mwongozo wa Mpango wa Somo wa Kenya')
+        ->toContain('## Kutazama Masomo')
+        ->toContain('## Kuhariri Masomo')
+        ->toContain('## Matoleo Rasmi')
+        ->toContain('## Maombi ya Kufuta')
+        ->toContain('## Utawala');
+});
+
+test('manual service saves canonical manual files into storage', function () {
+    $manuals = app(GuideManualService::class);
+
+    File::delete([
+        $manuals->markdownPath('en'),
+        $manuals->pdfPath('en'),
+        $manuals->markdownPath('sw'),
+        $manuals->pdfPath('sw'),
+    ]);
+
+    $manuals->generateAndSaveAll('en');
+    $manuals->generateAndSaveAll('sw');
+
+    expect($manuals->outputDirectory())->toBe(storage_path('app/manuals'));
+    expect(File::exists($manuals->markdownPath('en')))->toBeTrue();
+    expect(File::exists($manuals->pdfPath('en')))->toBeTrue();
     expect(File::exists($manuals->markdownPath('sw')))->toBeTrue();
     expect(File::exists($manuals->pdfPath('sw')))->toBeTrue();
-    expect(File::get($manuals->markdownPath('sw')))
-        ->toContain('# Mwongozo wa Mpango wa Somo wa Kenya')
-        ->toContain('## Kutazama Masomo');
 });
 
 test('manual download route returns 404 for invalid language', function () {

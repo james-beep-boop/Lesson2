@@ -30,35 +30,7 @@ class Guide extends Page
 
     public function sections(): array
     {
-        $user = auth()->user();
-
-        if (! $user) {
-            return [];
-        }
-
-        $all = GuideContent::sections($this->language);
-
-        return array_filter($all, function (array $section) use ($user): bool {
-            if ($section['roles'] === null) {
-                return true;
-            }
-
-            foreach ($section['roles'] as $role) {
-                if ($role === 'site_administrator' && $user->isSiteAdmin()) {
-                    return true;
-                }
-
-                if ($role === 'subject_admin' && $user->subjectGradesAsAdmin()->exists()) {
-                    return true;
-                }
-
-                if ($role === 'editor' && $user->subjectGrades()->wherePivot('role', 'editor')->exists()) {
-                    return true;
-                }
-            }
-
-            return false;
-        });
+        return GuideContent::visibleSections(auth()->user(), $this->language);
     }
 
     public function orientationText(): string

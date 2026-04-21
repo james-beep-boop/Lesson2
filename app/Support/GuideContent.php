@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\User;
+
 class GuideContent
 {
     /**
@@ -11,6 +13,41 @@ class GuideContent
     public static function sections(string $lang = 'en'): array
     {
         return $lang === 'sw' ? static::swahili() : static::english();
+    }
+
+    public static function visibleSections(?User $user, string $lang = 'en'): array
+    {
+        if (! $user) {
+            return [];
+        }
+
+        return array_values(array_filter(
+            static::sections($lang),
+            fn (array $section): bool => static::userCanSeeSection($user, $section),
+        ));
+    }
+
+    public static function userCanSeeSection(User $user, array $section): bool
+    {
+        if ($section['roles'] === null) {
+            return true;
+        }
+
+        foreach ($section['roles'] as $role) {
+            if ($role === 'site_administrator' && $user->isSiteAdmin()) {
+                return true;
+            }
+
+            if ($role === 'subject_admin' && $user->subjectGradesAsAdmin()->exists()) {
+                return true;
+            }
+
+            if ($role === 'editor' && $user->subjectGrades()->wherePivot('role', 'editor')->exists()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function english(): array

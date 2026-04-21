@@ -80,7 +80,7 @@
     <div class="section">
         <h2>{{ $section['title'] }}</h2>
         <div class="content">
-            {!! (new \League\CommonMark\GithubFlavoredMarkdownConverter(['html_input' => 'allow']))->convert($section['body'] ?? '') !!}
+            {!! (new \League\CommonMark\GithubFlavoredMarkdownConverter(['html_input' => 'strip']))->convert($section['body'] ?? '') !!}
         </div>
     </div>
 @endforeach

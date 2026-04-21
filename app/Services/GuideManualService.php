@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\Support\GuideContent;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\File;
@@ -15,7 +16,7 @@ class GuideManualService
 
     public function outputDirectory(): string
     {
-        return base_path('output/manuals');
+        return storage_path('app/manuals');
     }
 
     public function markdownFilename(string $lang = 'en'): string
@@ -38,9 +39,9 @@ class GuideManualService
         return $this->outputDirectory().'/'.$this->pdfFilename($lang);
     }
 
-    public function markdown(string $lang = 'en'): string
+    public function markdown(string $lang = 'en', ?User $user = null): string
     {
-        $sections = GuideContent::sections($lang);
+        $sections = $user ? GuideContent::visibleSections($user, $lang) : GuideContent::sections($lang);
         $intro = $lang === 'sw'
             ? 'Mwongozo huu unaeleza jinsi ya kutumia Lesson2 kutazama, kuhariri, kulinganisha, kushiriki, na kusimamia mipango ya masomo nchini Kenya.'
             : 'This manual explains how to use Lesson2 to view, edit, compare, share, and administer lesson plans in Kenya.';
@@ -57,17 +58,17 @@ class GuideManualService
         return implode("\n", $markdown)."\n";
     }
 
-    public function renderPdf(string $lang = 'en'): string
+    public function renderPdf(string $lang = 'en', ?User $user = null): string
     {
         return Pdf::loadView('pdf.guide-manual', [
             'title' => $this->title($lang),
             'language' => $lang,
-            'sections' => GuideContent::sections($lang),
+            'sections' => $user ? GuideContent::visibleSections($user, $lang) : GuideContent::sections($lang),
             'exportedAt' => now(),
         ])->output();
     }
 
-    public function save(string $lang = 'en'): void
+    public function generateAndSave(string $lang = 'en'): void
     {
         File::ensureDirectoryExists($this->outputDirectory());
 
@@ -78,9 +79,9 @@ class GuideManualService
     /**
      * @return array{markdown:string,pdf:string}
      */
-    public function ensureSaved(string $lang = 'en'): array
+    public function generateAndSaveAll(string $lang = 'en'): array
     {
-        $this->save($lang);
+        $this->generateAndSave($lang);
 
         return [
             'markdown' => $this->markdownPath($lang),
