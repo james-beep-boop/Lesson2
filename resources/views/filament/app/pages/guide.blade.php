@@ -28,7 +28,7 @@
         {{-- Guide sections --}}
         <div class="space-y-4">
             @foreach($this->sections() as $section)
-                <x-filament::section :heading="$section['title']" collapsible>
+                <x-filament::section :heading="$section['title']" collapsible collapsed>
                     <div class="prose prose-sm max-w-none dark:prose-invert">
                         @markdown($section['body'])
                     </div>

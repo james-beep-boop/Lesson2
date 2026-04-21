@@ -28,10 +28,6 @@ class Guide extends Page
         return 'User Guide';
     }
 
-    /**
-     * Return the guide sections for the currently selected language,
-     * filtered by the authenticated user's highest role.
-     */
     public function sections(): array
     {
         $user = auth()->user();
@@ -65,10 +61,6 @@ class Guide extends Page
         });
     }
 
-    /**
-     * A short role-specific heading shown at the top of the guide,
-     * so users immediately understand what they can do in the system.
-     */
     public function orientationText(): string
     {
         return match (auth()->user()?->role_label) {

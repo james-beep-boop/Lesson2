@@ -31,7 +31,8 @@ test('guide shows English content by default', function () {
     $this->actingAs(makeTeacher());
 
     Livewire::test(Guide::class)
-        ->assertSee('Viewing Lessons');
+        ->assertSee('Viewing Lessons')
+        ->assertSeeHtml('collapsed');
 });
 
 test('guide uses full content width', function () {
@@ -43,17 +44,21 @@ test('guide uses full content width', function () {
 });
 
 test('guide shows the english sections in the new order', function () {
-    $this->actingAs(makeTeacher());
+    $this->actingAs(makeSiteAdmin());
 
     $sections = Livewire::test(Guide::class)->instance()->sections();
 
     expect(array_column($sections, 'title'))->toBe([
         'Viewing Lessons',
-        'User Types and Permissions',
+        'Editing Lessons',
         'Comparing Versions',
+        'Official Versions',
         'Favorites',
-        'Messaging',
+        'Messaging Other Users',
         'Print & Export',
+        'Deletion Requests',
+        'User Types and Permissions',
+        'Administration',
     ]);
 });
 
@@ -67,7 +72,7 @@ test('switching to Swahili shows Swahili content', function () {
 });
 
 test('guide shows the swahili sections in the new order', function () {
-    $this->actingAs(makeTeacher());
+    $this->actingAs(makeSiteAdmin());
 
     $sections = Livewire::test(Guide::class)
         ->call('switchLanguage', 'sw')
@@ -76,11 +81,15 @@ test('guide shows the swahili sections in the new order', function () {
 
     expect(array_column($sections, 'title'))->toBe([
         'Kutazama Masomo',
-        'Aina za Watumiaji na Ruhusa',
+        'Kuhariri Masomo',
         'Kulinganisha Matoleo',
+        'Matoleo Rasmi',
         'Vipendwa',
-        'Ujumbe',
+        'Ujumbe kwa Watumiaji Wengine',
         'Chapisha na Hamisha',
+        'Maombi ya Kufuta',
+        'Aina za Watumiaji na Ruhusa',
+        'Utawala',
     ]);
 });
 
@@ -103,6 +112,8 @@ test('teacher sees the new user types section', function () {
         ->toContain('User Types and Permissions');
     expect(array_column($component->instance()->sections(), 'title'))
         ->not->toContain('Editing Lessons');
+    expect(array_column($component->instance()->sections(), 'title'))
+        ->not->toContain('Official Versions');
 });
 
 test('site administrator sees admin-only sections', function () {
