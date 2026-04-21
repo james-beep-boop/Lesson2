@@ -16,7 +16,8 @@ test('guide page renders for authenticated users', function () {
 
     Livewire::test(Guide::class)
         ->assertOk()
-        ->assertSee('Guide');
+        ->assertSee('Guide')
+        ->assertSee('Download Manual');
 });
 
 test('guide defaults to English language', function () {
@@ -206,4 +207,18 @@ test('switchLanguage ignores invalid language codes', function () {
         ->call('switchLanguage', 'fr');
 
     expect($component->get('language'))->toBe('en');
+});
+
+test('manual download url follows the selected guide language', function () {
+    $this->actingAs(makeTeacher());
+
+    $component = Livewire::test(Guide::class);
+
+    expect($component->instance()->manualDownloadUrl())
+        ->toBe(route('guide.manual.download', ['lang' => 'en']));
+
+    $component->call('switchLanguage', 'sw');
+
+    expect($component->instance()->manualDownloadUrl())
+        ->toBe(route('guide.manual.download', ['lang' => 'sw']));
 });

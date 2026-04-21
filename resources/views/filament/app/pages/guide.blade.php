@@ -22,6 +22,13 @@
                 >
                     Swahili
                 </x-filament::button>
+                <x-filament::button
+                    tag="a"
+                    :href="$this->manualDownloadUrl()"
+                    color="gray"
+                >
+                    Download Manual
+                </x-filament::button>
             </div>
         </div>
 

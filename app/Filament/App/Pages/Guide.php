@@ -75,4 +75,9 @@ class Guide extends Page
     {
         $this->language = in_array($lang, ['en', 'sw']) ? $lang : 'en';
     }
+
+    public function manualDownloadUrl(): string
+    {
+        return route('guide.manual.download', ['lang' => $this->language]);
+    }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GuideManualController;
 use App\Http\Controllers\LessonPlanDocxController;
 use App\Http\Controllers\LessonPlanPdfController;
 use Filament\Facades\Filament;
@@ -36,3 +37,7 @@ Route::get('/lesson-pdf/{family}/{version}', [LessonPlanPdfController::class, 'd
 Route::get('/lesson-docx/{family}/{version}', [LessonPlanDocxController::class, 'download'])
     ->middleware(['web'])
     ->name('lesson-plan.docx');
+
+Route::get('/guide-manual/{lang}', [GuideManualController::class, 'download'])
+    ->middleware(['web'])
+    ->name('guide.manual.download');
