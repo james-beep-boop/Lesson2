@@ -672,6 +672,26 @@ test('translation download returns a PDF file with the translation filename', fu
         ->assertFileDownloaded($expectedFilename, 'fake-pdf-bytes', 'application/pdf');
 });
 
+test('translation print preparation dispatches the inline PDF URL event', function () {
+    config(['features.ai_suggestions' => true]);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->set('translationComplete', true)
+        ->set('translatedContent', 'Mpango wa Somo')
+        ->call('preparePrintTranslation')
+        ->assertDispatched('open-translation-print', function (string $name, array $params): bool {
+            $url = $params['url'] ?? null;
+
+            return is_string($url) && str_contains($url, '/translation-preview-pdf/');
+        });
+});
+
 test('translation email action validates the recipient email address', function () {
     config(['features.ai_suggestions' => true]);
 
@@ -694,6 +714,7 @@ test('translation email action sends the translated PDF to the specified address
     config(['features.ai_suggestions' => true]);
     Mail::fake();
     $this->mock(LessonPlanPdfService::class)
+        ->makePartial()
         ->shouldReceive('renderTranslation')
         ->once()
         ->andReturn('fake-pdf-bytes');

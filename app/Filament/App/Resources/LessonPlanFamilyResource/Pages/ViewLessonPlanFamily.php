@@ -23,8 +23,10 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -579,6 +581,34 @@ class ViewLessonPlanFamily extends Page
             ));
     }
 
+    /**
+     * Prepare a short-lived inline PDF URL for browser printing.
+     */
+    public function preparePrintTranslation(): void
+    {
+        abort_unless(auth()->check(), 403);
+
+        if (! $this->selectedVersion) {
+            return;
+        }
+
+        $this->authorize('translate', $this->selectedVersion);
+
+        if (! $this->canUseTranslatedPreviewActions()) {
+            return;
+        }
+
+        $token = (string) Str::uuid();
+
+        Cache::put("translation-preview-pdf:{$token}", [
+            'user_id' => auth()->id(),
+            'lesson_plan_version_id' => $this->selectedVersion->id,
+            'translated_content' => $this->translatedContent,
+        ], now()->addMinutes(5));
+
+        $this->dispatch('open-translation-print', url: route('lesson-plan.translation-preview-pdf', ['token' => $token]));
+    }
+
     public function downloadTranslationPdf(): ?StreamedResponse
     {
         abort_unless(auth()->check(), 403);
@@ -593,20 +623,12 @@ class ViewLessonPlanFamily extends Page
             return null;
         }
 
-        $version = $this->selectedVersion;
-        set_time_limit(60);
-
         try {
-            $pdf = app(LessonPlanPdfService::class);
-            $pdfContent = $pdf->renderTranslation(
-                $version->family,
-                $version,
-                $this->translatedContent,
-            );
+            ['bytes' => $pdfContent, 'filename' => $filename] = $this->buildTranslationPdf();
 
             return response()->streamDownload(function () use ($pdfContent): void {
                 echo $pdfContent;
-            }, $pdf->translationFilename($version), [
+            }, $filename, [
                 'Content-Type' => 'application/pdf',
             ]);
         } catch (\Throwable $e) {
@@ -676,24 +698,15 @@ class ViewLessonPlanFamily extends Page
 
         $this->authorize('translate', $this->selectedVersion);
 
-        if (! $this->translatedContent) {
+        if (! $this->canUseTranslatedPreviewActions()) {
             return;
         }
 
-        $version = $this->selectedVersion;
-        $version->load(['family.subjectGrade.subject', 'contributor']);
-
-        set_time_limit(60);
-
         try {
-            $pdfContent = app(LessonPlanPdfService::class)->renderTranslation(
-                $version->family,
-                $version,
-                $this->translatedContent,
-            );
+            ['bytes' => $pdfContent] = $this->buildTranslationPdf();
 
             Mail::to($emailTo)->send(new LessonPlanPdfMail(
-                version: $version,
+                version: $this->selectedVersion,
                 pdfContent: $pdfContent,
                 senderName: auth()->user()->name,
                 customMessage: 'Swahili translation — preview only, not saved to database.'
@@ -711,6 +724,29 @@ class ViewLessonPlanFamily extends Page
                 ->danger()
                 ->send();
         }
+    }
+
+    /**
+     * @return array{bytes: string, filename: string}
+     */
+    protected function buildTranslationPdf(): array
+    {
+        /** @var LessonPlanVersion $version */
+        $version = $this->selectedVersion;
+        $version->loadMissing(['family.subjectGrade.subject', 'contributor']);
+
+        set_time_limit(60);
+
+        $pdf = app(LessonPlanPdfService::class);
+
+        return [
+            'bytes' => $pdf->renderTranslation(
+                $version->family,
+                $version,
+                $this->translatedContent,
+            ),
+            'filename' => $pdf->translationFilename($version),
+        ];
     }
 
     public function submitAiPrompt(): void

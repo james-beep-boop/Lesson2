@@ -4,7 +4,9 @@ use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFami
 use App\Mail\LessonPlanDocxMail;
 use App\Mail\LessonPlanPdfMail;
 use App\Models\LessonPlanVersion;
+use App\Services\LessonPlanPdfService;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -58,6 +60,69 @@ test('PDF download route returns PDF response for valid family and version', fun
 
     $response->assertOk();
     $response->assertHeader('content-type', 'application/pdf');
+});
+
+test('translation preview PDF route returns 403 for unauthenticated requests', function () {
+    $token = 'preview-token';
+    $sg = makeSubjectGrade();
+    [, $version] = makeFamilyWithVersion($sg);
+
+    Cache::put("translation-preview-pdf:{$token}", [
+        'user_id' => 999999,
+        'lesson_plan_version_id' => $version->id,
+        'translated_content' => 'Mpango wa Somo',
+    ], now()->addMinutes(5));
+
+    $this->get(route('lesson-plan.translation-preview-pdf', ['token' => $token]))
+        ->assertForbidden();
+});
+
+test('translation preview PDF route returns 403 for the wrong authenticated user', function () {
+    config(['features.ai_suggestions' => true]);
+    $token = 'preview-token';
+    $sg = makeSubjectGrade();
+    [, $version] = makeFamilyWithVersion($sg);
+    $owner = makeEditor($sg);
+
+    Cache::put("translation-preview-pdf:{$token}", [
+        'user_id' => $owner->id,
+        'lesson_plan_version_id' => $version->id,
+        'translated_content' => 'Mpango wa Somo',
+    ], now()->addMinutes(5));
+
+    $this->actingAs(makeTeacher());
+
+    $this->get(route('lesson-plan.translation-preview-pdf', ['token' => $token]))
+        ->assertForbidden();
+});
+
+test('translation preview PDF route returns an inline PDF for a valid cached preview', function () {
+    config(['features.ai_suggestions' => true]);
+    $token = 'preview-token';
+    $sg = makeSubjectGrade();
+    [, $version] = makeFamilyWithVersion($sg);
+    $user = makeEditor($sg);
+
+    Cache::put("translation-preview-pdf:{$token}", [
+        'user_id' => $user->id,
+        'lesson_plan_version_id' => $version->id,
+        'translated_content' => 'Mpango wa Somo',
+    ], now()->addMinutes(5));
+
+    $this->mock(LessonPlanPdfService::class)
+        ->makePartial()
+        ->shouldReceive('renderTranslation')
+        ->once()
+        ->andReturn('fake-pdf-bytes');
+
+    $this->actingAs($user);
+
+    $response = $this->get(route('lesson-plan.translation-preview-pdf', ['token' => $token]));
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+    $response->assertHeader('content-disposition', 'inline; filename="'.(new LessonPlanPdfService)->translationFilename($version).'"');
+    expect($response->getContent())->toBe('fake-pdf-bytes');
 });
 
 // ---------------------------------------------------------------------------
@@ -236,4 +301,71 @@ test('email DOCX modal closes on success', function () {
         ->call('sendEmailDocx');
 
     expect($component->get('showEmailDocxModal'))->toBeFalse();
+});
+
+test('lesson plan PDF view includes the shared copyright footer', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $html = view('pdf.lesson-plan', [
+        'family' => $family,
+        'version' => $version,
+        'exportedAt' => now(),
+    ])->render();
+
+    expect($html)
+        ->toContain('Copyright')
+        ->toContain('ARES Education')
+        ->toContain('https://areseducation.org')
+        ->toContain('CC BY-SA 4.0')
+        ->toContain('https://creativecommons.org/licenses/by-sa/4.0/deed.en')
+        ->toContain('Adapt, transform, redistribute, given appropriate attribution')
+        ->toContain('aria-label="Creative Commons"')
+        ->toContain('aria-label="Attribution"')
+        ->toContain('aria-label="Share Alike"');
+});
+
+test('translation PDF view includes the shared copyright footer', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $html = view('pdf.translation', [
+        'family' => $family,
+        'sourceVersion' => $version,
+        'translatedContent' => 'Mpango wa Somo',
+        'exportedAt' => now(),
+    ])->render();
+
+    expect($html)
+        ->toContain('Copyright')
+        ->toContain('ARES Education')
+        ->toContain('https://areseducation.org')
+        ->toContain('CC BY-SA 4.0')
+        ->toContain('https://creativecommons.org/licenses/by-sa/4.0/deed.en')
+        ->toContain('Adapt, transform, redistribute, given appropriate attribution')
+        ->toContain('aria-label="Creative Commons"')
+        ->toContain('aria-label="Attribution"')
+        ->toContain('aria-label="Share Alike"');
+});
+
+test('guide manual PDF view includes the shared copyright footer', function () {
+    $html = view('pdf.guide-manual', [
+        'language' => 'en',
+        'title' => 'Kenya Lesson Plan Manual',
+        'sections' => [
+            ['title' => 'Overview', 'body' => 'Guide body'],
+        ],
+        'exportedAt' => now(),
+    ])->render();
+
+    expect($html)
+        ->toContain('Copyright')
+        ->toContain('ARES Education')
+        ->toContain('https://areseducation.org')
+        ->toContain('CC BY-SA 4.0')
+        ->toContain('https://creativecommons.org/licenses/by-sa/4.0/deed.en')
+        ->toContain('Adapt, transform, redistribute, given appropriate attribution')
+        ->toContain('aria-label="Creative Commons"')
+        ->toContain('aria-label="Attribution"')
+        ->toContain('aria-label="Share Alike"');
 });

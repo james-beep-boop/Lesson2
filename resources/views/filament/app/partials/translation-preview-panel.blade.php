@@ -1,6 +1,5 @@
 @if($translationPanelOpen)
     {{--
-        Outer div provides the printTranslation() Alpine helper.
         Translation starts once when the panel mounts, which keeps the request
         lifecycle aligned with the visible UI state.
     --}}
@@ -15,30 +14,16 @@
 
                 this.started = true;
                 this.$nextTick(() => $wire.translatePreview());
-            },
-            printTranslation() {
-                const el = document.getElementById('translation-printable');
-                if (!el) return;
-                const w = window.open('', '_blank', 'width=820,height=640');
-                w.document.write(
-                    '<!DOCTYPE html><html><head><title>Swahili Translation<\/title>'
-                    + '<style>body{font-family:Georgia,serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.7}'
-                    + 'h1,h2,h3{margin-top:1.5em}table{border-collapse:collapse;width:100%}'
-                    + 'td,th{border:1px solid #ccc;padding:.4em .6em}<\/style>'
-                    + '<\/head><body>' + el.innerHTML + '<\/body><\/html>'
-                );
-                w.document.close();
-                w.focus();
-                w.print();
             }
         }"
+        x-on:open-translation-print.window="window.open($event.detail.url, '_blank')"
     >
         <x-filament::section heading="Swahili Translation">
             <x-slot name="afterHeader">
                 <div class="flex gap-2">
                     @if($translationComplete && filled($translatedContent))
                         <x-filament::button
-                            x-on:click="printTranslation()"
+                            wire:click="preparePrintTranslation"
                             color="gray"
                             size="sm"
                             icon="heroicon-o-printer"
@@ -82,13 +67,6 @@
                     class="ares-toast-viewer rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
                 >
                     <div data-toast-viewer wire:ignore></div>
-                </div>
-
-                <div
-                    id="translation-printable"
-                    class="ares-print-content prose max-w-none"
-                >
-                    @markdown($translatedContent)
                 </div>
             @else
                 {{-- Streaming in progress --}}

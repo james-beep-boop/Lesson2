@@ -77,8 +77,10 @@
         margin-top: 24px;
         border-top: 1px solid #e5e7eb;
         padding-top: 8px;
-        font-size: 9px;
+        font-size: 7px;
+        line-height: 1.2;
         color: #9ca3af;
+        white-space: nowrap;
     }
 </style>
 </head>
@@ -99,7 +101,7 @@
 </div>
 
 <div class="footer">
-    Exported {{ $exportedAt->format('d M Y H:i') }} · ARES Kenya Lesson Library
+    @include('pdf.partials.license-footer', ['year' => $exportedAt->year])
 </div>
 
 </body>

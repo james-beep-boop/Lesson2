@@ -63,8 +63,10 @@
         margin-top: 24px;
         border-top: 1px solid #e5e7eb;
         padding-top: 8px;
-        font-size: 9px;
+        font-size: 7px;
+        line-height: 1.2;
         color: #9ca3af;
+        white-space: nowrap;
     }
 </style>
 </head>
@@ -86,7 +88,7 @@
 @endforeach
 
 <div class="footer">
-    {{ $language === 'sw' ? 'Mwongozo huu umeundwa kutoka maudhui ya sasa ya Guide ndani ya Lesson2.' : 'This manual was generated from the current in-app Guide content in Lesson2.' }}
+    @include('pdf.partials.license-footer', ['year' => $exportedAt->year])
 </div>
 </body>
 </html>

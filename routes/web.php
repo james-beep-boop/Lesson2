@@ -31,6 +31,14 @@ Route::get('/lesson-pdf/{family}/{version}', [LessonPlanPdfController::class, 'd
     ->name('lesson-plan.pdf');
 
 /**
+ * Inline PDF for a short-lived translation preview payload.
+ * The translated content is stored ephemerally in cache by the Livewire page.
+ */
+Route::get('/translation-preview-pdf/{token}', [LessonPlanPdfController::class, 'printPreview'])
+    ->middleware(['web'])
+    ->name('lesson-plan.translation-preview-pdf');
+
+/**
  * DOCX download for a specific lesson plan version.
  * The version must belong to the given family — validated in the controller.
  */
