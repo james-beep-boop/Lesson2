@@ -102,13 +102,13 @@ test('ask AI hidden when flag is off', function () {
     expect($policy->askAi(makeEditor($sg), $version))->toBeFalse();
 });
 
-test('translate hidden from teachers', function () {
+test('translate visible to teachers when flag is on', function () {
     config(['features.ai_suggestions' => true]);
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
     $policy = new LessonPlanVersionPolicy;
 
-    expect($policy->translate(makeTeacher(), $version))->toBeFalse();
+    expect($policy->translate(makeTeacher(), $version))->toBeTrue();
 });
 
 test('translate visible to editors when flag is on', function () {
