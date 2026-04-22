@@ -642,9 +642,34 @@ test('translation preview no longer renders the inline email form', function () 
         ->set('translationPanelOpen', true)
         ->set('translationComplete', true)
         ->set('translatedContent', 'Mpango wa Somo')
+        ->assertSee('Print')
+        ->assertSee('Download PDF')
         ->assertSee('Email PDF')
         ->assertDontSee('Send PDF')
         ->assertDontSee('recipient@example.com');
+});
+
+test('translation download returns a PDF file with the translation filename', function () {
+    config(['features.ai_suggestions' => true]);
+
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+    $expectedFilename = (new LessonPlanPdfService)->translationFilename($version);
+
+    $this->mock(LessonPlanPdfService::class)
+        ->makePartial()
+        ->shouldReceive('renderTranslation')
+        ->once()
+        ->andReturn('fake-pdf-bytes');
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->set('translationComplete', true)
+        ->set('translatedContent', 'Mpango wa Somo')
+        ->call('downloadTranslationPdf')
+        ->assertFileDownloaded($expectedFilename, 'fake-pdf-bytes', 'application/pdf');
 });
 
 test('translation email action validates the recipient email address', function () {

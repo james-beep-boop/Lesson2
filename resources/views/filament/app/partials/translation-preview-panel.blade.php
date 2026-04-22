@@ -43,7 +43,16 @@
                             size="sm"
                             icon="heroicon-o-printer"
                         >
-                            Print / Save as PDF
+                            Print
+                        </x-filament::button>
+
+                        <x-filament::button
+                            wire:click="downloadTranslationPdf"
+                            color="gray"
+                            size="sm"
+                            icon="heroicon-o-arrow-down-tray"
+                        >
+                            Download PDF
                         </x-filament::button>
 
                         <x-filament::button

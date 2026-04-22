@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Livewire\Attributes\Url;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ViewLessonPlanFamily extends Page
 {
@@ -557,7 +558,7 @@ class ViewLessonPlanFamily extends Page
             ->authorize(fn (): bool => $this->selectedVersion instanceof LessonPlanVersion
                 && auth()->check()
                 && auth()->user()->can('translate', $this->selectedVersion))
-            ->hidden(fn (): bool => ! $this->canEmailTranslatedPreview())
+            ->hidden(fn (): bool => ! $this->canUseTranslatedPreviewActions())
             ->modalHeading('Email Swahili Translation PDF')
             ->modalSubmitActionLabel('Send PDF')
             ->schema([
@@ -576,6 +577,47 @@ class ViewLessonPlanFamily extends Page
                 emailTo: $data['email'],
                 message: $data['message'] ?? null,
             ));
+    }
+
+    public function downloadTranslationPdf(): ?StreamedResponse
+    {
+        abort_unless(auth()->check(), 403);
+
+        if (! $this->selectedVersion) {
+            return null;
+        }
+
+        $this->authorize('translate', $this->selectedVersion);
+
+        if (! $this->canUseTranslatedPreviewActions()) {
+            return null;
+        }
+
+        $version = $this->selectedVersion;
+        set_time_limit(60);
+
+        try {
+            $pdf = app(LessonPlanPdfService::class);
+            $pdfContent = $pdf->renderTranslation(
+                $version->family,
+                $version,
+                $this->translatedContent,
+            );
+
+            return response()->streamDownload(function () use ($pdfContent): void {
+                echo $pdfContent;
+            }, $pdf->translationFilename($version), [
+                'Content-Type' => 'application/pdf',
+            ]);
+        } catch (\Throwable $e) {
+            Notification::make('translation-download-error')
+                ->title('Failed to download translation PDF.')
+                ->body('Please try again or contact the site administrator.')
+                ->danger()
+                ->send();
+
+            return null;
+        }
     }
 
     public function useAiPrompt(string $prompt): void
@@ -614,7 +656,7 @@ class ViewLessonPlanFamily extends Page
         }
     }
 
-    protected function canEmailTranslatedPreview(): bool
+    protected function canUseTranslatedPreviewActions(): bool
     {
         return auth()->check()
             && $this->translationPanelOpen
