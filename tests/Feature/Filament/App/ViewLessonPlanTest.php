@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\LessonPlanAdvisor;
 use App\Ai\Agents\MarkdownSegmentTranslator;
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFamily;
 use App\Mail\LessonPlanPdfMail;
 use App\Models\DeletionRequest;
@@ -147,13 +148,15 @@ test('favoriting a version records the user favorite', function () {
 test('request deletion creates a pending deletion request', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
-    $subjectAdmin = makeSubjectAdmin($sg);
+    $editor = makeEditor($sg);
 
-    $this->actingAs($subjectAdmin);
+    $this->actingAs($editor);
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->set('deletionReason', 'Outdated content')
-        ->call('requestDeletion')
+        ->assertActionVisible('requestDeletion')
+        ->callAction('requestDeletion', [
+            'reason' => 'Outdated content',
+        ])
         ->assertNotified();
 
     expect(DeletionRequest::where('lesson_plan_version_id', $version->id)
@@ -165,23 +168,21 @@ test('request deletion creates a pending deletion request', function () {
 test('duplicate deletion request is rejected with a warning', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
-    $subjectAdmin = makeSubjectAdmin($sg);
+    $editor = makeEditor($sg);
 
     // Create the first deletion request manually
     $dr = new DeletionRequest([
         'lesson_plan_version_id' => $version->id,
         'reason' => 'First request',
     ]);
-    $dr->requested_by_user_id = $subjectAdmin->id;
+    $dr->requested_by_user_id = $editor->id;
     $dr->save();
 
-    $this->actingAs($subjectAdmin);
+    $this->actingAs($editor);
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->set('hasPendingDeletion', true)
-        ->set('deletionReason', 'Duplicate')
-        ->call('requestDeletion')
-        ->assertNotified();
+        ->assertActionHidden('requestDeletion');
 
     // Should still be only one deletion request
     expect(DeletionRequest::where('lesson_plan_version_id', $version->id)->count())->toBe(1);
@@ -981,16 +982,23 @@ test('message body includes human-readable lesson link with Day', function () {
 
     $this->actingAs(makeTeacher());
 
-    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'author');
-
-    $body = $component->get('messageBody');
-
-    expect($body)->toContain('Day '.$family->day);
-    expect($body)->toContain('version '.$version->version);
-    expect($body)->toContain($sg->subject->name.' Grade '.$sg->grade);
-    // Must contain a URL
-    expect($body)->toContain('http');
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->mountAction('messageAuthor')
+        ->assertSchemaStateSet([
+            'subject' => 'Question about '.$sg->subject->name.' Grade '.$sg->grade.' Day '.$family->day.' v'.$version->version,
+            'body' => 'Subject: '.$sg->subject->name
+                .' Grade '.$sg->grade
+                .' Day '.$family->day
+                .' Version v'.$version->version."\n"
+                .'Contributor: '.$version->contributor->name."\n\n"
+                .'---'."\n"
+                .'Lesson plan: ['.$sg->subject->name
+                .' Grade '.$sg->grade
+                .' Day '.$family->day
+                .' version '.$version->version
+                .']('.LessonPlanFamilyResource::versionUrl($version).')',
+        ])
+        ->assertMountedActionModalSee('To: '.$version->contributor->name);
 });
 
 // ---------------------------------------------------------------------------
@@ -1061,7 +1069,7 @@ test('editor can directly delete own version', function () {
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('selectVersion', $version->id)
-        ->call('directDeleteVersion')
+        ->callAction('deleteVersion')
         ->assertNotified();
 
     expect(LessonPlanVersion::find($version->id))->toBeNull();
@@ -1083,8 +1091,7 @@ test('editor cannot directly delete a version they did not author', function () 
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('selectVersion', $version->id)
-        ->call('directDeleteVersion')
-        ->assertForbidden();
+        ->assertActionHidden('deleteVersion');
 });
 
 test('editor cannot directly delete the official version', function () {
@@ -1102,6 +1109,25 @@ test('editor cannot directly delete the official version', function () {
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
         ->call('selectVersion', $version->id)
-        ->call('directDeleteVersion')
-        ->assertForbidden();
+        ->assertActionHidden('deleteVersion');
+});
+
+test('editor does not see request deletion for an official version', function () {
+    $sg = makeSubjectGrade();
+    $editor = makeEditor($sg);
+    $otherEditor = makeEditor($sg);
+    $family = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id]);
+    $version = LessonPlanVersion::factory()->create([
+        'lesson_plan_family_id' => $family->id,
+        'version' => '1.0.0',
+        'contributor_id' => $otherEditor->id,
+    ]);
+    $family->update(['official_version_id' => $version->id]);
+
+    $this->actingAs($editor);
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->call('selectVersion', $version->id)
+        ->assertDontSee('Request Deletion')
+        ->assertActionHidden('requestDeletion');
 });

@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFamily;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
@@ -14,88 +15,58 @@ beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('app'));
 });
 
-// ---------------------------------------------------------------------------
-// openMessageModal
-// ---------------------------------------------------------------------------
-
-test('openMessageModal is available to authenticated non-system user', function () {
+test('message author action is visible to authenticated non-system users', function () {
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeTeacher());
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'author')
-        ->assertSet('showMessageModal', true)
-        ->assertSet('messageRecipientType', 'author');
+        ->assertActionVisible('messageAuthor');
 });
 
-test('openMessageModal prefills subject with lesson context', function () {
-    $sg = makeSubjectGrade();
-    [$family] = makeFamilyWithVersion($sg);
-
-    $this->actingAs(makeTeacher());
-
-    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'author');
-
-    $subject = $component->get('messageSubject');
-
-    expect($subject)->toContain($sg->subject->name)
-        ->toContain((string) $sg->grade)
-        ->toContain((string) $family->day);
-});
-
-test('openMessageModal prefills body with lesson context and contributor without a link', function () {
+test('message author action prefills subject and body with lesson context', function () {
     $sg = makeSubjectGrade();
     [$family, $version] = makeFamilyWithVersion($sg);
 
+    $expectedBody = 'Subject: '.$sg->subject->name
+        .' Grade '.$sg->grade
+        .' Day '.$family->day
+        .' Version v'.$version->version."\n"
+        .'Contributor: '.$version->contributor->name."\n\n"
+        .'---'."\n"
+        .'Lesson plan: ['.$sg->subject->name
+        .' Grade '.$sg->grade
+        .' Day '.$family->day
+        .' version '.$version->version
+        .']('.LessonPlanFamilyResource::versionUrl($version).')';
+
     $this->actingAs(makeTeacher());
 
-    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'author');
-
-    $body = $component->get('messageBody');
-
-    expect($body)
-        ->toContain('Subject:')
-        ->toContain($sg->subject->name)
-        ->toContain((string) $sg->grade)
-        ->toContain((string) $family->day)
-        ->toContain($version->version)
-        ->toContain('Contributor:')
-        ->toContain($version->contributor->name)
-        ->not->toContain('Link:');
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->mountAction('messageAuthor')
+        ->assertSchemaStateSet([
+            'subject' => 'Question about '.$sg->subject->name.' Grade '.$sg->grade.' Day '.$family->day.' v'.$version->version,
+            'body' => $expectedBody,
+        ]);
 });
 
-test('message modal renders the simplified recipient controls and header return button', function () {
+test('message action trigger renders without the old inline message panel', function () {
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeTeacher());
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'author')
-        ->assertSeeHtml('Message About This Lesson')
-        ->assertSeeHtml('Return')
-        ->assertSeeHtml('Message Author')
-        ->assertSeeHtml('Message Subject Admin')
-        ->assertSeeHtml('Message Site Admin')
-        ->assertSeeHtml('Subject:')
-        ->assertSeeHtml('Message')
-        ->assertDontSeeHtml('Send to:')
-        ->assertDontSeeHtml('Any User');
+        ->assertSee('Message About This')
+        ->assertDontSee('Message About This Lesson');
 });
 
-// ---------------------------------------------------------------------------
-// Recipient shortcuts
-// ---------------------------------------------------------------------------
-
-test('author shortcut sends message to the selected version contributor', function () {
+test('author message action sends to the selected version contributor', function () {
     $sg = makeSubjectGrade();
     $contributor = makeTeacher();
     $family = LessonPlanFamily::factory()->create(['subject_grade_id' => $sg->id]);
-    $version = LessonPlanVersion::factory()->create([
+    LessonPlanVersion::factory()->create([
         'lesson_plan_family_id' => $family->id,
         'version' => '1.0.0',
         'contributor_id' => $contributor->id,
@@ -105,16 +76,21 @@ test('author shortcut sends message to the selected version contributor', functi
     $this->actingAs($sender);
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'author')
-        ->call('sendLessonMessage')
-        ->assertNotified();
+        ->callAction('messageAuthor', [
+            'subject' => 'Please review this lesson',
+            'body' => 'Can you review the current version?',
+        ])
+        ->assertNotified('Message sent.');
 
     expect(
-        Message::where('to_user_id', $contributor->id)->where('from_user_id', $sender->id)->exists()
+        Message::where('to_user_id', $contributor->id)
+            ->where('from_user_id', $sender->id)
+            ->where('subject', 'Please review this lesson')
+            ->exists()
     )->toBeTrue();
 });
 
-test('subject admin shortcut targets the correct subject-grade admin', function () {
+test('subject admin message action targets the correct subject-grade admin', function () {
     $sg = makeSubjectGrade();
     $admin = makeSubjectAdmin($sg);
     [$family] = makeFamilyWithVersion($sg);
@@ -123,16 +99,31 @@ test('subject admin shortcut targets the correct subject-grade admin', function 
     $this->actingAs($sender);
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'subject_admin')
-        ->call('sendLessonMessage')
-        ->assertNotified();
+        ->assertActionVisible('messageSubjectAdmin')
+        ->callAction('messageSubjectAdmin', [
+            'subject' => 'Question for subject admin',
+            'body' => 'Could you take a look at this lesson?',
+        ])
+        ->assertNotified('Message sent.');
 
     expect(
-        Message::where('to_user_id', $admin->id)->where('from_user_id', $sender->id)->exists()
+        Message::where('to_user_id', $admin->id)
+            ->where('from_user_id', $sender->id)
+            ->where('subject', 'Question for subject admin')
+            ->exists()
     )->toBeTrue();
 });
 
-test('site admin shortcut sends to all site administrators', function () {
+test('subject admin message action is hidden when the current user is the subject admin', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+    $this->actingAs(makeSubjectAdmin($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->assertActionHidden('messageSubjectAdmin');
+});
+
+test('site admin message action sends to all other site administrators', function () {
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
 
@@ -142,16 +133,17 @@ test('site admin shortcut sends to all site administrators', function () {
     $this->actingAs($sender);
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'site_admin')
-        ->call('sendLessonMessage')
-        ->assertNotified();
+        ->callAction('messageSiteAdmin', [
+            'subject' => 'Question for site admins',
+            'body' => 'Please review this lesson.',
+        ])
+        ->assertNotified('Message sent to 2 recipients.');
 
-    expect(Message::where('from_user_id', $sender->id)->count())->toBeGreaterThanOrEqual(2);
     expect(Message::where('from_user_id', $sender->id)->where('to_user_id', $admin1->id)->exists())->toBeTrue();
     expect(Message::where('from_user_id', $sender->id)->where('to_user_id', $admin2->id)->exists())->toBeTrue();
 });
 
-test('system user cannot send lesson messages', function () {
+test('system user cannot use lesson message actions', function () {
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
 
@@ -159,6 +151,6 @@ test('system user cannot send lesson messages', function () {
     $this->actingAs($systemUser);
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openMessageModal', 'author')
-        ->assertForbidden();
+        ->assertActionHidden('messageAuthor')
+        ->assertActionHidden('messageSiteAdmin');
 });

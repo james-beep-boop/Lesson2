@@ -4,6 +4,7 @@ use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFami
 use App\Mail\LessonPlanDocxMail;
 use App\Mail\LessonPlanPdfMail;
 use App\Models\LessonPlanVersion;
+use App\Services\LessonPlanDocxService;
 use App\Services\LessonPlanPdfService;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Cache;
@@ -136,44 +137,47 @@ test('email PDF validates email address', function () {
     $this->actingAs(makeTeacher());
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openEmailPdfModal')
-        ->set('emailPdfTo', 'not-an-email')
-        ->call('sendEmailPdf')
-        ->assertHasErrors(['emailPdfTo' => 'email']);
+        ->callAction('emailPdf', [
+            'email' => 'not-an-email',
+        ])
+        ->assertHasActionErrors(['email' => 'email']);
 });
 
 test('email PDF sends mail with attachment to the specified address', function () {
     Mail::fake();
-
-    $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg);
-
-    $this->actingAs(makeTeacher());
-
-    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openEmailPdfModal')
-        ->set('emailPdfTo', 'teacher@school.ac.ke')
-        ->set('emailPdfMessage', 'Please review this plan.')
-        ->call('sendEmailPdf')
-        ->assertNotified();
-
-    Mail::assertSent(LessonPlanPdfMail::class, fn ($mail) => $mail->hasTo('teacher@school.ac.ke'));
-});
-
-test('email PDF modal closes on success', function () {
-    Mail::fake();
+    $this->mock(LessonPlanPdfService::class)
+        ->makePartial()
+        ->shouldReceive('render')
+        ->once()
+        ->andReturn('fake-pdf-bytes');
 
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeTeacher());
 
-    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openEmailPdfModal')
-        ->set('emailPdfTo', 'someone@example.com')
-        ->call('sendEmailPdf');
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->callAction('emailPdf', [
+            'email' => 'teacher@school.ac.ke',
+            'message' => 'Please review this plan.',
+        ])
+        ->assertNotified('PDF sent successfully.');
 
-    expect($component->get('showEmailPdfModal'))->toBeFalse();
+    Mail::assertSent(LessonPlanPdfMail::class, fn ($mail) => $mail->hasTo('teacher@school.ac.ke'));
+});
+
+test('email PDF action can be mounted from the page', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->mountAction('emailPdf')
+        ->assertSchemaStateSet([
+            'email' => null,
+            'message' => null,
+        ]);
 });
 
 // ---------------------------------------------------------------------------
@@ -263,44 +267,47 @@ test('email DOCX validates email address', function () {
     $this->actingAs(makeTeacher());
 
     Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openEmailDocxModal')
-        ->set('emailDocxTo', 'not-an-email')
-        ->call('sendEmailDocx')
-        ->assertHasErrors(['emailDocxTo' => 'email']);
+        ->callAction('emailDocx', [
+            'email' => 'not-an-email',
+        ])
+        ->assertHasActionErrors(['email' => 'email']);
 });
 
 test('email DOCX sends mail with attachment to the specified address', function () {
     Mail::fake();
-
-    $sg = makeSubjectGrade();
-    [$family, $version] = makeFamilyWithVersion($sg);
-
-    $this->actingAs(makeTeacher());
-
-    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openEmailDocxModal')
-        ->set('emailDocxTo', 'teacher@school.ac.ke')
-        ->set('emailDocxMessage', 'Please review this plan.')
-        ->call('sendEmailDocx')
-        ->assertNotified();
-
-    Mail::assertSent(LessonPlanDocxMail::class, fn ($mail) => $mail->hasTo('teacher@school.ac.ke'));
-});
-
-test('email DOCX modal closes on success', function () {
-    Mail::fake();
+    $this->mock(LessonPlanDocxService::class)
+        ->makePartial()
+        ->shouldReceive('render')
+        ->once()
+        ->andReturn('fake-docx-bytes');
 
     $sg = makeSubjectGrade();
     [$family] = makeFamilyWithVersion($sg);
 
     $this->actingAs(makeTeacher());
 
-    $component = Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
-        ->call('openEmailDocxModal')
-        ->set('emailDocxTo', 'someone@example.com')
-        ->call('sendEmailDocx');
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->callAction('emailDocx', [
+            'email' => 'teacher@school.ac.ke',
+            'message' => 'Please review this plan.',
+        ])
+        ->assertNotified('.docx sent successfully.');
 
-    expect($component->get('showEmailDocxModal'))->toBeFalse();
+    Mail::assertSent(LessonPlanDocxMail::class, fn ($mail) => $mail->hasTo('teacher@school.ac.ke'));
+});
+
+test('email DOCX action can be mounted from the page', function () {
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeTeacher());
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->mountAction('emailDocx')
+        ->assertSchemaStateSet([
+            'email' => null,
+            'message' => null,
+        ]);
 });
 
 test('lesson plan PDF view includes the shared copyright footer', function () {

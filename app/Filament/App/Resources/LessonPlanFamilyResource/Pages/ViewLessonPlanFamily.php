@@ -19,6 +19,7 @@ use App\Services\MarkdownNormalizer;
 use App\Services\TranslationService;
 use App\Services\VersionService;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -65,12 +66,6 @@ class ViewLessonPlanFamily extends Page
 
     public bool $hasPendingDeletion = false;
 
-    public bool $showDeletionForm = false;
-
-    public string $deletionReason = '';
-
-    public bool $showDirectDeleteConfirm = false;
-
     // AI panel state
     public bool $aiPanelOpen = false;
 
@@ -83,42 +78,12 @@ class ViewLessonPlanFamily extends Page
     // Translation preview state
     public bool $translationPanelOpen = false;
 
+    /** Per-render cache for resolveMessageRecipientsFor() — avoids repeat DB queries. */
+    private array $resolvedMessageRecipients = [];
+
     public string $translatedContent = '';
 
     public bool $translationComplete = false;
-
-    // -------------------------------------------------------------------------
-    // Lesson-context messaging state
-    // -------------------------------------------------------------------------
-
-    public bool $showMessageModal = false;
-
-    /** author | subject_admin | site_admin */
-    public string $messageRecipientType = 'author';
-
-    public string $messageSubject = '';
-
-    public string $messageBody = '';
-
-    // -------------------------------------------------------------------------
-    // Email PDF state
-    // -------------------------------------------------------------------------
-
-    public bool $showEmailPdfModal = false;
-
-    public string $emailPdfTo = '';
-
-    public string $emailPdfMessage = '';
-
-    // -------------------------------------------------------------------------
-    // Email DOCX state
-    // -------------------------------------------------------------------------
-
-    public bool $showEmailDocxModal = false;
-
-    public string $emailDocxTo = '';
-
-    public string $emailDocxMessage = '';
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -301,13 +266,17 @@ class ViewLessonPlanFamily extends Page
         return app(VersionService::class)->computeAllNextVersions($this->record);
     }
 
-    public function requestDeletion(DeletionRequestService $service): void
+    protected function submitDeletionRequest(?string $reason = null): void
     {
         if (! $this->selectedVersion) {
             return;
         }
 
         $this->authorize('requestDeletion', $this->selectedVersion);
+
+        if (! $this->canRequestDeletionAction()) {
+            return;
+        }
 
         $user = auth()->user();
 
@@ -316,19 +285,16 @@ class ViewLessonPlanFamily extends Page
                 ->title('A pending deletion request already exists for this version.')
                 ->warning()
                 ->send();
-            $this->showDeletionForm = false;
 
             return;
         }
 
-        $service->request(
+        app(DeletionRequestService::class)->request(
             $this->selectedVersion,
             $user,
-            filled($this->deletionReason) ? $this->deletionReason : null
+            filled($reason) ? $reason : null
         );
 
-        $this->showDeletionForm = false;
-        $this->deletionReason = '';
         $this->hasPendingDeletion = true;
 
         Notification::make('deletion-requested')
@@ -337,13 +303,17 @@ class ViewLessonPlanFamily extends Page
             ->send();
     }
 
-    public function directDeleteVersion(VersionService $versionService): void
+    protected function performDirectDeleteVersion(): void
     {
         if (! $this->selectedVersion) {
             return;
         }
 
         $this->authorize('directDelete', $this->selectedVersion);
+
+        if (! $this->canDeleteSelectedVersion()) {
+            return;
+        }
 
         $version = $this->selectedVersion;
         $family = $this->record;
@@ -362,6 +332,8 @@ class ViewLessonPlanFamily extends Page
 
         // If deleted version was official, pick a new one.
         if ((int) $family->official_version_id === $version->id) {
+            $versionService = app(VersionService::class);
+
             $versionService->setOfficialVersion(
                 $family,
                 $versionService->preferredOfficialVersion($family, $version->id)
@@ -371,7 +343,6 @@ class ViewLessonPlanFamily extends Page
         $this->record = $family->load(['versions.contributor', 'officialVersion', 'latestVersion', 'subjectGrade.subject', 'subjectGrade.subjectAdmin']);
         $this->selectedVersion = $family->officialVersion ?? $family->latestVersion;
         $this->versionId = $this->selectedVersion?->id;
-        $this->showDirectDeleteConfirm = false;
         $this->syncDerivedState();
 
         Notification::make('version-deleted')
@@ -563,18 +534,7 @@ class ViewLessonPlanFamily extends Page
             ->hidden(fn (): bool => ! $this->canUseTranslatedPreviewActions())
             ->modalHeading('Email Swahili Translation PDF')
             ->modalSubmitActionLabel('Send PDF')
-            ->schema([
-                TextInput::make('email')
-                    ->label('Recipient Email')
-                    ->email()
-                    ->required()
-                    ->maxLength(255),
-                Textarea::make('message')
-                    ->label('Optional message')
-                    ->rows(3)
-                    ->maxLength(5000)
-                    ->placeholder('Add a note to include in the email body…'),
-            ])
+            ->schema($this->emailActionSchema())
             ->action(fn (array $data): mixed => $this->sendTranslationEmailPdf(
                 emailTo: $data['email'],
                 message: $data['message'] ?? null,
@@ -846,36 +806,92 @@ class ViewLessonPlanFamily extends Page
     // Lesson-context messaging
     // -------------------------------------------------------------------------
 
-    /**
-     * Open the message modal, pre-filling subject/body for the given recipient type.
-     * Allowed types: author | subject_admin | site_admin
-     */
-    public function openMessageModal(string $recipientType): void
+    public function messageAboutThisActionGroup(): ActionGroup
     {
-        abort_unless(auth()->check() && ! auth()->user()->is_system, 403);
-
-        $allowed = ['author', 'subject_admin', 'site_admin'];
-        if (! in_array($recipientType, $allowed)) {
-            return;
-        }
-
-        $this->messageRecipientType = $recipientType;
-        $this->showMessageModal = true;
-        $this->messageSubject = $this->buildMessageSubject();
-        $this->messageBody = $this->buildMessageBody();
+        return ActionGroup::make([
+            $this->messageAuthorAction(),
+            $this->messageSubjectAdminAction(),
+            $this->messageSiteAdminAction(),
+        ])
+            ->label('Message About This')
+            ->icon('heroicon-o-chat-bubble-left-right')
+            ->color('gray')
+            ->size('sm')
+            ->button()
+            ->dropdownPlacement('bottom-start');
     }
 
-    public function sendLessonMessage(): void
+    public function messageAuthorAction(): Action
+    {
+        return $this->makeLessonMessageAction(
+            name: 'messageAuthor',
+            recipientType: 'author',
+            modalHeading: 'Message Author About This Lesson',
+        );
+    }
+
+    public function messageSubjectAdminAction(): Action
+    {
+        return $this->makeLessonMessageAction(
+            name: 'messageSubjectAdmin',
+            recipientType: 'subject_admin',
+            modalHeading: 'Message Subject Admin About This Lesson',
+        );
+    }
+
+    public function messageSiteAdminAction(): Action
+    {
+        return $this->makeLessonMessageAction(
+            name: 'messageSiteAdmin',
+            recipientType: 'site_admin',
+            modalHeading: 'Message Site Administrator About This Lesson',
+        );
+    }
+
+    protected function makeLessonMessageAction(string $name, string $recipientType, string $modalHeading): Action
+    {
+        return Action::make($name)
+            ->authorize(fn (): bool => $this->selectedVersion instanceof LessonPlanVersion
+                && auth()->check()
+                && ! auth()->user()->is_system)
+            ->visible(fn (): bool => $this->canMessageRecipientType($recipientType))
+            ->modalHeading($modalHeading)
+            ->modalDescription(fn (): string => 'To: '.$this->messageRecipientLabel($recipientType))
+            ->modalSubmitActionLabel('Send Message')
+            ->fillForm(fn (): array => [
+                'subject' => $this->buildMessageSubject(),
+                'body' => $this->buildMessageBody(),
+            ])
+            ->schema($this->lessonMessageSchema())
+            ->action(fn (array $data): mixed => $this->sendLessonMessageTo(
+                recipientType: $recipientType,
+                subject: $data['subject'],
+                body: $data['body'],
+            ));
+    }
+
+    /**
+     * @return array<int, TextInput|Textarea>
+     */
+    protected function lessonMessageSchema(): array
+    {
+        return [
+            TextInput::make('subject')
+                ->label('Subject')
+                ->required()
+                ->maxLength(255),
+            Textarea::make('body')
+                ->label('Message')
+                ->required()
+                ->rows(10),
+        ];
+    }
+
+    protected function sendLessonMessageTo(string $recipientType, string $subject, string $body): void
     {
         abort_unless(auth()->check() && ! auth()->user()->is_system, 403);
 
-        $this->validate([
-            'messageSubject' => 'required|string|max:255',
-            'messageBody' => 'required|string',
-        ]);
-
-        $sender = auth()->user();
-        $recipients = $this->resolveMessageRecipients();
+        $recipients = $this->resolveMessageRecipientsFor($recipientType);
 
         if (empty($recipients)) {
             Notification::make('message-no-recipients')
@@ -886,19 +902,17 @@ class ViewLessonPlanFamily extends Page
             return;
         }
 
-        foreach ($recipients as $recipient) {
-            $msg = new Message([
-                'to_user_id' => $recipient->id,
-                'subject' => $this->messageSubject,
-                'body' => $this->messageBody,
-            ]);
-            $msg->from_user_id = $sender->id;
-            $msg->save();
-        }
+        $sender = auth()->user();
 
-        $this->showMessageModal = false;
-        $this->messageBody = '';
-        $this->messageSubject = '';
+        foreach ($recipients as $recipient) {
+            $message = new Message([
+                'to_user_id' => $recipient->id,
+                'subject' => $subject,
+                'body' => $body,
+            ]);
+            $message->from_user_id = $sender->id;
+            $message->save();
+        }
 
         $count = count($recipients);
         Notification::make('message-sent')
@@ -907,27 +921,50 @@ class ViewLessonPlanFamily extends Page
             ->send();
     }
 
+    protected function canMessageRecipientType(string $recipientType): bool
+    {
+        return auth()->check()
+            && ! auth()->user()->is_system
+            && $this->selectedVersion instanceof LessonPlanVersion
+            && filled($this->resolveMessageRecipientsFor($recipientType));
+    }
+
     /**
      * @return User[]
      */
-    private function resolveMessageRecipients(): array
+    protected function resolveMessageRecipientsFor(string $recipientType): array
     {
-        return match ($this->messageRecipientType) {
+        return $this->resolvedMessageRecipients[$recipientType] ??= match ($recipientType) {
             'author' => $this->selectedVersion?->contributor
                 ? [$this->selectedVersion->contributor]
                 : [],
 
-            'subject_admin' => $this->record->subjectGrade->subjectAdmin
-                ? [$this->record->subjectGrade->subjectAdmin]
+            'subject_admin' => ($subjectAdmin = $this->record->subjectGrade->subjectAdmin)
+                && ($subjectAdmin->id !== auth()->id())
+                ? [$subjectAdmin]
                 : [],
 
-            'site_admin' => User::role('site_administrator')->where('is_system', false)->get()->all(),
+            'site_admin' => User::role('site_administrator')
+                ->where('is_system', false)
+                ->where('id', '!=', auth()->id())
+                ->get()
+                ->all(),
 
             default => [],
         };
     }
 
-    private function buildMessageSubject(): string
+    protected function messageRecipientLabel(string $recipientType): string
+    {
+        return match ($recipientType) {
+            'author' => $this->selectedVersion?->contributor?->name ?? 'Unknown author',
+            'subject_admin' => $this->record->subjectGrade->subjectAdmin?->name ?? 'No subject administrator assigned',
+            'site_admin' => 'All Site Administrators',
+            default => 'Unknown recipient',
+        };
+    }
+
+    protected function buildMessageSubject(): string
     {
         $sg = $this->record->subjectGrade;
 
@@ -937,7 +974,7 @@ class ViewLessonPlanFamily extends Page
             .' v'.($this->selectedVersion?->version ?? '?');
     }
 
-    private function buildMessageBody(): string
+    protected function buildMessageBody(): string
     {
         $sg = $this->record->subjectGrade;
         $version = $this->selectedVersion;
@@ -961,53 +998,77 @@ class ViewLessonPlanFamily extends Page
     }
 
     // -------------------------------------------------------------------------
-    // Email PDF
+    // Email PDF / DOCX
     // -------------------------------------------------------------------------
 
-    public function openEmailPdfModal(): void
+    public function emailPdfAction(): Action
     {
-        abort_unless(auth()->check(), 403);
-        $this->showEmailPdfModal = true;
-        $this->emailPdfTo = '';
-        $this->emailPdfMessage = '';
+        return Action::make('emailPdf')
+            ->authorize(fn (): bool => $this->canEmailCurrentVersion())
+            ->modalHeading('Email PDF')
+            ->modalSubmitActionLabel('Send PDF')
+            ->schema($this->emailActionSchema())
+            ->action(fn (array $data): mixed => $this->sendLessonPlanPdfEmail(
+                emailTo: $data['email'],
+                message: $data['message'] ?? null,
+            ));
     }
 
-    public function sendEmailPdf(): void
+    public function emailDocxAction(): Action
+    {
+        return Action::make('emailDocx')
+            ->authorize(fn (): bool => $this->canEmailCurrentVersion())
+            ->modalHeading('Email .docx')
+            ->modalSubmitActionLabel('Send .docx')
+            ->schema($this->emailActionSchema())
+            ->action(fn (array $data): mixed => $this->sendLessonPlanDocxEmail(
+                emailTo: $data['email'],
+                message: $data['message'] ?? null,
+            ));
+    }
+
+    /**
+     * @return array<int, TextInput|Textarea>
+     */
+    protected function emailActionSchema(): array
+    {
+        return [
+            TextInput::make('email')
+                ->label('Recipient Email')
+                ->email()
+                ->required()
+                ->maxLength(255),
+            Textarea::make('message')
+                ->label('Optional message')
+                ->rows(3)
+                ->maxLength(5000)
+                ->placeholder('Add a note to include in the email body…'),
+        ];
+    }
+
+    protected function sendLessonPlanPdfEmail(string $emailTo, ?string $message = null): void
     {
         abort_unless(auth()->check(), 403);
 
-        $this->validate([
-            'emailPdfTo' => 'required|email|max:255',
-        ]);
-
-        if (! $this->selectedVersion) {
+        if (! $this->canEmailCurrentVersion()) {
             return;
         }
 
-        $version = $this->selectedVersion;
-        $version->load(['family.subjectGrade.subject', 'contributor']);
-
-        set_time_limit(60);
-
         try {
-            $pdfContent = app(LessonPlanPdfService::class)->render($version->family, $version);
+            ['bytes' => $pdfContent] = $this->buildLessonPlanPdf();
 
-            Mail::to($this->emailPdfTo)->send(new LessonPlanPdfMail(
-                version: $version,
+            Mail::to($emailTo)->send(new LessonPlanPdfMail(
+                version: $this->selectedVersion,
                 pdfContent: $pdfContent,
                 senderName: auth()->user()->name,
-                customMessage: $this->emailPdfMessage,
+                customMessage: $message ?? '',
             ));
-
-            $this->showEmailPdfModal = false;
-            $this->emailPdfTo = '';
-            $this->emailPdfMessage = '';
 
             Notification::make('email-pdf-sent')
                 ->title('PDF sent successfully.')
                 ->success()
                 ->send();
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             Notification::make('email-pdf-failed')
                 ->title('Failed to send PDF.')
                 ->body('Please try again or contact the site administrator.')
@@ -1016,59 +1077,132 @@ class ViewLessonPlanFamily extends Page
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Email DOCX
-    // -------------------------------------------------------------------------
-
-    public function openEmailDocxModal(): void
-    {
-        abort_unless(auth()->check(), 403);
-        $this->showEmailDocxModal = true;
-        $this->emailDocxTo = '';
-        $this->emailDocxMessage = '';
-    }
-
-    public function sendEmailDocx(): void
+    protected function sendLessonPlanDocxEmail(string $emailTo, ?string $message = null): void
     {
         abort_unless(auth()->check(), 403);
 
-        $this->validate([
-            'emailDocxTo' => 'required|email|max:255',
-        ]);
-
-        if (! $this->selectedVersion) {
+        if (! $this->canEmailCurrentVersion()) {
             return;
         }
 
-        $version = $this->selectedVersion;
-        $version->load(['family.subjectGrade.subject', 'contributor']);
-
-        set_time_limit(60);
-
         try {
-            $docxContent = app(LessonPlanDocxService::class)->render($version->family, $version);
+            ['bytes' => $docxContent] = $this->buildLessonPlanDocx();
 
-            Mail::to($this->emailDocxTo)->send(new LessonPlanDocxMail(
-                version: $version,
+            Mail::to($emailTo)->send(new LessonPlanDocxMail(
+                version: $this->selectedVersion,
                 docxContent: $docxContent,
                 senderName: auth()->user()->name,
-                customMessage: $this->emailDocxMessage,
+                customMessage: $message ?? '',
             ));
-
-            $this->showEmailDocxModal = false;
-            $this->emailDocxTo = '';
-            $this->emailDocxMessage = '';
 
             Notification::make('email-docx-sent')
                 ->title('.docx sent successfully.')
                 ->success()
                 ->send();
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             Notification::make('email-docx-failed')
                 ->title('Failed to send .docx.')
                 ->body('Please try again or contact the site administrator.')
                 ->danger()
                 ->send();
         }
+    }
+
+    /**
+     * @return array{bytes: string, filename: string}
+     */
+    protected function buildLessonPlanPdf(): array
+    {
+        /** @var LessonPlanVersion $version */
+        $version = $this->selectedVersion;
+        $version->loadMissing(['family.subjectGrade.subject', 'contributor']);
+
+        set_time_limit(60);
+
+        $pdf = app(LessonPlanPdfService::class);
+
+        return [
+            'bytes' => $pdf->render($version->family, $version),
+            'filename' => $pdf->filename($version),
+        ];
+    }
+
+    /**
+     * @return array{bytes: string, filename: string}
+     */
+    protected function buildLessonPlanDocx(): array
+    {
+        /** @var LessonPlanVersion $version */
+        $version = $this->selectedVersion;
+        $version->loadMissing(['family.subjectGrade.subject', 'contributor']);
+
+        set_time_limit(60);
+
+        $docx = app(LessonPlanDocxService::class);
+
+        return [
+            'bytes' => $docx->render($version->family, $version),
+            'filename' => $docx->filename($version),
+        ];
+    }
+
+    protected function canEmailCurrentVersion(): bool
+    {
+        return auth()->check() && $this->selectedVersion instanceof LessonPlanVersion;
+    }
+
+    // -------------------------------------------------------------------------
+    // Deletion actions
+    // -------------------------------------------------------------------------
+
+    public function requestDeletionAction(): Action
+    {
+        return Action::make('requestDeletion')
+            ->authorize(fn (): bool => $this->canRequestDeletionAction())
+            ->modalHeading(fn (): string => 'Request Deletion of Version '.($this->selectedVersion?->version ?? '?'))
+            ->modalDescription('A Site Administrator must approve and carry out the actual deletion. The contributor, Subject Admin (if assigned), and all Site Admins will be notified by inbox message.')
+            ->modalSubmitActionLabel('Submit Request')
+            ->schema([
+                Textarea::make('reason')
+                    ->label('Reason (optional)')
+                    ->rows(3)
+                    ->placeholder('Explain why this version should be deleted…'),
+            ])
+            ->action(fn (array $data): mixed => $this->submitDeletionRequest($data['reason'] ?? null));
+    }
+
+    public function deleteVersionAction(): Action
+    {
+        return Action::make('deleteVersion')
+            ->authorize(fn (): bool => $this->canDeleteSelectedVersion())
+            ->requiresConfirmation()
+            ->color('danger')
+            ->modalHeading(fn (): string => 'Delete Version '.($this->selectedVersion?->version ?? '?'))
+            ->modalDescription('This will permanently delete this version. This action cannot be undone.')
+            ->modalSubmitActionLabel('Confirm Delete')
+            ->action(fn (): mixed => $this->performDirectDeleteVersion());
+    }
+
+    protected function canRequestDeletionAction(): bool
+    {
+        return auth()->check()
+            && $this->selectedVersion instanceof LessonPlanVersion
+            && auth()->user()->can('requestDeletion', $this->selectedVersion)
+            && ! auth()->user()->can('directDelete', $this->selectedVersion)
+            && ! $this->hasPendingDeletion
+            && ! $this->isOfficialVersionSelected();
+    }
+
+    protected function canDeleteSelectedVersion(): bool
+    {
+        return auth()->check()
+            && $this->selectedVersion instanceof LessonPlanVersion
+            && auth()->user()->can('directDelete', $this->selectedVersion);
+    }
+
+    protected function isOfficialVersionSelected(): bool
+    {
+        return $this->selectedVersion instanceof LessonPlanVersion
+            && (int) $this->record->official_version_id === $this->selectedVersion->id;
     }
 }

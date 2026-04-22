@@ -12,9 +12,9 @@
         $canRequestDeletion = $user && $selectedVersion
             && $user->can('requestDeletion', $selectedVersion)
             && ! $canDirectDelete
+            && ! $isOfficialSelected
             && ! $this->hasPendingDeletion;
         $canAskAi = $user && $selectedVersion && $user->can('askAi', $selectedVersion);
-        $canMessage = $user && ! $user->is_system;
         $favorite = $this->userFavorite;
         $differsFromOfficial = $favorite && $record->official_version_id && $favorite->lesson_plan_version_id !== $record->official_version_id;
     @endphp
@@ -333,7 +333,7 @@
 
                     @if($canDirectDelete)
                         <x-filament::button
-                            wire:click="$set('showDirectDeleteConfirm', true)"
+                            wire:click="mountAction('deleteVersion')"
                             color="danger"
                             icon="heroicon-o-trash"
                         >
@@ -341,7 +341,7 @@
                         </x-filament::button>
                     @elseif($canRequestDeletion)
                         <x-filament::button
-                            wire:click="$set('showDeletionForm', true)"
+                            wire:click="mountAction('requestDeletion')"
                             color="danger"
                             icon="heroicon-o-trash"
                         >
@@ -386,7 +386,7 @@
                     </x-filament::button>
 
                     <x-filament::button
-                        wire:click="openEmailPdfModal"
+                        wire:click="mountAction('emailPdf')"
                         @click="openPanel = null"
                         color="gray"
                         icon="heroicon-o-envelope"
@@ -407,7 +407,7 @@
                     </x-filament::button>
 
                     <x-filament::button
-                        wire:click="openEmailDocxModal"
+                        wire:click="mountAction('emailDocx')"
                         @click="openPanel = null"
                         color="gray"
                         icon="heroicon-o-envelope"
@@ -416,91 +416,15 @@
                         Email .docx
                     </x-filament::button>
 
-                    @if($canMessage)
-                        <x-filament::button
-                            wire:click="openMessageModal('author')"
-                            @click="openPanel = null"
-                            color="gray"
-                            icon="heroicon-o-chat-bubble-left-right"
-                            size="sm"
-                        >
-                            Message About This
-                        </x-filament::button>
-                    @endif
+                    <x-filament-actions::group :group="$this->messageAboutThisActionGroup()" />
                 </div>
             </div>
         </div>
         @endif
 
         {{-- Action panels — below buttons, above lesson --}}
-        @include('filament.app.partials.email-pdf-modal')
-        @include('filament.app.partials.email-docx-modal')
         @include('filament.app.partials.ai-panel')
         @include('filament.app.partials.translation-preview-panel')
-        @include('filament.app.partials.message-modal')
-
-        {{-- Request Deletion panel --}}
-        @if($showDeletionForm && $selectedVersion)
-        <div class="mt-4" data-noprint>
-            @if($isOfficialSelected && !($user && $user->isSiteAdmin()))
-                <x-filament::section heading="Cannot Delete Official Version">
-                    <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                        The official version of a lesson plan cannot be deleted. To delete this version, first mark a different version as official.
-                    </p>
-                    <x-filament::button wire:click="$set('showDeletionForm', false)" color="gray">
-                        Close
-                    </x-filament::button>
-                </x-filament::section>
-            @else
-                <x-filament::section heading="Request Deletion of Version {{ $selectedVersion->version }}">
-                    @if($isOfficialSelected)
-                        <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
-                            <p class="text-sm font-medium text-amber-800 dark:text-amber-300">⚠ This is the official version. Deleting it will remove the official designation from this lesson plan.</p>
-                        </div>
-                    @endif
-                    <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                        This submits a deletion request. A Site Admin must approve and carry out the actual deletion. The contributor and all Site Admins will be notified by inbox message.
-                    </p>
-                    <div class="mb-4">
-                        <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Reason (optional)</label>
-                        <textarea
-                            wire:model="deletionReason"
-                            rows="3"
-                            class="w-full rounded-lg border border-gray-300 p-3 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                            placeholder="Explain why this version should be deleted…"
-                        ></textarea>
-                    </div>
-                    <div class="flex gap-2">
-                        <x-filament::button wire:click="requestDeletion" color="danger">
-                            Submit Request
-                        </x-filament::button>
-                        <x-filament::button wire:click="$set('showDeletionForm', false)" color="gray">
-                            Cancel
-                        </x-filament::button>
-                    </div>
-                </x-filament::section>
-            @endif
-        </div>
-        @endif
-
-        {{-- Direct delete confirmation --}}
-        @if($showDirectDeleteConfirm && $selectedVersion)
-        <div class="mt-4" data-noprint>
-            <x-filament::section heading="Delete Version {{ $selectedVersion->version }}">
-                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">
-                    This will permanently delete this version. This action cannot be undone.
-                </p>
-                <div class="flex gap-2">
-                    <x-filament::button wire:click="directDeleteVersion" color="danger" icon="heroicon-o-trash">
-                        Confirm Delete
-                    </x-filament::button>
-                    <x-filament::button wire:click="$set('showDirectDeleteConfirm', false)" color="gray">
-                        Cancel
-                    </x-filament::button>
-                </div>
-            </x-filament::section>
-        </div>
-        @endif
 
         {{-- Versions panel (hidden in compare mode) --}}
         @if(!$compareMode)
