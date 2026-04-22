@@ -46,6 +46,15 @@ test('site admin role label uses the canonical full term', function () {
     expect($admin->role_label)->toBe('Site Administrator');
 });
 
+test('subject admin detailed role label includes assigned subject scope once', function () {
+    $subjectGrade = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($subjectGrade);
+
+    expect($subjectAdmin->detailed_role_label)
+        ->toContain('Subject Admin — '.$subjectGrade->subject->name.' Grade '.$subjectGrade->grade)
+        ->not->toContain('Editor — '.$subjectGrade->subject->name.' Grade '.$subjectGrade->grade);
+});
+
 test('registration form creates user with unverified email', function () {
     Livewire::test(Register::class)
         ->fillForm([

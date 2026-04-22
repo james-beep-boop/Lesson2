@@ -2,7 +2,6 @@
 
 namespace App\Filament\App\Pages;
 
-use App\Models\SubjectGrade;
 use Filament\Auth\Pages\EditProfile;
 use Filament\Notifications\Notification;
 use Illuminate\Validation\Rules\Password;
@@ -85,34 +84,8 @@ class Profile extends EditProfile
     /** Human-readable role label for this user. Cached per Livewire request. */
     public function getRoleLabel(): string
     {
-        if (isset($this->cachedRoleLabel)) {
-            return $this->cachedRoleLabel;
-        }
-
-        $user = $this->getUser();
-
-        if ($user->isSiteAdmin()) {
-            return $this->cachedRoleLabel = 'Site Administrator';
-        }
-
-        $asSubjectAdmin = SubjectGrade::where('subject_admin_user_id', $user->id)
-            ->with('subject')
-            ->get();
-
-        if ($asSubjectAdmin->isNotEmpty()) {
-            return $this->cachedRoleLabel = $asSubjectAdmin
-                ->map(fn ($sg) => 'Subject Admin — '.$sg->subject->name.' Grade '.$sg->grade)
-                ->join(', ');
-        }
-
-        $asEditor = $user->subjectGrades()->with('subject')->get();
-
-        if ($asEditor->isNotEmpty()) {
-            return $this->cachedRoleLabel = $asEditor
-                ->map(fn ($sg) => 'Editor — '.$sg->subject->name.' Grade '.$sg->grade)
-                ->join(', ');
-        }
-
-        return $this->cachedRoleLabel = 'Teacher';
+        return $this->cachedRoleLabel ??= $this->getUser()
+            ->loadMissing(['subjectGradesAsAdmin.subject', 'subjectGrades.subject'])
+            ->detailed_role_label;
     }
 }

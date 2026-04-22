@@ -124,6 +124,24 @@ test('viewing a message marks it as read', function () {
     expect($message->fresh()->read_at)->not->toBeNull();
 });
 
+test('view message renders markdown lesson links as clickable labels', function () {
+    $recipient = makeTeacher();
+    $sender = makeTeacher();
+
+    $message = new Message([
+        'to_user_id' => $recipient->id,
+        'subject' => 'Lesson link',
+        'body' => 'Lesson plan: [Mathematics Grade 10 Day 2 version 1.01](https://www.sheql.com/lesson-plan-families/45?version=74)',
+    ]);
+    $message->from_user_id = $sender->id;
+    $message->save();
+
+    $this->actingAs($recipient)
+        ->get(MessageResource::getUrl('view', ['record' => $message->id]))
+        ->assertOk()
+        ->assertSeeHtml('<a href="https://www.sheql.com/lesson-plan-families/45?version=74" target="_blank" rel="noopener noreferrer" class="underline">Mathematics Grade 10 Day 2 version 1.01</a>');
+});
+
 test('a user cannot view another users message', function () {
     $owner = makeTeacher();
     $intruder = makeTeacher();

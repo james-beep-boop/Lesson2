@@ -86,6 +86,15 @@ test('favorites tab shows only versions the user has favorited', function () {
         ->assertCanNotSeeTableRecords([$unfavored]);
 });
 
+test('subject administrators see the My Subjects tab label', function () {
+    $subjectAdmin = makeSubjectAdmin(makeSubjectGrade());
+
+    $this->actingAs($subjectAdmin);
+
+    Livewire::test(ListLessonPlanFamilies::class)
+        ->assertSee('My Subjects');
+});
+
 test('favorite action fills and unfills the star immediately', function () {
     $sg = makeSubjectGrade();
     [, $version] = makeFamilyWithVersion($sg);

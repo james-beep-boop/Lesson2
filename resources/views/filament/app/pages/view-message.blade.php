@@ -1,6 +1,21 @@
 <x-filament-panels::page>
     @php
         $displayBody = preg_replace('/\n*\[deletion_request:\d+\]\s*$/', '', $this->record->body);
+        $renderedBody = preg_replace_callback(
+            '/\[(?<label>[^\]\n]+)\]\((?<markdown_url>https?:\/\/[^\s)<>]+)\)|(?<bare_url>https?:\/\/[^\s<>]+)/',
+            function (array $matches): string {
+                if (filled($matches['markdown_url'])) {
+                    return '<a href="'.e($matches['markdown_url']).'" target="_blank" rel="noopener noreferrer" class="underline">'
+                        .e($matches['label'])
+                        .'</a>';
+                }
+
+                $url = rtrim($matches['bare_url'], '.,;:)!"\'');
+
+                return '<a href="'.e($url).'" target="_blank" rel="noopener noreferrer" class="underline">'.e($url).'</a>';
+            },
+            e($displayBody)
+        );
     @endphp
 
     <div class="max-w-3xl space-y-4">
@@ -31,14 +46,7 @@
                 class="prose prose-sm dark:prose-invert max-w-none text-gray-800 dark:text-gray-200"
                 data-testid="message-body"
             >
-                {!! nl2br(preg_replace_callback(
-                    '~https?://[^\s<>]+~',
-                    function ($m) {
-                        $url = rtrim($m[0], '.,;:)!"\'');
-                        return '<a href="'.$url.'" target="_blank" rel="noopener noreferrer" class="underline">'.$url.'</a>';
-                    },
-                    e($displayBody)
-                )) !!}
+                {!! nl2br($renderedBody) !!}
             </div>
         </div>
 

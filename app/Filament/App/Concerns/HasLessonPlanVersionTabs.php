@@ -61,7 +61,7 @@ trait HasLessonPlanVersionTabs
         ];
 
         if ($showMineTab) {
-            $tabs['mine'] = Tab::make('My Subject-Grades')
+            $tabs['mine'] = Tab::make('My Subjects')
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
                     'family',
                     fn (Builder $fq) => $fq->whereIn('subject_grade_id', $subjectGradeIds)

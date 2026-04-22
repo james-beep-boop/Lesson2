@@ -28,7 +28,7 @@
                             size="sm"
                             icon="heroicon-o-printer"
                         >
-                            Print
+                            View PDF
                         </x-filament::button>
 
                         <x-filament::button

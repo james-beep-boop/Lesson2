@@ -175,4 +175,56 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             }
         )->shouldCache();
     }
+
+    /** @var array<int, string>|null */
+    private ?array $detailedRoleLabelsCache = null;
+
+    /**
+     * @return array<int, string>
+     */
+    public function detailedRoleLabels(): array
+    {
+        if ($this->detailedRoleLabelsCache !== null) {
+            return $this->detailedRoleLabelsCache;
+        }
+
+        $labels = [];
+
+        if ($this->isSiteAdmin()) {
+            $labels[] = 'Site Administrator';
+        }
+
+        $subjectAdminGrades = $this->relationLoaded('subjectGradesAsAdmin')
+            ? $this->subjectGradesAsAdmin->loadMissing('subject')
+            : $this->subjectGradesAsAdmin()->with('subject')->get();
+
+        if ($subjectAdminGrades->isNotEmpty()) {
+            $labels[] = 'Subject Admin — '.$subjectAdminGrades
+                ->map(fn (SubjectGrade $subjectGrade): string => $subjectGrade->subject->name.' Grade '.$subjectGrade->grade)
+                ->join(', ');
+        }
+
+        $editorGrades = $this->relationLoaded('subjectGrades')
+            ? $this->subjectGrades->loadMissing('subject')
+            : $this->subjectGrades()->with('subject')->get();
+
+        $editorGrades = $editorGrades
+            ->where('pivot.role', 'editor')
+            ->reject(fn (SubjectGrade $subjectGrade): bool => (int) $subjectGrade->subject_admin_user_id === $this->id);
+
+        if ($editorGrades->isNotEmpty()) {
+            $labels[] = 'Editor — '.$editorGrades
+                ->map(fn (SubjectGrade $subjectGrade): string => $subjectGrade->subject->name.' Grade '.$subjectGrade->grade)
+                ->join(', ');
+        }
+
+        return $this->detailedRoleLabelsCache = $labels === [] ? ['Teacher'] : $labels;
+    }
+
+    protected function detailedRoleLabel(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string => implode(' | ', $this->detailedRoleLabels())
+        )->shouldCache();
+    }
 }

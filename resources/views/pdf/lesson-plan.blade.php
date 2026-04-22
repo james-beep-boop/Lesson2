@@ -8,7 +8,7 @@
         font-size: 12px;
         color: #1a1a1a;
         margin: 0;
-        padding: 0;
+        padding: 0 0 54px;
     }
     .header {
         border-bottom: 2px solid #2563eb;
@@ -84,13 +84,16 @@
         vertical-align: top;
     }
     .footer {
-        margin-top: 24px;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
         border-top: 1px solid #e5e7eb;
         padding-top: 8px;
         font-size: 7px;
-        line-height: 1.2;
+        line-height: 1.3;
         color: #9ca3af;
-        white-space: nowrap;
+        text-align: center;
     }
 </style>
 </head>
@@ -116,7 +119,7 @@
 </div>
 
 <div class="footer">
-    @include('pdf.partials.license-footer', ['year' => $exportedAt->year])
+    @include('pdf.partials.license-footer', ['exportedAt' => $exportedAt])
 </div>
 
 </body>

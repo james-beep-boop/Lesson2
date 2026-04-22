@@ -60,6 +60,10 @@ class AppPanelProvider extends PanelProvider
 
 /* Hide the empty profile header placeholder in the user menu */
 .fi-user-menu .fi-dropdown-header { display: none !important; }
+.fi-user-menu .fi-dropdown-panel {
+    width: min(37.5rem, calc(100vw - 1rem)) !important;
+    max-width: min(37.5rem, calc(100vw - 1rem)) !important;
+}
 
 /* Tailwind-compatible utility classes for custom blade views */
 .flex { display: flex; }
@@ -171,17 +175,12 @@ HTML);
             ->renderHook(
                 PanelsRenderHook::USER_MENU_PROFILE_BEFORE,
                 fn (): HtmlString => auth()->check()
-                    ? new HtmlString(
-                        '<div class="fi-dropdown-list">'
-                        .'<div style="padding:0.625rem 0.875rem 0.5rem;">'
-                        .'<table style="border-collapse:collapse;font-size:0.8125rem;line-height:1.6;">'
-                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Username:</td><td>'.e(auth()->user()->username).'</td></tr>'
-                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Role:</td><td>'.e(auth()->user()->role_label).'</td></tr>'
-                        .'<tr><td style="opacity:0.55;font-size:0.75rem;padding-right:0.625rem;white-space:nowrap;vertical-align:top;">Email:</td><td>'.e(auth()->user()->email).'</td></tr>'
-                        .'</table>'
-                        .'</div>'
-                        .'</div>'
-                    )
+                    ? new HtmlString((string) view('filament.app.partials.user-menu-profile', [
+                        'user' => auth()->user()->loadMissing([
+                            'subjectGradesAsAdmin.subject',
+                            'subjectGrades.subject',
+                        ]),
+                    ]))
                     : new HtmlString('')
             )
             ->colors([

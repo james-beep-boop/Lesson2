@@ -321,12 +321,16 @@ test('lesson plan PDF view includes the shared copyright footer', function () {
     ])->render();
 
     expect($html)
+        ->toContain('Exported ')
+        ->toContain('ARES Kenya Lesson Library')
+        ->toContain('https://kenyalessons.org')
         ->toContain('Copyright')
         ->toContain('ARES Education')
         ->toContain('https://areseducation.org')
         ->toContain('CC BY-SA 4.0')
         ->toContain('https://creativecommons.org/licenses/by-sa/4.0/deed.en')
         ->toContain('Adapt, transform, redistribute, given appropriate attribution')
+        ->toContain('position: fixed;')
         ->toContain('aria-label="Creative Commons"')
         ->toContain('aria-label="Attribution"')
         ->toContain('aria-label="Share Alike"');
@@ -344,12 +348,16 @@ test('translation PDF view includes the shared copyright footer', function () {
     ])->render();
 
     expect($html)
+        ->toContain('Exported ')
+        ->toContain('ARES Kenya Lesson Library')
+        ->toContain('https://kenyalessons.org')
         ->toContain('Copyright')
         ->toContain('ARES Education')
         ->toContain('https://areseducation.org')
         ->toContain('CC BY-SA 4.0')
         ->toContain('https://creativecommons.org/licenses/by-sa/4.0/deed.en')
         ->toContain('Adapt, transform, redistribute, given appropriate attribution')
+        ->toContain('position: fixed;')
         ->toContain('aria-label="Creative Commons"')
         ->toContain('aria-label="Attribution"')
         ->toContain('aria-label="Share Alike"');
@@ -366,13 +374,32 @@ test('guide manual PDF view includes the shared copyright footer', function () {
     ])->render();
 
     expect($html)
+        ->toContain('Exported ')
+        ->toContain('ARES Kenya Lesson Library')
+        ->toContain('https://kenyalessons.org')
         ->toContain('Copyright')
         ->toContain('ARES Education')
         ->toContain('https://areseducation.org')
         ->toContain('CC BY-SA 4.0')
         ->toContain('https://creativecommons.org/licenses/by-sa/4.0/deed.en')
         ->toContain('Adapt, transform, redistribute, given appropriate attribution')
+        ->toContain('position: fixed;')
         ->toContain('aria-label="Creative Commons"')
         ->toContain('aria-label="Attribution"')
         ->toContain('aria-label="Share Alike"');
+});
+
+test('guide manual PDF footer uses Swahili export label when language is sw', function () {
+    $html = view('pdf.guide-manual', [
+        'language' => 'sw',
+        'title' => 'Mwongozo wa Masomo ya Kenya',
+        'sections' => [
+            ['title' => 'Muhtasari', 'body' => 'Maelezo ya mwongozo'],
+        ],
+        'exportedAt' => now(),
+    ])->render();
+
+    expect($html)
+        ->toContain('Imetolewa ')
+        ->not->toContain('Exported ');
 });
