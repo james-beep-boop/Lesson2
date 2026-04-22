@@ -29,8 +29,11 @@ RELEASE_COMMIT="${RELEASE_COMMIT:-unknown}"
 # --- PHP binary detection ---------------------------------------------------
 if [ -z "${PHP_BIN:-}" ]; then
     for candidate in \
+        /usr/local/php85/bin/php \
         /usr/local/php84/bin/php \
         /usr/local/php83/bin/php \
+        php85 \
+        php8.5 \
         php84 \
         php8.4 \
         php8.3 \
@@ -57,7 +60,7 @@ php_min_version() {
     if [ "$(printf '%s\n%s' "$required" "$actual" | sort -V | head -1)" != "$required" ]; then
         echo "ERROR: PHP $required or higher required. Found: $actual (using $PHP_BIN)"
         echo "Set PHP_BIN to the correct binary, e.g.:"
-        echo "  PHP_BIN=/usr/local/php84/bin/php bash ~/Lesson2/UPDATE_SITE.sh"
+        echo "  PHP_BIN=/usr/local/php85/bin/php bash ~/Lesson2/UPDATE_SITE.sh"
         exit 1
     fi
 }
@@ -78,7 +81,7 @@ cleanup() {
 trap 'cleanup' EXIT
 
 require_cmd "$PHP_BIN"
-php_min_version "8.3"
+php_min_version "8.5"
 
 cd "$APP_DIR"
 
