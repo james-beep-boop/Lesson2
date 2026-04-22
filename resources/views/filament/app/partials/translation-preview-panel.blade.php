@@ -47,7 +47,7 @@
                         </x-filament::button>
 
                         <x-filament::button
-                            wire:click="openTranslationEmailPanel"
+                            wire:click="mountAction('emailTranslationPdf')"
                             color="gray"
                             size="sm"
                             icon="heroicon-o-envelope"
@@ -87,54 +87,6 @@
                     <span wire:stream="translatedContent"></span>
                     <span class="italic text-gray-400 dark:text-gray-500">Translating to Swahili…</span>
                 </div>
-            @endif
-
-            @if($showTranslationEmailPanel)
-            <div class="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-                <div class="mb-3">
-                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Recipient Email <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="translationEmailTo"
-                        type="email"
-                        placeholder="recipient@example.com"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 @error('translationEmailTo') border-red-400 @enderror"
-                    >
-                    @error('translationEmailTo')
-                        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div class="mb-3">
-                    <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Optional message
-                    </label>
-                    <textarea
-                        wire:model="translationEmailMessage"
-                        rows="3"
-                        placeholder="Add a note to include in the email body…"
-                        class="w-full rounded-lg border border-gray-300 p-3 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                    ></textarea>
-                </div>
-                <div class="flex gap-2">
-                    <x-filament::button
-                        wire:click="sendTranslationEmailPdf"
-                        wire:loading.attr="disabled"
-                        wire:target="sendTranslationEmailPdf"
-                        size="sm"
-                        icon="heroicon-o-paper-airplane"
-                    >
-                        Send PDF
-                    </x-filament::button>
-                    <x-filament::button
-                        wire:click="$set('showTranslationEmailPanel', false)"
-                        color="gray"
-                        size="sm"
-                    >
-                        Cancel
-                    </x-filament::button>
-                </div>
-            </div>
             @endif
         </x-filament::section>
     </div>

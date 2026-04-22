@@ -3,11 +3,14 @@
 use App\Ai\Agents\LessonPlanAdvisor;
 use App\Ai\Agents\MarkdownSegmentTranslator;
 use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFamily;
+use App\Mail\LessonPlanPdfMail;
 use App\Models\DeletionRequest;
 use App\Models\Favorite;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
+use App\Services\LessonPlanPdfService;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
@@ -610,6 +613,84 @@ test('closeTranslationPanel resets translationComplete to false', function () {
         ->assertSet('translationPanelOpen', false)
         ->assertSet('translationComplete', false)
         ->assertSet('translatedContent', '');
+});
+
+test('translation email action is hidden until translation is complete', function () {
+    config(['features.ai_suggestions' => true]);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->set('translationComplete', false)
+        ->set('translatedContent', '')
+        ->assertActionHidden('emailTranslationPdf');
+});
+
+test('translation preview no longer renders the inline email form', function () {
+    config(['features.ai_suggestions' => true]);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->set('translationComplete', true)
+        ->set('translatedContent', 'Mpango wa Somo')
+        ->assertSee('Email PDF')
+        ->assertDontSee('Send PDF')
+        ->assertDontSee('recipient@example.com');
+});
+
+test('translation email action validates the recipient email address', function () {
+    config(['features.ai_suggestions' => true]);
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->set('translationComplete', true)
+        ->set('translatedContent', 'Mpango wa Somo')
+        ->callAction('emailTranslationPdf', [
+            'email' => 'not-an-email',
+        ])
+        ->assertHasActionErrors(['email' => 'email']);
+});
+
+test('translation email action sends the translated PDF to the specified address', function () {
+    config(['features.ai_suggestions' => true]);
+    Mail::fake();
+    $this->mock(LessonPlanPdfService::class)
+        ->shouldReceive('renderTranslation')
+        ->once()
+        ->andReturn('fake-pdf-bytes');
+
+    $sg = makeSubjectGrade();
+    [$family] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(makeEditor($sg));
+
+    Livewire::test(ViewLessonPlanFamily::class, ['record' => $family])
+        ->set('translationPanelOpen', true)
+        ->set('translationComplete', true)
+        ->set('translatedContent', 'Mpango wa Somo')
+        ->assertActionVisible('emailTranslationPdf')
+        ->callAction('emailTranslationPdf', [
+            'email' => 'teacher@school.ac.ke',
+            'message' => 'Please review this translation.',
+        ])
+        ->assertHasNoActionErrors()
+        ->assertNotified('Translation PDF sent successfully.');
+
+    Mail::assertSent(LessonPlanPdfMail::class, fn (LessonPlanPdfMail $mail): bool => $mail->hasTo('teacher@school.ac.ke'));
 });
 
 // ---------------------------------------------------------------------------

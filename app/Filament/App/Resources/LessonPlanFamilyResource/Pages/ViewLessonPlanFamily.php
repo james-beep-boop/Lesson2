@@ -18,6 +18,9 @@ use App\Services\LessonPlanPdfService;
 use App\Services\MarkdownNormalizer;
 use App\Services\TranslationService;
 use App\Services\VersionService;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Facades\Log;
@@ -80,12 +83,6 @@ class ViewLessonPlanFamily extends Page
     public string $translatedContent = '';
 
     public bool $translationComplete = false;
-
-    public bool $showTranslationEmailPanel = false;
-
-    public string $translationEmailTo = '';
-
-    public string $translationEmailMessage = '';
 
     // -------------------------------------------------------------------------
     // Lesson-context messaging state
@@ -552,7 +549,33 @@ class ViewLessonPlanFamily extends Page
         $this->translationPanelOpen = false;
         $this->translatedContent = '';
         $this->translationComplete = false;
-        $this->showTranslationEmailPanel = false;
+    }
+
+    public function emailTranslationPdfAction(): Action
+    {
+        return Action::make('emailTranslationPdf')
+            ->authorize(fn (): bool => $this->selectedVersion instanceof LessonPlanVersion
+                && auth()->check()
+                && auth()->user()->can('translate', $this->selectedVersion))
+            ->hidden(fn (): bool => ! $this->canEmailTranslatedPreview())
+            ->modalHeading('Email Swahili Translation PDF')
+            ->modalSubmitActionLabel('Send PDF')
+            ->schema([
+                TextInput::make('email')
+                    ->label('Recipient Email')
+                    ->email()
+                    ->required()
+                    ->maxLength(255),
+                Textarea::make('message')
+                    ->label('Optional message')
+                    ->rows(3)
+                    ->maxLength(5000)
+                    ->placeholder('Add a note to include in the email body…'),
+            ])
+            ->action(fn (array $data): mixed => $this->sendTranslationEmailPdf(
+                emailTo: $data['email'],
+                message: $data['message'] ?? null,
+            ));
     }
 
     public function useAiPrompt(string $prompt): void
@@ -591,23 +614,27 @@ class ViewLessonPlanFamily extends Page
         }
     }
 
-    public function openTranslationEmailPanel(): void
+    protected function canEmailTranslatedPreview(): bool
     {
-        abort_unless(auth()->check(), 403);
-        $this->showTranslationEmailPanel = true;
-        $this->translationEmailTo = '';
-        $this->translationEmailMessage = '';
+        return auth()->check()
+            && $this->translationPanelOpen
+            && $this->selectedVersion instanceof LessonPlanVersion
+            && auth()->user()->can('translate', $this->selectedVersion)
+            && $this->translationComplete
+            && filled($this->translatedContent);
     }
 
-    public function sendTranslationEmailPdf(): void
+    protected function sendTranslationEmailPdf(string $emailTo, ?string $message = null): void
     {
         abort_unless(auth()->check(), 403);
 
-        $this->validate([
-            'translationEmailTo' => 'required|email|max:255',
-        ]);
+        if (! $this->selectedVersion) {
+            return;
+        }
 
-        if (! $this->selectedVersion || ! $this->translatedContent) {
+        $this->authorize('translate', $this->selectedVersion);
+
+        if (! $this->translatedContent) {
             return;
         }
 
@@ -623,17 +650,13 @@ class ViewLessonPlanFamily extends Page
                 $this->translatedContent,
             );
 
-            Mail::to($this->translationEmailTo)->send(new LessonPlanPdfMail(
+            Mail::to($emailTo)->send(new LessonPlanPdfMail(
                 version: $version,
                 pdfContent: $pdfContent,
                 senderName: auth()->user()->name,
                 customMessage: 'Swahili translation — preview only, not saved to database.'
-                    .($this->translationEmailMessage ? "\n\n".$this->translationEmailMessage : ''),
+                    .($message ? "\n\n".$message : ''),
             ));
-
-            $this->showTranslationEmailPanel = false;
-            $this->translationEmailTo = '';
-            $this->translationEmailMessage = '';
 
             Notification::make('translation-email-sent')
                 ->title('Translation PDF sent successfully.')

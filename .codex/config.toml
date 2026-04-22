@@ -5,5 +5,8 @@ command = "php"
 args = ["artisan", "boost:mcp"]
 cwd = "/Users/jamesmcclelland/Documents/GitHub/Lesson2"
 
+[mcp_servers.laravel-boost.tools.search-docs]
+approval_mode = "approve"
+
 [sandbox_workspace_write]
 network_access = true
