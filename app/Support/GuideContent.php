@@ -97,6 +97,16 @@ class GuideContent
                     .'- Click any message row to read it; you can reply from the message view.',
             ],
             [
+                'title' => 'Translate to Swahili',
+                'roles' => null,
+                'body' => '- While viewing a lesson plan, click the **Translate to Swahili** button to translate that lesson.',
+            ],
+            [
+                'title' => 'Ask AI',
+                'roles' => ['editor', 'subject_admin', 'site_administrator'],
+                'body' => '- When viewing a lesson plan, you can ask AI to suggest improvements, check for clarity, simplify the lesson plan, or anything at all.',
+            ],
+            [
                 'title' => 'Print & Export',
                 'roles' => null,
                 'body' => "- **Print**: opens your browser's print dialog with a clean layout.\n"
@@ -118,8 +128,7 @@ class GuideContent
                 'body' => "- **Teachers** can browse lessons, compare versions, favorite versions, message other users, translate to Swahili, print, and export.\n"
                     ."- **Editors** can do all of that, edit lesson plans within their assigned subject and grade, and use the **Ask AI** function.\n"
                     ."- **Subject Administrators** can do all editor actions for their subject-grades, mark a version official, request deletion, and promote teachers to be editors.\n"
-                    ."- **Site Administrators** can manage subjects, grades, users, subject-grade assignments, and deletion requests.\n"
-                    .'- System users are internal accounts and do not sign in to the app panel.',
+                    .'- **Site Administrators** can manage subjects, grades, users, subject-grade assignments, and deletion requests.',
             ],
             [
                 'title' => 'Administration',
@@ -178,6 +187,16 @@ class GuideContent
                     .'- Bonyeza mstari wowote wa ujumbe kuusoma; unaweza kujibu kutoka kwenye mtazamo wa ujumbe.',
             ],
             [
+                'title' => 'Tafsiri kwa Kiswahili',
+                'roles' => null,
+                'body' => '- Ukiwa unatazama mpango wa somo, bonyeza kitufe cha **Translate to Swahili** kutafsiri somo hilo.',
+            ],
+            [
+                'title' => 'Ask AI',
+                'roles' => ['editor', 'subject_admin', 'site_administrator'],
+                'body' => '- Unapotazama mpango wa somo, unaweza kuuliza AI ipendekeze maboresho, ikague uwazi, irahisishe mpango wa somo, au chochote unachotaka.',
+            ],
+            [
                 'title' => 'Chapisha na Hamisha',
                 'roles' => null,
                 'body' => "- **Chapisha**: hufungua mazungumzo ya kuchapisha ya kivinjari chako kwa mpangilio safi.\n"
@@ -199,8 +218,7 @@ class GuideContent
                 'body' => "- **Walimu** wanaweza kutazama masomo, kulinganisha matoleo, kuweka vipendwa, kutuma ujumbe kwa watumiaji wengine, kutafsiri kwa Kiswahili, kuchapisha, na kuhamisha.\n"
                     ."- **Wahariri** wanaweza kufanya yote hayo, kuhariri mipango ya masomo ndani ya somo na darasa walilopewa, na kutumia kipengele cha **Ask AI**.\n"
                     ."- **Wasimamizi wa Somo** wanaweza kufanya vitendo vyote vya mhariri kwa subject-grade zao, kuweka toleo kuwa rasmi, kuomba kufutwa, na kuwapa walimu jukumu la kuwa wahariri.\n"
-                    ."- **Wasimamizi wa Tovuti** wanaweza kusimamia masomo, madarasa, watumiaji, mgao wa subject-grade, na maombi ya kufutwa.\n"
-                    .'- Watumiaji wa mfumo ni akaunti za ndani na hawaingii kwenye paneli ya programu.',
+                    .'- **Wasimamizi wa Tovuti** wanaweza kusimamia masomo, madarasa, watumiaji, mgao wa subject-grade, na maombi ya kufutwa.',
             ],
             [
                 'title' => 'Utawala',

@@ -14,7 +14,8 @@ test('manual download route returns 403 for unauthenticated requests', function 
 });
 
 test('english manual download returns a download with only the sections visible to the user', function () {
-    $this->actingAs(makeTeacher());
+    $teacher = makeTeacher();
+    $this->actingAs($teacher);
 
     $manuals = app(GuideManualService::class);
 
@@ -22,21 +23,25 @@ test('english manual download returns a download with only the sections visible 
         ->assertOk()
         ->assertDownload($manuals->pdfFilename('en'));
 
-    $teacherMarkdown = $manuals->markdown('en');
+    $teacherMarkdown = $manuals->markdown('en', $teacher);
 
     expect($teacherMarkdown)
         ->toContain('# Kenya Lesson Plan Manual')
         ->toContain('## Viewing Lessons')
-        ->toContain('## Editing Lessons')
-        ->toContain('## Official Versions')
-        ->toContain('## Deletion Requests')
-        ->toContain('## Administration');
+        ->toContain('## Translate to Swahili')
+        ->toContain('click the **Translate to Swahili** button')
+        ->not->toContain('## Ask AI')
+        ->not->toContain('## Editing Lessons')
+        ->not->toContain('## Official Versions')
+        ->not->toContain('## Deletion Requests')
+        ->not->toContain('## Administration');
 
     expect($response->headers->get('content-type'))->toContain('application/pdf');
 });
 
 test('swahili manual download returns the full manual for all users', function () {
-    $this->actingAs(makeTeacher());
+    $teacher = makeTeacher();
+    $this->actingAs($teacher);
 
     $manuals = app(GuideManualService::class);
 
@@ -44,13 +49,16 @@ test('swahili manual download returns the full manual for all users', function (
         ->assertOk()
         ->assertDownload($manuals->pdfFilename('sw'));
 
-    expect($manuals->markdown('sw'))
+    expect($manuals->markdown('sw', $teacher))
         ->toContain('# Mwongozo wa Mpango wa Somo wa Kenya')
         ->toContain('## Kutazama Masomo')
-        ->toContain('## Kuhariri Masomo')
-        ->toContain('## Matoleo Rasmi')
-        ->toContain('## Maombi ya Kufuta')
-        ->toContain('## Utawala');
+        ->toContain('## Tafsiri kwa Kiswahili')
+        ->toContain('**Translate to Swahili**')
+        ->not->toContain('## Ask AI')
+        ->not->toContain('## Kuhariri Masomo')
+        ->not->toContain('## Matoleo Rasmi')
+        ->not->toContain('## Maombi ya Kufuta')
+        ->not->toContain('## Utawala');
 });
 
 test('manual service saves canonical manual files into storage', function () {

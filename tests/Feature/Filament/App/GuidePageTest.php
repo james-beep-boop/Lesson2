@@ -63,6 +63,8 @@ test('guide shows the english sections in the new order', function () {
         'Official Versions',
         'Favorites',
         'Messaging Other Users',
+        'Translate to Swahili',
+        'Ask AI',
         'Print & Export',
         'Deletion Requests',
         'User Types and Permissions',
@@ -93,9 +95,12 @@ test('guide includes the updated editing, messaging, and permissions text in Eng
 
     expect($sections['Editing Lessons']['body'])->toContain('Make your edits in the edit window.');
     expect($sections['Messaging Other Users']['body'])->toContain('Messages to you appear in your **Inbox**');
+    expect($sections['Translate to Swahili']['body'])->toContain('click the **Translate to Swahili** button');
+    expect($sections['Ask AI']['body'])->toContain('ask AI to suggest improvements');
     expect($sections['User Types and Permissions']['body'])
         ->toContain('translate to Swahili')
-        ->toContain('promote teachers to be editors');
+        ->toContain('promote teachers to be editors')
+        ->not->toContain('System users are internal accounts');
 });
 
 test('guide includes the updated editing, messaging, and permissions text in Swahili', function () {
@@ -108,9 +113,12 @@ test('guide includes the updated editing, messaging, and permissions text in Swa
 
     expect($sections['Kuhariri Masomo']['body'])->toContain('Fanya mabadiliko yako kwenye dirisha la kuhariri.');
     expect($sections['Ujumbe kwa Watumiaji Wengine']['body'])->toContain('Ujumbe unaokujia unaonekana kwenye **Kisanduku cha Barua**');
+    expect($sections['Tafsiri kwa Kiswahili']['body'])->toContain('**Translate to Swahili**');
+    expect($sections['Ask AI']['body'])->toContain('unaweza kuuliza AI');
     expect($sections['Aina za Watumiaji na Ruhusa']['body'])
         ->toContain('kutafsiri kwa Kiswahili')
-        ->toContain('kuwapa walimu jukumu la kuwa wahariri');
+        ->toContain('kuwapa walimu jukumu la kuwa wahariri')
+        ->not->toContain('Watumiaji wa mfumo ni akaunti za ndani');
 });
 
 test('guide shows the swahili sections in the new order', function () {
@@ -128,6 +136,8 @@ test('guide shows the swahili sections in the new order', function () {
         'Matoleo Rasmi',
         'Vipendwa',
         'Ujumbe kwa Watumiaji Wengine',
+        'Tafsiri kwa Kiswahili',
+        'Ask AI',
         'Chapisha na Hamisha',
         'Maombi ya Kufuta',
         'Aina za Watumiaji na Ruhusa',
@@ -153,7 +163,11 @@ test('teacher sees the new user types section', function () {
     expect(array_column($component->instance()->sections(), 'title'))
         ->toContain('User Types and Permissions');
     expect(array_column($component->instance()->sections(), 'title'))
+        ->toContain('Translate to Swahili');
+    expect(array_column($component->instance()->sections(), 'title'))
         ->not->toContain('Editing Lessons');
+    expect(array_column($component->instance()->sections(), 'title'))
+        ->not->toContain('Ask AI');
     expect(array_column($component->instance()->sections(), 'title'))
         ->not->toContain('Official Versions');
 });
@@ -188,6 +202,7 @@ test('editor sees editing sections', function () {
     $titles = array_column($sections, 'title');
 
     expect($titles)->toContain('Editing Lessons');
+    expect($titles)->toContain('Ask AI');
 });
 
 test('teacher does not see admin-only sections', function () {
