@@ -21,16 +21,16 @@ class ListSubjectGrades extends ListRecords
     public function getTabs(): array
     {
         $hasAdmin = SubjectGrade::whereNotNull('subject_admin_user_id')->count();
-        $noAdmin  = SubjectGrade::whereNull('subject_admin_user_id')->count();
+        $noAdmin = SubjectGrade::whereNull('subject_admin_user_id')->count();
 
         return [
             'all' => Tab::make('All'),
 
             'has_admin' => Tab::make("Has Subject Admin ({$hasAdmin})")
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereNotNull('subject_admin_user_id')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNotNull('subject_admin_user_id')),
 
             'no_admin' => Tab::make("No Subject Admin ({$noAdmin})")
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereNull('subject_admin_user_id')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('subject_admin_user_id')),
         ];
     }
 }
