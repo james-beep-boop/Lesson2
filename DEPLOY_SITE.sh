@@ -168,6 +168,10 @@ echo "  [3/4] Uploading built frontend assets..."
 "$RSYNC_BIN" -az -e "ssh $SSH_SHARED_OPTS" --delete --delete-delay --force \
     public/build/ "$REMOTE_HOST:$REMOTE_APP_DIR/public/build/"
 
+echo "  [3b/4] Uploading guide manuals..."
+"$RSYNC_BIN" -az -e "ssh $SSH_SHARED_OPTS" \
+    storage/app/manuals/ "$REMOTE_HOST:$REMOTE_APP_DIR/storage/app/manuals/"
+
 echo "  [4/4] Finalizing deploy on DreamHost..."
 ssh -tt $SSH_SHARED_OPTS "$REMOTE_HOST" "cd $REMOTE_APP_DIR && PHP_BIN=$REMOTE_PHP_BIN RELEASE_COMMIT=$RELEASE_COMMIT bash ./$REMOTE_SCRIPT"
 
