@@ -1,6 +1,8 @@
 <?php
 
 use App\Filament\Admin\Resources\UserResource\Pages\ListUsers;
+use App\Models\Subject;
+use App\Models\SubjectGrade;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
@@ -102,4 +104,25 @@ test('deleting a non-admin user succeeds', function () {
 
     expect(User::where('id', $teacher->id)->withTrashed()->exists())->toBeTrue();
     expect(User::where('id', $teacher->id)->exists())->toBeFalse();
+});
+
+test('user table shows scoped assignment summaries', function () {
+    $math = Subject::factory()->create(['name' => 'Mathematics']);
+    $science = Subject::factory()->create(['name' => 'Science']);
+    $mathGrade = SubjectGrade::factory()->create([
+        'subject_id' => $math->id,
+        'grade' => 10,
+    ]);
+    $scienceGrade = SubjectGrade::factory()->create([
+        'subject_id' => $science->id,
+        'grade' => 8,
+    ]);
+    $target = makeSubjectAdmin($mathGrade);
+    $target->subjectGrades()->attach($scienceGrade->id, ['role' => 'editor']);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(ListUsers::class)
+        ->assertSee('SA: Mathematics G10')
+        ->assertSee('Ed: Science G8');
 });

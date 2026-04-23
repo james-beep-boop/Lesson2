@@ -8,6 +8,8 @@ use App\Models\Favorite;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
 use App\Models\Message;
+use App\Models\Subject;
+use App\Models\SubjectGrade;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Livewire\Livewire;
@@ -31,7 +33,9 @@ test('non-admin is denied access to admin dashboard', function () {
 test('site admin can access admin dashboard', function () {
     $this->actingAs(makeSiteAdmin())
         ->get(AdminDashboard::getUrl())
-        ->assertOk();
+        ->assertOk()
+        ->assertSee('Site Administrator')
+        ->assertSee('Subject Admins');
 });
 
 test('admin nav item is hidden from non-admins', function () {
@@ -178,72 +182,68 @@ test('bulk delete refuses to delete own account', function () {
     expect(User::find($admin->id))->not->toBeNull();
 });
 
-// ── UsersWidget – confirmRole action ─────────────────────────────────────────
-// The Status column is a SelectColumn. Changing it stores a pending role in
-// $pendingRoleChanges; clicking "Confirm" applies the change. Tests set the
-// pending state directly via Livewire's set() before calling the action.
+// ── UsersWidget – role display and site-admin actions ─────────────────────────
 
-test('confirmRole action promotes a user to site administrator', function () {
+test('users widget shows scoped assignment summaries', function () {
+    $math = Subject::factory()->create(['name' => 'Mathematics']);
+    $science = Subject::factory()->create(['name' => 'Science']);
+    $mathGrade = SubjectGrade::factory()->create([
+        'subject_id' => $math->id,
+        'grade' => 10,
+    ]);
+    $scienceGrade = SubjectGrade::factory()->create([
+        'subject_id' => $science->id,
+        'grade' => 8,
+    ]);
+    $target = makeSubjectAdmin($mathGrade);
+    $target->subjectGrades()->attach($scienceGrade->id, ['role' => 'editor']);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(UsersWidget::class)
+        ->assertSee('SA: Mathematics G10')
+        ->assertSee('Ed: Science G8');
+});
+
+test('grant site admin action promotes a user to site administrator', function () {
     $target = makeTeacher();
 
     $this->actingAs(makeSiteAdmin());
 
     Livewire::test(UsersWidget::class)
-        ->set('pendingRoleChanges', [$target->id => 'site_admin'])
-        ->callTableAction('confirmRole', $target)
+        ->callTableAction('grantSiteAdmin', $target)
         ->assertNotified();
 
     expect($target->fresh()->isSiteAdmin())->toBeTrue();
 });
 
-test('confirmRole action demotes an admin when another admin remains', function () {
+test('revoke site admin action removes global admin when another admin remains', function () {
     $admin1 = makeSiteAdmin();
     $admin2 = makeSiteAdmin();
 
     $this->actingAs($admin1);
 
     Livewire::test(UsersWidget::class)
-        ->set('pendingRoleChanges', [$admin2->id => 'user'])
-        ->callTableAction('confirmRole', $admin2)
+        ->callTableAction('revokeSiteAdmin', $admin2)
         ->assertNotified();
 
     expect($admin2->fresh()->isSiteAdmin())->toBeFalse();
 });
 
-// Note: the last-admin server-side guard in demoteToUser() is intentional
-// defense-in-depth but cannot be triggered via the UI: the ->hidden() guard on
-// the confirmRole action prevents an admin from targeting themselves, and you
-// cannot reach a state where you are the sole admin targeting a different sole admin
-// (the actor must be an admin to mount the widget, so ≥1 admin always remains).
-
-test('confirmRole action demoting to user removes all scoped role assignments', function () {
+test('revoke site admin action keeps subject-grade assignments unchanged', function () {
     $sg = makeSubjectGrade();
-    $editor = makeEditor($sg);
     $admin = makeSiteAdmin();
-
-    $this->actingAs($admin);
-
-    Livewire::test(UsersWidget::class)
-        ->set('pendingRoleChanges', [$editor->id => 'user'])
-        ->callTableAction('confirmRole', $editor)
-        ->assertNotified();
-
-    expect(DB::table('subject_grade_user')->where('user_id', $editor->id)->exists())->toBeFalse();
-});
-
-test('confirmRole action demoting to user clears subject_admin_user_id', function () {
-    $sg = makeSubjectGrade();
     $subjectAdmin = makeSubjectAdmin($sg);
-    $admin = makeSiteAdmin();
+    $subjectAdmin->assignRole('site_administrator');
 
     $this->actingAs($admin);
 
     Livewire::test(UsersWidget::class)
-        ->set('pendingRoleChanges', [$subjectAdmin->id => 'user'])
-        ->callTableAction('confirmRole', $subjectAdmin)
+        ->callTableAction('revokeSiteAdmin', $subjectAdmin)
         ->assertNotified();
 
-    expect($sg->fresh()->subject_admin_user_id)->toBeNull();
+    expect($subjectAdmin->fresh()->isSiteAdmin())->toBeFalse();
+    expect($sg->fresh()->subject_admin_user_id)->toBe($subjectAdmin->id);
 });
 
 // ── UsersWidget – message action ──────────────────────────────────────────────

@@ -55,10 +55,19 @@ class UserResource extends Resource
                         'Editor' => 'info',
                         default => 'gray',
                     }),
+                TextColumn::make('scoped_assignments')
+                    ->label('Assignments')
+                    ->state(fn (User $record): string => $record->scopedAssignmentSummary())
+                    ->wrap(),
                 TextColumn::make('email_verified_at')->dateTime()->label('Verified')->sortable(),
             ])
             ->actions([
                 EditAction::make(),
+                Action::make('manageAssignments')
+                    ->label('Manage Assignments')
+                    ->icon('heroicon-o-table-cells')
+                    ->color('gray')
+                    ->url(fn (): string => SubjectGradeResource::getUrl('index')),
                 Action::make('grantSiteAdmin')
                     ->label('Grant Site Administrator')
                     ->icon('heroicon-o-shield-check')

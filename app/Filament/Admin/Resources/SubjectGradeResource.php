@@ -7,12 +7,12 @@ use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\SubjectAdminService;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Actions\Action;
-use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -20,9 +20,18 @@ use Filament\Tables\Table;
 class SubjectGradeResource extends Resource
 {
     protected static ?string $model = SubjectGrade::class;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-table-cells';
+
     protected static string|\UnitEnum|null $navigationGroup = 'Curriculum';
+
     protected static ?string $label = 'Subject Grade';
+
+    /** @return array<int, string> */
+    private static function gradeOptions(): array
+    {
+        return array_combine(range(1, 12), array_map(fn (int $g): string => 'Grade '.$g, range(1, 12)));
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -31,7 +40,7 @@ class SubjectGradeResource extends Resource
                 ->relationship('subject', 'name')
                 ->required(),
             Select::make('grade')
-                ->options(array_combine(range(1, 12), array_map(fn ($g) => 'Grade ' . $g, range(1, 12))))
+                ->options(self::gradeOptions())
                 ->required(),
             // subject_admin_user_id is intentionally excluded from the form.
             // Use the "Assign Subject Admin" table action, which runs the full
@@ -45,18 +54,19 @@ class SubjectGradeResource extends Resource
             ->modifyQueryUsing(fn ($query) => $query->with(['subject', 'subjectAdmin', 'users']))
             ->columns([
                 TextColumn::make('subject.name')->sortable()->searchable()->label('Subject'),
-                TextColumn::make('grade')->sortable()->formatStateUsing(fn ($state) => 'Grade ' . $state),
+                TextColumn::make('grade')->sortable()->formatStateUsing(fn ($state) => 'Grade '.$state),
                 TextColumn::make('subjectAdmin.username')->label('Subject Admin')->default('—'),
                 TextColumn::make('editors_display')
                     ->label('Editors')
-                    ->state(fn (SubjectGrade $record): string =>
-                        $record->users->isNotEmpty()
-                            ? $record->users->pluck('username')->join(', ')
-                            : '—'
+                    ->state(fn (SubjectGrade $record): string => $record->users->isNotEmpty()
+                        ? $record->users->pluck('username')->join(', ')
+                        : '—'
                     ),
             ])
             ->filters([
                 SelectFilter::make('subject')->relationship('subject', 'name'),
+                SelectFilter::make('grade')
+                    ->options(self::gradeOptions()),
             ])
             ->actions([
                 EditAction::make(),

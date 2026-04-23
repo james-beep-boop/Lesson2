@@ -9,8 +9,8 @@
         thead .fi-ta-page-checkbox { display: none; }
     </style>
 
-    {{-- ── Stats grid (2 rows × 3 boxes) ───────────────────────────────────── --}}
-    <div class="mb-6" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+    {{-- ── Stats grid ───────────────────────────────────────────────────── --}}
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <x-filament::section>
             <div style="text-align: center;">
                 <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['siteAdmins'] }}</div>

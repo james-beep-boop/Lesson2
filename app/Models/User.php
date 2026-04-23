@@ -179,6 +179,47 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     /** @var array<int, string>|null */
     private ?array $detailedRoleLabelsCache = null;
 
+    /** @var array<int, string>|null */
+    private ?array $scopedAssignmentLabelsCache = null;
+
+    /**
+     * @return array<int, string>
+     */
+    public function scopedAssignmentLabels(): array
+    {
+        if ($this->scopedAssignmentLabelsCache !== null) {
+            return $this->scopedAssignmentLabelsCache;
+        }
+
+        $subjectAdminGrades = $this->relationLoaded('subjectGradesAsAdmin')
+            ? $this->subjectGradesAsAdmin->loadMissing('subject')
+            : $this->subjectGradesAsAdmin()->with('subject')->get();
+
+        $adminLabels = $subjectAdminGrades
+            ->map(fn (SubjectGrade $subjectGrade): string => 'SA: '.$subjectGrade->subject->name.' G'.$subjectGrade->grade);
+
+        $editorGrades = $this->relationLoaded('subjectGrades')
+            ? $this->subjectGrades->loadMissing('subject')
+            : $this->subjectGrades()->with('subject')->get();
+
+        $editorLabels = $editorGrades
+            ->filter(fn (SubjectGrade $subjectGrade): bool => $subjectGrade->pivot?->role === 'editor')
+            ->reject(fn (SubjectGrade $subjectGrade): bool => (int) $subjectGrade->subject_admin_user_id === $this->id)
+            ->map(fn (SubjectGrade $subjectGrade): string => 'Ed: '.$subjectGrade->subject->name.' G'.$subjectGrade->grade);
+
+        return $this->scopedAssignmentLabelsCache = $adminLabels
+            ->sort()
+            ->values()
+            ->merge($editorLabels->sort()->values())
+            ->values()
+            ->all();
+    }
+
+    public function scopedAssignmentSummary(): string
+    {
+        return collect($this->scopedAssignmentLabels())->join(' | ') ?: 'None';
+    }
+
     /**
      * @return array<int, string>
      */
