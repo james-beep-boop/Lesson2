@@ -4,7 +4,9 @@
 .claude/worktrees/
 .claude/skills/
 .cursor/
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/**
 /output/
 /tmp/
 update_plan.md

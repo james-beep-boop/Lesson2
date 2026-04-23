@@ -72,6 +72,18 @@ test('swahili guide content returns swahili section titles for teachers', functi
         ->not->toContain('Utawala');
 });
 
+test('manual download redirects back with session flag when PDF is missing', function () {
+    $this->actingAs(makeTeacher());
+
+    $manuals = Mockery::mock(GuideManualService::class)->makePartial();
+    $manuals->allows('pdfPath')->andReturn('/nonexistent/path/manual.pdf');
+    $this->app->instance(GuideManualService::class, $manuals);
+
+    $this->get(route('guide.manual.download', ['lang' => 'en']))
+        ->assertRedirect()
+        ->assertSessionHas('manual_missing', true);
+});
+
 test('manual download route returns 404 for invalid language', function () {
     $this->actingAs(makeTeacher());
 
