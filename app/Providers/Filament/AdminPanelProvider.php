@@ -2,12 +2,13 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Http\Middleware\AbsoluteSessionTimeout;
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -37,8 +38,11 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\Filament\Admin\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\Filament\Admin\Pages')
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
-            ->plugins([
-                FilamentShieldPlugin::make(),
+            ->navigationItems([
+                NavigationItem::make('Lessons')
+                    ->icon('heroicon-o-document-text')
+                    ->sort(-1)
+                    ->url(fn (): string => LessonPlanFamilyResource::getUrl('index', panel: 'app')),
             ])
             ->renderHook(
                 PanelsRenderHook::BODY_START,

@@ -1,5 +1,9 @@
 <?php
 
+use App\Filament\Admin\Resources\DeletionRequestResource;
+use App\Filament\Admin\Resources\SubjectGradeResource;
+use App\Filament\Admin\Resources\SubjectResource;
+use App\Filament\Admin\Resources\UserResource;
 use App\Filament\App\Pages\AdminDashboard;
 use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Filament\App\Widgets\LessonVersionsWidget;
@@ -35,7 +39,20 @@ test('site admin can access admin dashboard', function () {
         ->get(AdminDashboard::getUrl())
         ->assertOk()
         ->assertSee('Site Administrator')
-        ->assertSee('Subject Admins');
+        ->assertSee('Subject Admins')
+        ->assertSee('Admin Resources')
+        ->assertSee('Manage Users')
+        ->assertSee('Subject Grades')
+        ->assertSee('Deletion Requests');
+});
+
+test('site admin dashboard links to the admin resource pages', function () {
+    $this->actingAs(makeSiteAdmin())
+        ->get(AdminDashboard::getUrl())
+        ->assertSee(UserResource::getUrl('index', panel: 'admin'), escape: false)
+        ->assertSee(SubjectResource::getUrl('index', panel: 'admin'), escape: false)
+        ->assertSee(SubjectGradeResource::getUrl('index', panel: 'admin'), escape: false)
+        ->assertSee(DeletionRequestResource::getUrl('index', panel: 'admin'), escape: false);
 });
 
 test('admin nav item is hidden from non-admins', function () {

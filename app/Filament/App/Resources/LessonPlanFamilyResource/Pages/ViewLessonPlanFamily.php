@@ -119,7 +119,7 @@ class ViewLessonPlanFamily extends Page
     private function syncPendingDeletion(): void
     {
         $this->hasPendingDeletion = (bool) $this->selectedVersion?->deletionRequests()
-            ->whereNull('resolved_at')
+            ->pending()
             ->exists();
     }
 

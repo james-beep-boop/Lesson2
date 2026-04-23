@@ -4,9 +4,10 @@ namespace App\Filament\Admin\Resources\UserResource\Pages;
 
 use App\Filament\Admin\Resources\UserResource;
 use App\Models\User;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Schemas\Schema;
-use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Model;
 
 class CreateUser extends CreateRecord
@@ -36,6 +37,10 @@ class CreateUser extends CreateRecord
                 ->required()
                 ->minLength(8)
                 ->helperText('Minimum 8 characters. The user can change this after logging in.'),
+            Checkbox::make('is_site_admin')
+                ->label('Make Site Administrator')
+                ->helperText('Gives this user full administrative access immediately after creation.')
+                ->default(false),
         ]);
     }
 
@@ -45,10 +50,20 @@ class CreateUser extends CreateRecord
      */
     protected function handleRecordCreation(array $data): Model
     {
-        return User::create([
+        $isSiteAdmin = (bool) ($data['is_site_admin'] ?? false);
+
+        unset($data['is_site_admin']);
+
+        $user = User::create([
             ...$data,
             'email_verified_at' => now(),
         ]);
+
+        if ($isSiteAdmin) {
+            $user->assignRole('site_administrator');
+        }
+
+        return $user;
     }
 
     protected function getRedirectUrl(): string

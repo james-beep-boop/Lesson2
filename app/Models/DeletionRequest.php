@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,5 +44,15 @@ class DeletionRequest extends Model
     public function isResolved(): bool
     {
         return $this->resolved_at !== null;
+    }
+
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->whereNull('resolved_at');
+    }
+
+    public function scopeResolved(Builder $query): Builder
+    {
+        return $query->whereNotNull('resolved_at');
     }
 }

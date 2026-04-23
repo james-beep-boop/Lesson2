@@ -19,17 +19,17 @@ class ListDeletionRequests extends ListRecords
 
     public function getTabs(): array
     {
-        $pending  = DeletionRequest::whereNull('resolved_at')->count();
-        $resolved = DeletionRequest::whereNotNull('resolved_at')->count();
+        $pending = DeletionRequest::pending()->count();
+        $resolved = DeletionRequest::resolved()->count();
 
         return [
             'all' => Tab::make('All'),
 
             'pending' => Tab::make("Pending ({$pending})")
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('resolved_at')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->pending()),
 
             'resolved' => Tab::make("Resolved ({$resolved})")
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereNotNull('resolved_at')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->resolved()),
         ];
     }
 }

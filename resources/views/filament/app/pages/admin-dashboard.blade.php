@@ -49,6 +49,47 @@
         </x-filament::section>
     </div>
 
+    <h2 class="fi-header-heading mb-3">Admin Resources</h2>
+
+    <x-filament::section class="mb-6">
+        <div class="flex flex-wrap gap-3">
+            <x-filament::button
+                tag="a"
+                color="gray"
+                href="{{ \App\Filament\Admin\Resources\UserResource::getUrl('index', panel: 'admin') }}"
+            >
+                Manage Users
+            </x-filament::button>
+
+            <x-filament::button
+                tag="a"
+                color="gray"
+                href="{{ \App\Filament\Admin\Resources\SubjectResource::getUrl('index', panel: 'admin') }}"
+            >
+                Subjects ({{ $stats['subjects'] }})
+            </x-filament::button>
+
+            <x-filament::button
+                tag="a"
+                color="gray"
+                href="{{ \App\Filament\Admin\Resources\SubjectGradeResource::getUrl('index', panel: 'admin') }}"
+            >
+                Subject Grades ({{ $stats['subjectGrades'] }})
+            </x-filament::button>
+
+            <x-filament::button
+                tag="a"
+                :color="$stats['pendingDeletionRequests'] > 0 ? 'danger' : 'gray'"
+                href="{{ \App\Filament\Admin\Resources\DeletionRequestResource::getUrl('index', panel: 'admin') }}"
+            >
+                Deletion Requests
+                @if ($stats['pendingDeletionRequests'] > 0)
+                    ({{ $stats['pendingDeletionRequests'] }} pending)
+                @endif
+            </x-filament::button>
+        </div>
+    </x-filament::section>
+
     {{-- ── Lesson Plans Admin section ──────────────────────────────────────────── --}}
     <div class="mb-3 flex items-center justify-between">
         <h2 class="fi-header-heading">Lesson Plans Admin</h2>

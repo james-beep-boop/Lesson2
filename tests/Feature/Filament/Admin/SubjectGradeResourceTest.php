@@ -62,3 +62,21 @@ test('subject grades can be filtered by subject admin assignment tabs', function
         ->assertCanSeeTableRecords([$withoutAdmin])
         ->assertCanNotSeeTableRecords([$withAdmin]);
 });
+
+test('subject admin can be removed from a subject grade', function () {
+    $subject = Subject::factory()->create(['name' => 'Mathematics']);
+    $subjectAdmin = User::factory()->create();
+    $subjectGrade = SubjectGrade::factory()->create([
+        'subject_id' => $subject->id,
+        'grade' => 10,
+        'subject_admin_user_id' => $subjectAdmin->id,
+    ]);
+
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(ListSubjectGrades::class)
+        ->callTableAction('removeSubjectAdmin', $subjectGrade)
+        ->assertNotified();
+
+    expect($subjectGrade->fresh()->subject_admin_user_id)->toBeNull();
+});

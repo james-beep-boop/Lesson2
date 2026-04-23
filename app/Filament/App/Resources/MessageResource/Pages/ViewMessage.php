@@ -113,7 +113,7 @@ class ViewMessage extends ViewRecord
             return DeletionRequest::query()
                 ->with('version.family.subjectGrade.subject')
                 ->whereKey($this->deletionRequestId)
-                ->whereNull('resolved_at')
+                ->pending()
                 ->first();
         }
 
@@ -121,7 +121,7 @@ class ViewMessage extends ViewRecord
             return DeletionRequest::query()
                 ->with('version.family.subjectGrade.subject')
                 ->whereKey((int) $matches[1])
-                ->whereNull('resolved_at')
+                ->pending()
                 ->first();
         }
 
@@ -137,7 +137,7 @@ class ViewMessage extends ViewRecord
 
         return DeletionRequest::query()
             ->with('version.family.subjectGrade.subject')
-            ->whereNull('resolved_at')
+            ->pending()
             ->whereHas('version', function ($query) use ($familyMatches, $versionMatches) {
                 $query
                     ->where('lesson_plan_family_id', (int) $familyMatches[1])

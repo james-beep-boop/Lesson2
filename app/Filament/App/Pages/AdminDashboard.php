@@ -2,8 +2,10 @@
 
 namespace App\Filament\App\Pages;
 
+use App\Models\DeletionRequest;
 use App\Models\LessonPlanFamily;
 use App\Models\LessonPlanVersion;
+use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Models\User;
 use App\Services\BackupService;
@@ -50,8 +52,11 @@ class AdminDashboard extends Page
             $totalUsers = User::where('is_system', false)->count();
             $families = LessonPlanFamily::count();
             $versions = LessonPlanVersion::count();
+            $subjects = Subject::count();
+            $subjectGrades = SubjectGrade::count();
+            $pendingDeletionRequests = DeletionRequest::pending()->count();
 
-            return compact('siteAdmins', 'subjectAdmins', 'editors', 'totalUsers', 'families', 'versions');
+            return compact('siteAdmins', 'subjectAdmins', 'editors', 'totalUsers', 'families', 'versions', 'subjects', 'subjectGrades', 'pendingDeletionRequests');
         });
     }
 

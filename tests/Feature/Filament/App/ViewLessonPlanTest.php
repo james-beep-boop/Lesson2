@@ -160,7 +160,7 @@ test('request deletion creates a pending deletion request', function () {
         ->assertNotified();
 
     expect(DeletionRequest::where('lesson_plan_version_id', $version->id)
-        ->whereNull('resolved_at')
+        ->pending()
         ->exists()
     )->toBeTrue();
 });

@@ -1,6 +1,9 @@
 <?php
 
+use App\Filament\Admin\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Admin\Resources\UserResource\Pages\ListUsers;
+use App\Filament\App\Pages\AdminDashboard;
+use App\Filament\App\Resources\LessonPlanFamilyResource;
 use App\Models\Subject;
 use App\Models\SubjectGrade;
 use App\Models\User;
@@ -11,6 +14,20 @@ use Spatie\Permission\Models\Role;
 beforeEach(function () {
     Role::firstOrCreate(['name' => 'site_administrator', 'guard_name' => 'web']);
     Filament::setCurrentPanel(Filament::getPanel('admin'));
+});
+
+test('admin dashboard route redirects to the single admin home', function () {
+    $this->actingAs(makeSiteAdmin())
+        ->get('/admin')
+        ->assertRedirect(AdminDashboard::getUrl(panel: 'app'));
+});
+
+test('admin resource pages include a lessons navigation link', function () {
+    $this->actingAs(makeSiteAdmin())
+        ->get('/admin/users')
+        ->assertOk()
+        ->assertSee('Lessons')
+        ->assertSee(LessonPlanFamilyResource::getUrl('index', panel: 'app'), escape: false);
 });
 
 // -------------------------------------------------------------------------
@@ -125,4 +142,24 @@ test('user table shows scoped assignment summaries', function () {
     Livewire::test(ListUsers::class)
         ->assertSee('SA: Mathematics G10')
         ->assertSee('Ed: Science G8');
+});
+
+test('site admin can create a user as a site administrator in one step', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(CreateUser::class)
+        ->fillForm([
+            'username' => 'newadmin',
+            'name' => 'New Admin',
+            'email' => 'newadmin@example.com',
+            'password' => 'password123',
+            'is_site_admin' => true,
+        ])
+        ->call('create')
+        ->assertNotified()
+        ->assertRedirect();
+
+    $user = User::where('email', 'newadmin@example.com')->firstOrFail();
+
+    expect($user->isSiteAdmin())->toBeTrue();
 });

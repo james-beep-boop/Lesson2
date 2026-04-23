@@ -73,6 +73,7 @@ class SubjectGradeResource extends Resource
                 Action::make('assignSubjectAdmin')
                     ->label('Assign Subject Admin')
                     ->icon('heroicon-o-user-plus')
+                    ->modalDescription('If this subject grade already has a Subject Admin, that person will automatically become an Editor.')
                     ->form([
                         Select::make('user_id')
                             ->label('User')
@@ -85,6 +86,28 @@ class SubjectGradeResource extends Resource
                         app(SubjectAdminService::class)->promote($user, $record);
                         Notification::make('subject-admin-assigned')->title('Subject Admin assigned')->success()->send();
                     }),
+                Action::make('removeSubjectAdmin')
+                    ->label('Remove Subject Admin')
+                    ->icon('heroicon-o-user-minus')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Remove Subject Admin?')
+                    ->modalDescription(fn (SubjectGrade $record): string => "Remove the Subject Admin assignment from {$record->subject->name}, Grade {$record->grade}?")
+                    ->action(function (SubjectGrade $record): void {
+                        $subjectAdmin = $record->subjectAdmin;
+
+                        if (! $subjectAdmin) {
+                            return;
+                        }
+
+                        app(SubjectAdminService::class)->removeUser($subjectAdmin, $record);
+
+                        Notification::make('subject-admin-removed')
+                            ->title('Subject Admin removed.')
+                            ->success()
+                            ->send();
+                    })
+                    ->visible(fn (SubjectGrade $record): bool => $record->subject_admin_user_id !== null),
                 Action::make('addEditor')
                     ->label('Add Editor')
                     ->icon('heroicon-o-user-circle')
