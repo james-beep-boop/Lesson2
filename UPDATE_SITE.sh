@@ -147,9 +147,7 @@ echo "        done in $(( $(date +%s) - _t5_start ))s"
 echo "  [6/8] Rebuilding caches..."
 _t() { echo "        $(date +%H:%M:%S) $*"; }
 _t "optimize:clear...";    "$PHP_BIN" artisan optimize:clear --quiet
-_t "config:cache...";      "$PHP_BIN" artisan config:cache --quiet
-_t "route:cache...";       "$PHP_BIN" artisan route:cache --quiet
-_t "view:cache...";        "$PHP_BIN" artisan view:cache --quiet
+_t "optimize...";          "$PHP_BIN" artisan optimize --quiet
 _t "icons:cache...";       "$PHP_BIN" artisan icons:cache --quiet
 _t "permission:cache...";  "$PHP_BIN" artisan permission:cache-reset --quiet
 _t "done."
