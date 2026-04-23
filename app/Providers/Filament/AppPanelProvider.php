@@ -60,9 +60,11 @@ class AppPanelProvider extends PanelProvider
 
 /* Hide the empty profile header placeholder in the user menu */
 .fi-user-menu .fi-dropdown-header { display: none !important; }
-.fi-user-menu .fi-dropdown-panel {
-    width: min(37.5rem, calc(100vw - 1rem)) !important;
-    max-width: min(37.5rem, calc(100vw - 1rem)) !important;
+
+/* User menu panel is teleported to <body>, so the parent selector .fi-user-menu does not reach it.
+   min-width on .fi-dropdown-panel is safe — panels already expand to fit content. */
+.fi-dropdown-panel {
+    min-width: 18rem;
 }
 
 /* Tailwind-compatible utility classes for custom blade views */
