@@ -3,6 +3,7 @@
 .claude/settings.local.json
 .claude/worktrees/
 .claude/skills/
+.codex/
 .cursor/
 .agents/*
 !.agents/skills/
