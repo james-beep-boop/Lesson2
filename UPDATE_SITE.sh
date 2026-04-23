@@ -140,15 +140,19 @@ if [ -d storage/app/public ] && [ ! -L public/storage ]; then
 fi
 
 echo "  [5/8] Publishing Filament assets..."
+_t5_start=$(date +%s)
 "$PHP_BIN" artisan filament:assets --quiet
+echo "        done in $(( $(date +%s) - _t5_start ))s"
 
 echo "  [6/8] Rebuilding caches..."
-"$PHP_BIN" artisan optimize:clear --quiet
-"$PHP_BIN" artisan config:cache --quiet
-"$PHP_BIN" artisan route:cache --quiet
-"$PHP_BIN" artisan view:cache --quiet
-"$PHP_BIN" artisan icons:cache --quiet
-"$PHP_BIN" artisan permission:cache-reset --quiet
+_t() { echo "        $(date +%H:%M:%S) $*"; }
+_t "optimize:clear...";    "$PHP_BIN" artisan optimize:clear --quiet
+_t "config:cache...";      "$PHP_BIN" artisan config:cache --quiet
+_t "route:cache...";       "$PHP_BIN" artisan route:cache --quiet
+_t "view:cache...";        "$PHP_BIN" artisan view:cache --quiet
+_t "icons:cache...";       "$PHP_BIN" artisan icons:cache --quiet
+_t "permission:cache...";  "$PHP_BIN" artisan permission:cache-reset --quiet
+_t "done."
 
 echo "  [7/8] Writing version info..."
 mkdir -p storage/app
