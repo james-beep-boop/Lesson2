@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\GuideManualService;
+use App\Support\GuideContent;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -20,52 +21,55 @@ test('manual download route returns 403 for unverified users', function () {
         ->assertForbidden();
 });
 
-test('english manual download returns a download with only the sections visible to the user', function () {
+test('english manual download serves the committed PDF file', function () {
     $teacher = makeTeacher();
     $this->actingAs($teacher);
 
     $manuals = app(GuideManualService::class);
 
-    $response = $this->get(route('guide.manual.download', ['lang' => 'en']))
+    $this->get(route('guide.manual.download', ['lang' => 'en']))
         ->assertOk()
-        ->assertDownload($manuals->pdfFilename('en'));
-
-    $teacherMarkdown = $manuals->markdown('en', $teacher);
-
-    expect($teacherMarkdown)
-        ->toContain('# Kenya Lesson Plan Manual')
-        ->toContain('## Viewing Lessons')
-        ->toContain('## Translate to Swahili')
-        ->toContain('click the **Translate to Swahili** button')
-        ->not->toContain('## Ask AI')
-        ->not->toContain('## Editing Lessons')
-        ->not->toContain('## Official Versions')
-        ->not->toContain('## Deletion Requests')
-        ->not->toContain('## Administration');
-
-    expect($response->headers->get('content-type'))->toContain('application/pdf');
+        ->assertDownload($manuals->pdfFilename('en'))
+        ->assertHeader('content-type', 'application/pdf');
 });
 
-test('swahili manual download returns the full manual for all users', function () {
-    $teacher = makeTeacher();
-    $this->actingAs($teacher);
+test('swahili manual download serves the committed PDF file', function () {
+    $this->actingAs(makeTeacher());
 
     $manuals = app(GuideManualService::class);
 
     $this->get(route('guide.manual.download', ['lang' => 'sw']))
         ->assertOk()
-        ->assertDownload($manuals->pdfFilename('sw'));
+        ->assertDownload($manuals->pdfFilename('sw'))
+        ->assertHeader('content-type', 'application/pdf');
+});
 
-    expect($manuals->markdown('sw', $teacher))
-        ->toContain('# Mwongozo wa Mpango wa Somo wa Kenya')
-        ->toContain('## Kutazama Masomo')
-        ->toContain('## Tafsiri kwa Kiswahili')
-        ->toContain('**Translate to Swahili**')
-        ->not->toContain('## Ask AI')
-        ->not->toContain('## Kuhariri Masomo')
-        ->not->toContain('## Matoleo Rasmi')
-        ->not->toContain('## Maombi ya Kufuta')
-        ->not->toContain('## Utawala');
+test('teachers see viewing and translation sections but not admin sections', function () {
+    $teacher = makeTeacher();
+    $titles = collect(GuideContent::visibleSections($teacher, 'en'))->pluck('title')->all();
+
+    expect($titles)
+        ->toContain('Viewing Lessons')
+        ->toContain('Translate to Swahili')
+        ->not->toContain('Ask AI')
+        ->not->toContain('Editing Lessons')
+        ->not->toContain('Official Versions')
+        ->not->toContain('Deletion Requests')
+        ->not->toContain('Administration');
+});
+
+test('swahili guide content returns swahili section titles for teachers', function () {
+    $teacher = makeTeacher();
+    $titles = collect(GuideContent::visibleSections($teacher, 'sw'))->pluck('title')->all();
+
+    expect($titles)
+        ->toContain('Kutazama Masomo')
+        ->toContain('Tafsiri kwa Kiswahili')
+        ->not->toContain('Ask AI')
+        ->not->toContain('Kuhariri Masomo')
+        ->not->toContain('Matoleo Rasmi')
+        ->not->toContain('Maombi ya Kufuta')
+        ->not->toContain('Utawala');
 });
 
 test('manual download route returns 404 for invalid language', function () {
