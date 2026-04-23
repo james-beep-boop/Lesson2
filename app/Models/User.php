@@ -197,6 +197,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
         $adminLabels = $subjectAdminGrades
             ->toBase()
+            ->filter(fn (SubjectGrade $subjectGrade): bool => $subjectGrade->subject !== null)
             ->map(fn (SubjectGrade $subjectGrade): string => 'SA: '.$subjectGrade->subject->name.' G'.$subjectGrade->grade);
 
         $editorGrades = $this->relationLoaded('subjectGrades')
@@ -207,6 +208,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             ->toBase()
             ->filter(fn (SubjectGrade $subjectGrade): bool => $subjectGrade->pivot?->role === 'editor')
             ->reject(fn (SubjectGrade $subjectGrade): bool => (int) $subjectGrade->subject_admin_user_id === $this->id)
+            ->filter(fn (SubjectGrade $subjectGrade): bool => $subjectGrade->subject !== null)
             ->map(fn (SubjectGrade $subjectGrade): string => 'Ed: '.$subjectGrade->subject->name.' G'.$subjectGrade->grade);
 
         return $this->scopedAssignmentLabelsCache = $adminLabels
@@ -241,6 +243,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             ? $this->subjectGradesAsAdmin->loadMissing('subject')
             : $this->subjectGradesAsAdmin()->with('subject')->get();
 
+        $subjectAdminGrades = $subjectAdminGrades->filter(fn (SubjectGrade $sg): bool => $sg->subject !== null);
+
         if ($subjectAdminGrades->isNotEmpty()) {
             $labels[] = 'Subject Admin — '.$subjectAdminGrades
                 ->map(fn (SubjectGrade $subjectGrade): string => $subjectGrade->subject->name.' Grade '.$subjectGrade->grade)
@@ -254,6 +258,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         $editorGrades = $editorGrades
             ->where('pivot.role', 'editor')
             ->reject(fn (SubjectGrade $subjectGrade): bool => (int) $subjectGrade->subject_admin_user_id === $this->id);
+
+        $editorGrades = $editorGrades->filter(fn (SubjectGrade $sg): bool => $sg->subject !== null);
 
         if ($editorGrades->isNotEmpty()) {
             $labels[] = 'Editor — '.$editorGrades

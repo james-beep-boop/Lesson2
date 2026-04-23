@@ -100,7 +100,7 @@
 </div>
 
 <div class="content">
-    {!! (new \League\CommonMark\GithubFlavoredMarkdownConverter(['html_input' => 'allow']))->convert($translatedContent ?? '') !!}
+    {!! (new \League\CommonMark\GithubFlavoredMarkdownConverter(['html_input' => 'strip']))->convert($translatedContent ?? '') !!}
 </div>
 
 <div class="footer">

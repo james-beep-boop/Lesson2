@@ -16,7 +16,7 @@
                 this.$nextTick(() => $wire.translatePreview());
             }
         }"
-        x-on:open-translation-print.window="window.open($event.detail.url, '_blank')"
+        x-on:open-translation-print.window="window.open($event.detail.url, '_blank', 'noopener')"
     >
         <x-filament::section heading="Swahili Translation">
             <x-slot name="afterHeader">

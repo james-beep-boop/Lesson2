@@ -59,7 +59,7 @@ Mwongozo huu unaeleza jinsi ya kutumia Lesson2 kutazama, kuhariri, kulinganisha,
 
 - Bonyeza **Omba Kufutwa** kwenye toleo kuliashiria kwa kuondolewa.
 - Msimamizi wa Tovuti lazima aidhinishe ombi kabla toleo halijafutwa.
-- Mchango na wasimamizi wote wa tovuti wanataarifiwa kwa ujumbe wa sanduku la barua wakati ombi linawasilishwa.
+- Mchangiaji na wasimamizi wote wa tovuti wanataarifiwa kwa ujumbe wa sanduku la barua wakati ombi linawasilishwa.
 
 ## Aina za Watumiaji na Ruhusa
 

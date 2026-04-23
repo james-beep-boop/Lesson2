@@ -4,15 +4,15 @@
         $renderedBody = preg_replace_callback(
             '/\[(?<label>[^\]\n]+)\]\((?<markdown_url>https?:\/\/[^\s)<>]+)\)|(?<bare_url>https?:\/\/[^\s<>]+)/',
             function (array $matches): string {
-                if (filled($matches['markdown_url'])) {
-                    return '<a href="'.e($matches['markdown_url']).'" target="_blank" rel="noopener noreferrer" class="underline">'
-                        .e($matches['label'])
+                if (filled($matches['markdown_url'] ?? '')) {
+                    return '<a href="'.$matches['markdown_url'].'" target="_blank" rel="noopener noreferrer" class="underline">'
+                        .$matches['label']
                         .'</a>';
                 }
 
                 $url = rtrim($matches['bare_url'], '.,;:)!"\'');
 
-                return '<a href="'.e($url).'" target="_blank" rel="noopener noreferrer" class="underline">'.e($url).'</a>';
+                return '<a href="'.$url.'" target="_blank" rel="noopener noreferrer" class="underline">'.$url.'</a>';
             },
             e($displayBody)
         );

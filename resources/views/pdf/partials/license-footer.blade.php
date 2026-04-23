@@ -1,13 +1,13 @@
 <div style="text-align: center;">
     <div>
-        {{ $exportLabel ?? 'Exported' }} {{ $exportedAt->format('d M Y H:i') }}
+        {{ $exportLabel ?? 'Exported' }} {{ $exportedAt?->format('d M Y H:i') ?? 'N/A' }}
         &middot;
         <a href="https://kenyalessons.org" style="color: inherit; text-decoration: underline;">ARES Kenya Lesson Library</a>
     </div>
     <div>
         Copyright
         <a href="https://areseducation.org" style="color: inherit; text-decoration: underline;">ARES Education</a>
-        {{ $exportedAt->year }}
+        {{ $exportedAt?->year ?? date('Y') }}
         <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.en" style="color: inherit; text-decoration: underline;">CC BY-SA 4.0</a>
         <span style="display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; margin-inline: 2px;">
             <svg style="display: inline-block; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512" width="9" height="9" aria-label="Creative Commons" fill="currentColor">

@@ -10,7 +10,8 @@ class GuideManualController extends Controller
     public function download(string $lang, GuideManualService $manuals)
     {
         abort_unless(auth()->check(), 403);
-        abort_unless(in_array($lang, ['en', 'sw']), 404);
+        abort_unless(auth()->user()->hasVerifiedEmail(), 403);
+        abort_unless(in_array($lang, ['en', 'sw'], true), 404);
 
         $path = $manuals->pdfPath($lang);
         abort_unless(File::exists($path), 404);

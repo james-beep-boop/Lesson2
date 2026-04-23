@@ -15,6 +15,7 @@ class LessonPlanDocxController extends Controller
     public function download(LessonPlanFamily $family, LessonPlanVersion $version, LessonPlanDocxService $docx)
     {
         abort_unless(auth()->check(), 403);
+        abort_unless(auth()->user()->hasVerifiedEmail(), 403);
         abort_unless((int) $version->lesson_plan_family_id === $family->id, 404);
 
         set_time_limit(60);

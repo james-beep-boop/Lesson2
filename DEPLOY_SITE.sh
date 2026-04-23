@@ -169,6 +169,10 @@ echo "  [3/4] Uploading built frontend assets..."
     public/build/ "$REMOTE_HOST:$REMOTE_APP_DIR/public/build/"
 
 echo "  [3b/4] Uploading guide manuals..."
+if [ ! -d storage/app/manuals ]; then
+    echo "ERROR: storage/app/manuals/ is missing. Ensure manual PDFs are present before deploying."
+    exit 1
+fi
 "$RSYNC_BIN" -az -e "ssh $SSH_SHARED_OPTS" \
     storage/app/manuals/ "$REMOTE_HOST:$REMOTE_APP_DIR/storage/app/manuals/"
 
