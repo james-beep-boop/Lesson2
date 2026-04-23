@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use App\Services\GuideManualService;
 use Spatie\Permission\Models\Role;
 
@@ -8,6 +9,13 @@ beforeEach(function () {
 });
 
 test('manual download route returns 403 for unauthenticated requests', function () {
+    $this->get(route('guide.manual.download', ['lang' => 'en']))
+        ->assertForbidden();
+});
+
+test('manual download route returns 403 for unverified users', function () {
+    $this->actingAs(User::factory()->unverified()->create());
+
     $this->get(route('guide.manual.download', ['lang' => 'en']))
         ->assertForbidden();
 });

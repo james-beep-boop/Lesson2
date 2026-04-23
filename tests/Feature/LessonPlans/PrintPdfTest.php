@@ -4,6 +4,7 @@ use App\Filament\App\Resources\LessonPlanFamilyResource\Pages\ViewLessonPlanFami
 use App\Mail\LessonPlanDocxMail;
 use App\Mail\LessonPlanPdfMail;
 use App\Models\LessonPlanVersion;
+use App\Models\User;
 use App\Services\LessonPlanDocxService;
 use App\Services\LessonPlanPdfService;
 use Filament\Facades\Filament;
@@ -63,6 +64,18 @@ test('PDF download route returns PDF response for valid family and version', fun
     $response->assertHeader('content-type', 'application/pdf');
 });
 
+test('PDF download route returns 403 for unverified users', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(User::factory()->unverified()->create());
+
+    $this->get(route('lesson-plan.pdf', [
+        'family' => $family->id,
+        'version' => $version->id,
+    ]))->assertForbidden();
+});
+
 test('translation preview PDF route returns 403 for unauthenticated requests', function () {
     $token = 'preview-token';
     $sg = makeSubjectGrade();
@@ -92,6 +105,24 @@ test('translation preview PDF route returns 403 for the wrong authenticated user
     ], now()->addMinutes(5));
 
     $this->actingAs(makeTeacher());
+
+    $this->get(route('lesson-plan.translation-preview-pdf', ['token' => $token]))
+        ->assertForbidden();
+});
+
+test('translation preview PDF route returns 403 for unverified users', function () {
+    $token = 'preview-token';
+    $sg = makeSubjectGrade();
+    [, $version] = makeFamilyWithVersion($sg);
+    $user = User::factory()->unverified()->create();
+
+    Cache::put("translation-preview-pdf:{$token}", [
+        'user_id' => $user->id,
+        'lesson_plan_version_id' => $version->id,
+        'translated_content' => 'Mpango wa Somo',
+    ], now()->addMinutes(5));
+
+    $this->actingAs($user);
 
     $this->get(route('lesson-plan.translation-preview-pdf', ['token' => $token]))
         ->assertForbidden();
@@ -221,6 +252,18 @@ test('DOCX download route returns 403 for unauthenticated requests', function ()
     ]));
 
     $response->assertForbidden();
+});
+
+test('DOCX download route returns 403 for unverified users', function () {
+    $sg = makeSubjectGrade();
+    [$family, $version] = makeFamilyWithVersion($sg);
+
+    $this->actingAs(User::factory()->unverified()->create());
+
+    $this->get(route('lesson-plan.docx', [
+        'family' => $family->id,
+        'version' => $version->id,
+    ]))->assertForbidden();
 });
 
 test('DOCX download route returns 404 when version does not belong to family', function () {
