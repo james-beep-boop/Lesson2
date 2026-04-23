@@ -205,6 +205,25 @@ test('users widget shows scoped assignment summaries', function () {
         ->assertSee('Ed: Science G8');
 });
 
+test('scoped assignment summary handles users with admin and editor assignments', function () {
+    $math = Subject::factory()->create(['name' => 'Mathematics']);
+    $science = Subject::factory()->create(['name' => 'Science']);
+    $mathGrade = SubjectGrade::factory()->create([
+        'subject_id' => $math->id,
+        'grade' => 10,
+    ]);
+    $scienceGrade = SubjectGrade::factory()->create([
+        'subject_id' => $science->id,
+        'grade' => 8,
+    ]);
+    $target = makeSubjectAdmin($mathGrade);
+    $target->subjectGrades()->attach($scienceGrade->id, ['role' => 'editor']);
+
+    $target->load(['subjectGradesAsAdmin.subject', 'subjectGrades.subject']);
+
+    expect($target->scopedAssignmentSummary())->toBe('SA: Mathematics G10 | Ed: Science G8');
+});
+
 test('grant site admin action promotes a user to site administrator', function () {
     $target = makeTeacher();
 

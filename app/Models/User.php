@@ -196,6 +196,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             : $this->subjectGradesAsAdmin()->with('subject')->get();
 
         $adminLabels = $subjectAdminGrades
+            ->toBase()
             ->map(fn (SubjectGrade $subjectGrade): string => 'SA: '.$subjectGrade->subject->name.' G'.$subjectGrade->grade);
 
         $editorGrades = $this->relationLoaded('subjectGrades')
@@ -203,6 +204,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             : $this->subjectGrades()->with('subject')->get();
 
         $editorLabels = $editorGrades
+            ->toBase()
             ->filter(fn (SubjectGrade $subjectGrade): bool => $subjectGrade->pivot?->role === 'editor')
             ->reject(fn (SubjectGrade $subjectGrade): bool => (int) $subjectGrade->subject_admin_user_id === $this->id)
             ->map(fn (SubjectGrade $subjectGrade): string => 'Ed: '.$subjectGrade->subject->name.' G'.$subjectGrade->grade);
