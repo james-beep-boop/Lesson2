@@ -3,6 +3,7 @@
 namespace App\Filament\App\Pages;
 
 use App\Support\GuideContent;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Width;
 
@@ -17,6 +18,17 @@ class Guide extends Page
     protected static ?int $navigationSort = 99;
 
     public string $language = 'en';
+
+    public function mount(): void
+    {
+        if (session()->pull('manual_missing')) {
+            Notification::make()
+                ->title('Manual not available')
+                ->body('The PDF manual is not currently on the server. Please contact an administrator.')
+                ->warning()
+                ->send();
+        }
+    }
 
     public function getMaxContentWidth(): Width
     {
