@@ -1,7 +1,6 @@
 <?php
 
 use App\Services\GuideManualService;
-use Illuminate\Support\Facades\File;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -59,23 +58,6 @@ test('swahili manual download returns the full manual for all users', function (
         ->not->toContain('## Matoleo Rasmi')
         ->not->toContain('## Maombi ya Kufuta')
         ->not->toContain('## Utawala');
-});
-
-test('manual service saves canonical manual files into storage', function () {
-    $tempDir = sys_get_temp_dir().'/guide-manual-test-'.uniqid();
-
-    $manuals = Mockery::mock(GuideManualService::class)->makePartial();
-    $manuals->allows('outputDirectory')->andReturn($tempDir);
-
-    $manuals->generateAndSaveAll('en');
-    $manuals->generateAndSaveAll('sw');
-
-    expect(File::exists($tempDir.'/'.$manuals->markdownFilename('en')))->toBeTrue();
-    expect(File::exists($tempDir.'/'.$manuals->pdfFilename('en')))->toBeTrue();
-    expect(File::exists($tempDir.'/'.$manuals->markdownFilename('sw')))->toBeTrue();
-    expect(File::exists($tempDir.'/'.$manuals->pdfFilename('sw')))->toBeTrue();
-
-    File::deleteDirectory($tempDir);
 });
 
 test('manual download route returns 404 for invalid language', function () {

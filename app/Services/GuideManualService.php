@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Support\GuideContent;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\File;
 
 class GuideManualService
 {
@@ -58,34 +56,4 @@ class GuideManualService
         return implode("\n", $markdown)."\n";
     }
 
-    public function renderPdf(string $lang = 'en', ?User $user = null): string
-    {
-        return Pdf::loadView('pdf.guide-manual', [
-            'title' => $this->title($lang),
-            'language' => $lang,
-            'sections' => $user ? GuideContent::visibleSections($user, $lang) : GuideContent::sections($lang),
-            'exportedAt' => now(),
-        ])->output();
-    }
-
-    public function generateAndSave(string $lang = 'en'): void
-    {
-        File::ensureDirectoryExists($this->outputDirectory());
-
-        File::put($this->markdownPath($lang), $this->markdown($lang));
-        File::put($this->pdfPath($lang), $this->renderPdf($lang));
-    }
-
-    /**
-     * @return array{markdown:string,pdf:string}
-     */
-    public function generateAndSaveAll(string $lang = 'en'): array
-    {
-        $this->generateAndSave($lang);
-
-        return [
-            'markdown' => $this->markdownPath($lang),
-            'pdf' => $this->pdfPath($lang),
-        ];
-    }
 }
