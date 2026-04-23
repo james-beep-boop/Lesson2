@@ -2,6 +2,12 @@
 .DS_Store
 .claude/settings.local.json
 .claude/worktrees/
+.claude/skills/
+.cursor/
+.agents/
+/output/
+/tmp/
+update_plan.md
 .env
 .env.backup
 .env.production
