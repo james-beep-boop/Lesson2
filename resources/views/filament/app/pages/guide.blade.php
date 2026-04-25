@@ -36,7 +36,7 @@
         <div class="space-y-4">
             @foreach($this->sections() as $section)
                 <x-filament::section :heading="$section['title']" collapsible collapsed>
-                    <div class="prose prose-sm max-w-none dark:prose-invert [&_a]:text-primary-600 [&_a]:underline hover:[&_a]:text-primary-700 dark:[&_a]:text-primary-400">
+                    <div class="ares-guide-content prose prose-sm max-w-none dark:prose-invert">
                         @markdown($section['body'])
                     </div>
                 </x-filament::section>

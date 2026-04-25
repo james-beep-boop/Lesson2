@@ -9,3 +9,23 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@layer components {
+    .ares-guide-content a {
+        color: var(--color-blue-600);
+        text-decoration-line: underline;
+        text-underline-offset: 0.125rem;
+    }
+
+    .ares-guide-content a:hover {
+        color: var(--color-blue-700);
+    }
+
+    .dark .ares-guide-content a {
+        color: var(--color-blue-400);
+    }
+
+    .dark .ares-guide-content a:hover {
+        color: var(--color-blue-300);
+    }
+}
