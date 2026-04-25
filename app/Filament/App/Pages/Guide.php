@@ -3,9 +3,11 @@
 namespace App\Filament\App\Pages;
 
 use App\Support\GuideContent;
+use App\Support\GuideMarkdown;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Width;
+use Illuminate\Support\HtmlString;
 
 class Guide extends Page
 {
@@ -63,5 +65,10 @@ class Guide extends Page
     public function manualDownloadUrl(): string
     {
         return route('guide.manual.download', ['lang' => $this->language]);
+    }
+
+    public function renderSectionBody(string $markdown): HtmlString
+    {
+        return GuideMarkdown::render($markdown);
     }
 }

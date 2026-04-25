@@ -37,7 +37,7 @@
             @foreach($this->sections() as $section)
                 <x-filament::section :heading="$section['title']" collapsible collapsed>
                     <div class="ares-guide-content prose prose-sm max-w-none dark:prose-invert">
-                        @markdown($section['body'])
+                        {{ $this->renderSectionBody($section['body']) }}
                     </div>
                 </x-filament::section>
             @endforeach

@@ -114,6 +114,15 @@ test('guide includes the updated editing, messaging, and permissions text in Eng
         ->toContain('[publicity, privacy, or moral rights](https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-publicity-privacy-or-moral-rights)');
 });
 
+test('guide copyright links open in a new tab', function () {
+    $this->actingAs(makeSiteAdmin());
+
+    Livewire::test(Guide::class)
+        ->assertSeeHtml('rel="noopener noreferrer" target="_blank" href="https://areseducation.org"')
+        ->assertSeeHtml('rel="noopener noreferrer" target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.en"')
+        ->assertSeeHtml('rel="noopener noreferrer" target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-appropriate-credit"');
+});
+
 test('guide includes the updated editing, messaging, and permissions text in Swahili', function () {
     $this->actingAs(makeSiteAdmin());
 
