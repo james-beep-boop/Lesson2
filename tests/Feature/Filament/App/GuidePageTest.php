@@ -69,6 +69,7 @@ test('guide shows the english sections in the new order', function () {
         'Deletion Requests',
         'User Types and Permissions',
         'Administration',
+        'Copyright',
     ]);
 });
 
@@ -101,6 +102,16 @@ test('guide includes the updated editing, messaging, and permissions text in Eng
         ->toContain('translate to Swahili')
         ->toContain('promote teachers to be editors')
         ->not->toContain('System users are internal accounts');
+
+    expect($sections['Copyright']['body'])
+        ->toContain('[ARES Education](https://areseducation.org)')
+        ->toContain('[Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/deed.en)')
+        ->toContain('[appropriate credit](https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-appropriate-credit)')
+        ->toContain('[indicate if changes were made](https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-indicate-changes)')
+        ->toContain('[same license](https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-same-license)')
+        ->toContain('[technological measures](https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-technological-measures)')
+        ->toContain('[exception or limitation](https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-exception-or-limitation)')
+        ->toContain('[publicity, privacy, or moral rights](https://creativecommons.org/licenses/by-sa/4.0/deed.en#ref-publicity-privacy-or-moral-rights)');
 });
 
 test('guide includes the updated editing, messaging, and permissions text in Swahili', function () {
@@ -119,6 +130,10 @@ test('guide includes the updated editing, messaging, and permissions text in Swa
         ->toContain('kutafsiri kwa Kiswahili')
         ->toContain('kuwapa walimu jukumu la kuwa wahariri')
         ->not->toContain('Watumiaji wa mfumo ni akaunti za ndani');
+
+    expect($sections['Copyright']['body'])
+        ->toContain('These Lesson Plans are developed by')
+        ->toContain('[ARES Education](https://areseducation.org)');
 });
 
 test('guide shows the swahili sections in the new order', function () {
@@ -142,6 +157,7 @@ test('guide shows the swahili sections in the new order', function () {
         'Maombi ya Kufuta',
         'Aina za Watumiaji na Ruhusa',
         'Utawala',
+        'Copyright',
     ]);
 });
 
@@ -160,16 +176,14 @@ test('teacher sees the new user types section', function () {
 
     $component = Livewire::test(Guide::class);
 
-    expect(array_column($component->instance()->sections(), 'title'))
-        ->toContain('User Types and Permissions');
-    expect(array_column($component->instance()->sections(), 'title'))
-        ->toContain('Translate to Swahili');
-    expect(array_column($component->instance()->sections(), 'title'))
-        ->not->toContain('Editing Lessons');
-    expect(array_column($component->instance()->sections(), 'title'))
-        ->not->toContain('Ask AI');
-    expect(array_column($component->instance()->sections(), 'title'))
-        ->not->toContain('Official Versions');
+    $titles = array_column($component->instance()->sections(), 'title');
+
+    expect($titles)->toContain('User Types and Permissions');
+    expect($titles)->toContain('Translate to Swahili');
+    expect($titles)->toContain('Copyright');
+    expect($titles)->not->toContain('Editing Lessons');
+    expect($titles)->not->toContain('Ask AI');
+    expect($titles)->not->toContain('Official Versions');
 });
 
 test('site administrator sees admin-only sections', function () {
@@ -181,6 +195,7 @@ test('site administrator sees admin-only sections', function () {
     $titles = array_column($sections, 'title');
 
     expect($titles)->toContain('Administration');
+    expect(array_slice($titles, -2))->toBe(['Administration', 'Copyright']);
 });
 
 test('site administrator sees the canonical orientation text', function () {
