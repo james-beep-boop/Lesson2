@@ -210,6 +210,12 @@ class LessonPlanFamilyResource extends Resource
             return false;
         }
 
-        return $user->isSiteAdmin();
+        if ($user->isSiteAdmin()) {
+            return true;
+        }
+
+        // Subject Admins may create families for subject_grades they administer.
+        // Editors and Teachers cannot create new families (spec §10).
+        return $user->subjectGradesAsAdmin()->exists();
     }
 }

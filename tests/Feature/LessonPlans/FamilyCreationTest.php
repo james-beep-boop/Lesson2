@@ -79,6 +79,16 @@ test('editors and teachers cannot create a family per policy', function () {
     expect($policy->create($editor))->toBeFalse();
 });
 
+test('subject admins and site admins can create a family per policy', function () {
+    $sg = makeSubjectGrade();
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
+    $policy = new LessonPlanFamilyPolicy;
+
+    expect($policy->create($subjectAdmin))->toBeTrue();
+    expect($policy->create($siteAdmin))->toBeTrue();
+});
+
 test('saving a new family creates family and first version in one transaction', function () {
     $sg = makeSubjectGrade();
     $contributor = makeTeacher();

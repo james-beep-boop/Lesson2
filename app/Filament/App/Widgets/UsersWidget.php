@@ -61,7 +61,8 @@ class UsersWidget extends TableWidget
                     ->wrap(),
                 TextColumn::make('email')
                     ->label('Email')
-                    ->searchable(),
+                    ->searchable()
+                    ->visible(fn (): bool => auth()->user()?->isSiteAdmin() ?? false),
             ])
             ->recordActions([
                 Action::make('grantSiteAdmin')

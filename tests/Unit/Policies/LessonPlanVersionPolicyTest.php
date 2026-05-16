@@ -64,14 +64,21 @@ test('site admin can add a version to any subject_grade', function () {
 });
 
 test('only subject admin and site admin can mark a version official', function () {
+    // Create all users (including the Subject Admin) BEFORE the version is loaded.
+    // Policy reads $version->family?->subjectGrade which caches the relation on first
+    // access; mutating subject_admin_user_id after that point would not be reflected.
     $sg = makeSubjectGrade();
+    $teacher = makeTeacher();
+    $editor = makeEditor($sg);
+    $subjectAdmin = makeSubjectAdmin($sg);
+    $siteAdmin = makeSiteAdmin();
     [$family, $version] = makeFamilyWithVersion($sg);
     $policy = new LessonPlanVersionPolicy;
 
-    expect($policy->markOfficial(makeTeacher(), $version))->toBeFalse();
-    expect($policy->markOfficial(makeEditor($sg), $version))->toBeFalse();
-    expect($policy->markOfficial(makeSubjectAdmin($sg), $version))->toBeTrue();
-    expect($policy->markOfficial(makeSiteAdmin(), $version))->toBeTrue();
+    expect($policy->markOfficial($teacher, $version))->toBeFalse();
+    expect($policy->markOfficial($editor, $version))->toBeFalse();
+    expect($policy->markOfficial($subjectAdmin, $version))->toBeTrue();
+    expect($policy->markOfficial($siteAdmin, $version))->toBeTrue();
 });
 
 test('ask AI hidden from teacher', function () {

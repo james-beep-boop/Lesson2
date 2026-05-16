@@ -13,10 +13,15 @@ class LessonPlanFamilyPolicy
         return ! $user->is_system;
     }
 
-    /** Only Site Admins may create a new lesson plan family. */
+    /**
+     * Site Admins, and Subject Admins for any subject_grade, may create a new family.
+     * The per-subject_grade gate is enforced when the form is submitted, since this
+     * gate runs before any subject_grade has been chosen.
+     */
     public function create(User $user): bool
     {
-        return $user->isSiteAdmin();
+        return $user->isSiteAdmin()
+            || $user->subjectGradesAsAdmin()->exists();
     }
 
     /**

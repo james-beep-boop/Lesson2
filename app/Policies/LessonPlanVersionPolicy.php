@@ -22,7 +22,7 @@ class LessonPlanVersionPolicy
      */
     public function create(User $user, LessonPlanFamily $family): bool
     {
-        $subjectGrade = $family->subjectGrade()->first();
+        $subjectGrade = $family->subjectGrade;
 
         if (! $subjectGrade) {
             return false;
@@ -35,7 +35,7 @@ class LessonPlanVersionPolicy
     /** Mark a version official: Subject Admin (own) or Site Admin. */
     public function markOfficial(User $user, LessonPlanVersion $version): bool
     {
-        $subjectGrade = $version->family()->first()?->subjectGrade()->first();
+        $subjectGrade = $version->family?->subjectGrade;
 
         if (! $subjectGrade) {
             return false;
@@ -51,7 +51,7 @@ class LessonPlanVersionPolicy
      */
     public function requestDeletion(User $user, LessonPlanVersion $version): bool
     {
-        $subjectGrade = $version->family()->first()?->subjectGrade()->first();
+        $subjectGrade = $version->family?->subjectGrade;
 
         if (! $subjectGrade) {
             return false;
@@ -69,8 +69,8 @@ class LessonPlanVersionPolicy
      */
     public function directDelete(User $user, LessonPlanVersion $version): bool
     {
-        $family = $version->family()->first();
-        $subjectGrade = $family?->subjectGrade()->first();
+        $family = $version->family;
+        $subjectGrade = $family?->subjectGrade;
 
         if (! $subjectGrade) {
             return false;
@@ -110,7 +110,7 @@ class LessonPlanVersionPolicy
             return false;
         }
 
-        $subjectGrade = $version->family()->first()?->subjectGrade()->first();
+        $subjectGrade = $version->family?->subjectGrade;
 
         if (! $subjectGrade) {
             return false;
