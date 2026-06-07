@@ -8,7 +8,7 @@
 
 Build the MVP for the **ARES Kenya Lesson Plan Library** — a web application for teachers and administrators to store, version, browse, compare, and manage lesson plans.
 
-**Working directory:** `/Users/jamesmcclelland/Documents/GitHub/Lesson2`
+**Working directory:** repository root
 
 ---
 
@@ -100,92 +100,26 @@ No application code changes required when switching providers. The `LessonPlanAd
 
 ## 3. AI Tooling and Knowledge Currency
 
-### ⚠️ Knowledge currency warning
+The project uses packages that may be newer than an assistant's training data, so verify package-specific APIs before implementing changes.
 
-The AI assistants working on this project (Claude Code and others) have a training cutoff of **August 2025**. The following packages were released or significantly updated **after** that date:
+Preferred verification order:
 
-| Package | Version used |
-|---|---|
-| Laravel | 13 |
-| Filament | 5 |
-| Livewire | 4 |
-| Laravel AI SDK (`laravel/ai`) | first-party, Laravel 13 era |
+1. Boost `search_docs` when available
+2. Official documentation
+3. Installed vendor source; trust installed source if docs disagree
 
-Release dates are context, not the rule. **The rule is: verify before using.** Built-in training knowledge of these packages must be treated as unreliable. Always verify against live documentation or installed package source before implementing any feature that touches them. If documentation and installed source disagree, trust the installed source. This is not optional — silent assumption errors on post-cutoff APIs are the primary risk on this project.
+Key docs to check at build time:
 
-### How to verify during the build
+- Laravel 13: https://laravel.com/docs/13.x
+- Laravel AI SDK: https://laravel.com/docs/13.x/ai-sdk
+- Laravel Boost: https://laravel.com/docs/13.x/boost
+- Filament 5: https://filamentphp.com/docs/5.x
+- Livewire 4: https://livewire.laravel.com/docs
+- Tailwind CSS v4: https://tailwindcss.com/docs
+- Spatie Permission: https://spatie.be/docs/laravel-permission
+- Laravel Shift Blueprint: https://blueprint.laravelshift.com
 
-In order of preference:
-
-1. **Boost `search_docs` MCP tool** — when Boost is installed and available, query Filament 5, Laravel 13, Livewire 4 docs directly from within the coding session.
-2. **WebFetch on official doc pages** — when Boost is unavailable or results are insufficient.
-3. **Read installed package source** — when a specific method signature or config key is uncertain, read the installed vendor file directly. **If installed source and docs disagree, trust the installed source.**
-
-**Never** proceed with a package-specific implementation based solely on training-data recall when any of the above verification options are available.
-
-### Key documentation URLs
-
-Verify these URLs are current at build time — doc URL structures occasionally change between major versions:
-
-| Resource | URL |
-|---|---|
-| Laravel 13 | https://laravel.com/docs/13.x |
-| Laravel AI SDK | https://laravel.com/docs/13.x/ai-sdk |
-| Laravel Boost | https://laravel.com/docs/13.x/boost |
-| Filament 5 | https://filamentphp.com/docs/5.x *(verify URL at build time)* |
-| Livewire 4 | https://livewire.laravel.com/docs |
-| Tailwind CSS v4 | https://tailwindcss.com/docs |
-| Spatie Permission | https://spatie.be/docs/laravel-permission |
-| Laravel Shift Blueprint | https://blueprint.laravelshift.com |
-
-### Pre-build verification checklist
-
-Run through this before writing code in each phase. Use Boost `search_docs` or WebFetch for each item.
-
-**Before any Filament work:**
-- [ ] Confirm Panel Provider registration syntax for Filament 5
-- [ ] Confirm multi-panel setup (app panel + admin panel) in Filament 5
-- [ ] Confirm Filament Shield installation and config for Filament 5
-- [ ] Confirm Tailwind v4 + Filament 5 CSS pipeline setup (`@source` directives)
-
-**Before any auth work:**
-- [ ] Confirm Filament 5 built-in auth scaffold (login, register, password reset, email verify)
-
-**Before any Livewire work:**
-- [ ] Confirm Livewire 4 component syntax and lifecycle hooks
-- [ ] Confirm how Livewire 4 integrates within Filament 5 custom pages
-
-**Before AI SDK work:**
-- [ ] Confirm `laravel/ai` install and `AiServiceProvider` publish steps
-- [ ] Confirm Agent class interface and `Promptable` trait in current version
-- [ ] Confirm streaming response API
-
-**Before Blueprint scaffolding:**
-- [ ] Confirm `draft.yaml` syntax for current Blueprint version (2.13+)
-- [ ] Confirm which generators are available and which require flags
-
-### CLAUDE.md
-
-`CLAUDE.md` in the project root is the live instruction file for AI coding sessions. It is committed to the repository and loaded automatically by Claude Code at the start of every session.
-
-`php artisan boost:install` generates an initial `CLAUDE.md`. After running it, the generated file must be reviewed and merged with the hand-authored `CLAUDE.md` already in the repository — do not overwrite it blindly.
-
-### Version pinning
-
-After the first `composer install`, record the resolved versions of key packages here. **Only useful if actively maintained — if it falls out of date, delete it rather than leave it wrong.**
-
-```
-# Resolved package versions — 2026-04-06
-laravel/framework: 13.2.0
-filament/filament: 5.4.3
-livewire/livewire: 4.2.2
-laravel/ai: 0.4.2
-laravel/pennant: (not installed — not used; direct config check used instead)
-laravel/boost: 2.4.1
-laravel-shift/blueprint: 2.13.0
-spatie/laravel-permission: 7.2.4
-bezhansalleh/filament-shield: 4.2.0
-```
+`CLAUDE.md` in the project root is the live instruction file for AI coding sessions. If `php artisan boost:install` regenerates it, review and merge the result rather than overwriting the committed file.
 
 ---
 
@@ -896,4 +830,4 @@ The MVP is complete when:
 
 ---
 
-*Last updated: 2026-03-21. Added Section 3 — AI Tooling and Knowledge Currency: knowledge currency warning, pre-build verification checklist, doc URLs, CLAUDE.md guidance, version pinning template. Section count: 22.*
+

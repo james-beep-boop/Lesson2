@@ -10,7 +10,7 @@ Repository-specific guidance lives here. Shared Laravel / Filament / Pest / Boos
 
 **ARES Kenya Lesson Plan Library** — a Laravel 13 / Filament 5 / Livewire 4 web application for teachers and administrators to store, version, browse, compare, and manage lesson plans.
 
-**Working directory:** `/Users/jamesmcclelland/Documents/GitHub/Lesson2`
+**Working directory:** repository root
 
 ---
 

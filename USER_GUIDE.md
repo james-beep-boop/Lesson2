@@ -1,94 +1,78 @@
 # ARES Lesson Library User Guide
 
-This guide is for first-time users exploring the ARES Lesson Library. The app is used to browse, view, edit, compare, translate, print, export, and share lesson plans for ARES Kenya.
+This guide is for first-time users exploring the ARES Lesson Library. The app lets authorized users browse, compare, favorite, edit, translate, print, export, and share lesson plans for ARES Kenya.
 
-## Main Functions
+## What users can do
 
-- Log in with your assigned demo or production account.
+- Log in with a demo or production account.
 - Browse lesson-plan families by subject, grade, day, and official status.
-- Open a lesson plan to view its current version and navigate between versions.
-- Compare two versions in the same lesson family in read-only mode.
-- Favorite a specific version so you can return to it quickly later.
-- Edit lesson plans to create a new version when your role allows it.
-- Use **Ask AI** for writing help and clarity suggestions when AI is enabled.
-- Translate lesson plans to Swahili for review when translation preview is available.
-- Send and receive inbox messages, including system notices and deletion-related alerts.
-- Print lesson plans from the browser for a clean paper copy.
-- Save or download lesson plans as PDF files.
-- Save or download lesson plans as `.docx` Word files.
-- Email lesson plans as PDF attachments.
-- Email lesson plans as `.docx` attachments.
-- Request deletion of a lesson-plan version when your role allows it.
-- Manage users, subject assignments, official versions, and deletion requests in the admin area.
+- Open a lesson plan to view versions and compare them.
+- Favorite a version for quick return later.
+- Edit lessons when your role allows it.
+- Use **Ask AI** for writing help when AI is enabled.
+- Preview Swahili translations when the translation feature is enabled.
+- Print, save, or email lesson plans as PDF or `.docx` files.
+- Use the inbox for alerts and messages.
+- Request deletion when your role allows it.
 
-## User Types And Privileges
+## Roles
 
 ### Teacher
 
-- Can view all lesson plans.
-- Can compare versions.
-- Can favorite versions.
-- Can use the inbox and send messages.
-- Cannot edit lesson plans.
-- Cannot create new lesson-plan families.
-- Cannot manage users or admin settings.
+- View lesson plans
+- Compare versions
+- Favorite versions
+- Use the inbox
+- No editing or admin access
 
 ### Editor
 
-- Has all Teacher privileges.
-- Can edit lesson plans for assigned subject-grade areas.
-- Can create a new version within an assigned lesson-plan family.
-- Can use **Ask AI** on lessons they are allowed to edit.
-- Can use Swahili translation preview on lessons they are allowed to edit when the feature is enabled.
-- Cannot create brand-new lesson-plan families.
-- Cannot manage users or global admin settings.
+- Everything a Teacher can do
+- Edit assigned subject-grade lessons
+- Create new versions in assigned lesson-plan families
+- Use **Ask AI** and translation preview when enabled
 
 ### Subject Administrator
 
-- Has all Editor privileges for assigned subject-grade areas.
-- Can create brand-new lesson-plan families for their assigned subject-grade.
-- Can mark a version as official for their assigned subject-grade.
-- Can request deletion of a version in their assigned subject-grade.
-- Can manage editors and other scoped users for their assigned subject-grade.
-- Cannot manage users outside their assigned subject-grade.
+- Everything an Editor can do
+- Create new lesson-plan families in assigned subject-grades
+- Mark a version official for an assigned subject-grade
+- Manage scoped users and deletion requests
 
 ### Site Administrator
 
-- Has all Teacher, Editor, and Subject Administrator privileges.
-- Can manage all lesson-plan families and all subject-grades.
-- Can manage users, roles, and subject assignments.
-- Can mark official versions across the library.
-- Can review and complete deletion requests.
-- Can access the admin panel.
-- Can handle all export, email, and messaging workflows across the app.
+- Full access to lesson plans and admin tools
+- Manage users, roles, subject assignments, and official versions
+- Review deletion requests
+- Access the admin panel
 
-## Demo Logins
+## Demo logins
 
-Use these accounts for review and testing. Unless noted otherwise, the demo password is `password`.
+Use these accounts for review and testing. Demo passwords are configured in the seed data.
 
-| Name | Username | Email | Role | Password |
-|---|---|---|---|---|
-| David Njoroge | `david` | `david@demo.test` | Teacher | `password` |
-| Test User | `user` | `user@demo.test` | Teacher | `password` |
-| Bob Ochieng | `bob` | `bob@demo.test` | Editor - Mathematics Grade 10 | `password` |
-| Carol Mwangi | `carol` | `carol@demo.test` | Editor - Science Grade 10 | `password` |
-| Test Editor | `editor` | `editor@demo.test` | Editor - English Grade 10 | `password` |
-| Test SubjectAdmin | `subject_admin` | `subject_admin@demo.test` | Subject Administrator - English Grade 10 | `password` |
-| Alice Kamau | `alice` | `alice@demo.test` | Subject Administrator - Mathematics Grade 10 | `password` |
-| Eve Wanjiku | `eve` | `eve@demo.test` | Subject Administrator - Science Grade 10 | `password` |
-| Site Administrator | `admin` | `admin@sheql.com` | Site Administrator | Set separately |
+| Name | Username | Email | Role |
+|---|---|---|---|
+| David Njoroge | `david` | `david@demo.test` | Teacher |
+| Test User | `user` | `user@demo.test` | Teacher |
+| Bob Ochieng | `bob` | `bob@demo.test` | Editor - Mathematics Grade 10 |
+| Carol Mwangi | `carol` | `carol@demo.test` | Editor - Science Grade 10 |
+| Test Editor | `editor` | `editor@demo.test` | Editor - English Grade 10 |
+| Test SubjectAdmin | `subject_admin` | `subject_admin@demo.test` | Subject Administrator - English Grade 10 |
+| Alice Kamau | `alice` | `alice@demo.test` | Subject Administrator - Mathematics Grade 10 |
+| Eve Wanjiku | `eve` | `eve@demo.test` | Subject Administrator - Science Grade 10 |
+| Site Administrator | `admin` | `admin@sheql.com` | Site Administrator |
 
-## Suggested First Steps
+## Quick start
 
-1. Log in as a Teacher and open a lesson plan.
-2. Try switching between versions and comparing them.
-3. Mark a version as a favorite.
-4. If your account has edit access, try creating a new version and using the AI suggestion panel.
-5. Open the print, PDF, and `.docx` actions to see how lesson plans can be shared outside the app.
+1. Sign in and open a lesson plan.
+2. Compare two versions.
+3. Favorite one version.
+4. If you can edit, try creating a new version.
+5. Try print, PDF, or `.docx` export.
 
 ## Notes
 
 - Lesson plans are stored as Markdown in the database.
 - Email addresses are only visible to Site Administrators.
-- AI and translation features may be disabled by configuration in some environments.
-- The app’s interface is role-aware, so different users will see different buttons and actions.
+- AI and translation features can be disabled by configuration.
+- The interface changes by role, so different users see different actions.

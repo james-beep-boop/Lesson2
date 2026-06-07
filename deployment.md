@@ -8,7 +8,7 @@ The important architectural rule is simple:
 - DreamHost is a runtime host only
 - DreamHost does not run `npm`, `composer install`, `git pull`, or build steps during deploy
 
-Historical deployment incidents remain in [`troubleshooting.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/troubleshooting.md).
+Historical deployment incidents remain in [`troubleshooting.md`](./troubleshooting.md).
 
 ---
 
@@ -16,8 +16,8 @@ Historical deployment incidents remain in [`troubleshooting.md`](/Users/jamesmcc
 
 Production deploy is two-stage:
 
-1. [`DEPLOY_SITE.sh`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/DEPLOY_SITE.sh) runs locally
-2. [`UPDATE_SITE.sh`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/UPDATE_SITE.sh) runs on DreamHost
+1. [`DEPLOY_SITE.sh`](./DEPLOY_SITE.sh) runs locally
+2. [`UPDATE_SITE.sh`](./UPDATE_SITE.sh) runs on DreamHost
 
 Local stage responsibilities:
 

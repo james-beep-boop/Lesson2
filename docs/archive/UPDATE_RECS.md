@@ -33,7 +33,7 @@ Reasoning:
 
 ### Why hold `jfcherng/php-diff`
 
-The app uses diff rendering directly in [`app/Services/DiffService.php`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/app/Services/DiffService.php), and the Toast UI plan makes diff behavior more important as part of the editing safety net.
+The app uses diff rendering directly in [`app/Services/DiffService.php`](../../app/Services/DiffService.php), and the Toast UI plan makes diff behavior more important as part of the editing safety net.
 
 Even though the v7 release notes suggest a modernization-focused release, it is still a major version bump and may require API migration around differ/renderer options.
 
@@ -112,7 +112,7 @@ When revisiting `jfcherng/php-diff`, do it as its own small migration task:
 
 1. Read the v7 migration guide.
 2. Check whether `DiffHelper::calculate()` still accepts array options or now expects value objects.
-3. Update [`app/Services/DiffService.php`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/app/Services/DiffService.php) only if required.
+3. Update [`app/Services/DiffService.php`](../../app/Services/DiffService.php) only if required.
 4. Manually verify both side-by-side and unified diff output in the app.
 5. Run relevant tests.
 

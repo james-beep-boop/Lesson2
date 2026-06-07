@@ -63,7 +63,7 @@ Lightweight tracker extracted from `Lesson2.md`. For requirements and behavioral
 
 ## Next Sprint
 
-Definitive next step: [`Toast_UI_Editor_Plan.md`](/Users/jamesmcclelland/Documents/GitHub/Lesson2/Toast_UI_Editor_Plan.md)
+Definitive next step: [`Toast_UI_Editor_Plan.md`](../../Toast_UI_Editor_Plan.md)
 
 Priority order:
 
