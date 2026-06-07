@@ -2,6 +2,8 @@
 
 Laravel 13 / Filament 5 application for storing, versioning, comparing, translating, exporting, and managing lesson plans for ARES Kenya.
 
+> **Note:** This project has been superseded by a clean-slate Node/Payload rewrite in the **Lesson3** repository (`james-beep-boop/Lesson3`). This repo is preserved for reference.
+
 Live site: https://www.sheql.com
 
 ## Docs
